@@ -5,15 +5,27 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .adapters.instagram import InstagramAdapter
+from .adapters.registry import registry
+from .adapters.x import XAdapter
 from .config import get_settings
 from .db import init_db
 from .routes import health, jobs, media
+from .service import get_queue
+from .worker import Worker
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    yield
+    registry.register(InstagramAdapter())
+    registry.register(XAdapter())
+    worker = Worker(get_queue(), n_workers=2)
+    task = __import__("asyncio").create_task(worker.run())
+    try:
+        yield
+    finally:
+        task.cancel()
 
 
 def create_app() -> FastAPI:

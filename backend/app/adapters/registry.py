@@ -26,3 +26,10 @@ class AdapterRegistry:
 
 
 registry = AdapterRegistry()
+
+
+def detect_platform(url: str) -> BaseAdapter | None:
+    platform_name = registry.detect(url)
+    if platform_name:
+        return registry.get(platform_name)
+    return None
