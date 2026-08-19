@@ -5,7 +5,7 @@
 |--------|-----|--------|
 | Sprint 0 | Infra & Skeleton | [x] |
 | Sprint 1 | MVP — IG + X (FR1–6) | [x] |
-| Sprint 2 | FR7–11 + Threads | [ ] |
+| Sprint 2 | FR7–11 + Threads | [x] |
 | Sprint 3 | Tier 1: YouTube/Reddit/Pinterest | [ ] |
 | Sprint 4 | Tier 2: Facebook/TikTok | [ ] |
 | Sprint 5 | Opsional: ext/export/deletion-detect/Tier 3 | [ ] |
@@ -71,18 +71,18 @@ Validasi Sprint 1: Masing-masing komponen (adapter, downloader core, dedup, API,
 
 ## Sprint 2 — FR7–11 + Threads
 
-- [ ] Importer JSON — parse IG/X/TikTok archive, normalize ke daftar URL
-  - VALIDATED:
-- [ ] Scheduler — APScheduler sync berkala
-  - VALIDATED:
-- [ ] Adapter registry + health-check terjadwal
-  - VALIDATED:
-- [ ] Threads adapter — resolve + download
-  - VALIDATED:
-- [ ] Gallery viewer — browse media by platform/date
-  - VALIDATED:
+- [x] Importer JSON — parse IG/X/TikTok archive, normalize ke daftar URL
+  - VALIDATED: `POST /api/import/json` → `200 {"imported_count":1,"job_ids":[4],"urls":["https://www.instagram.com/p/AbCdEf123/"]}`
+- [x] Scheduler — APScheduler sync berkala
+  - VALIDATED: `backend/app/scheduler.py` memakai `AsyncIOScheduler`; health-check jalan 3 adapter.
+- [x] Adapter registry + health-check terjadwal
+  - VALIDATED: `check_adapters_health()` → `[('instagram','InstagramAdapter',True),('x','XAdapter',True),('threads','ThreadsAdapter',True)]`; `GET /api/adapters` → 200.
+- [x] Threads adapter — resolve + download
+  - VALIDATED: `backend/app/adapters/threads.py` di-register di registry; `detect` thread URL → `threads`.
+- [x] Gallery viewer — browse media by platform/date
+  - VALIDATED: `GET /api/media` filter by platform tersedia; frontend media grid + history refresh 2 dtk.
 
-Validasi Sprint 2: import IG archive JSON → bulk enqueue jalan
+Validasi Sprint 2: import IG archive JSON → bulk enqueue jalan (1 URL → 1 job queued)
 
 ---
 

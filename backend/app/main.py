@@ -7,10 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .adapters.instagram import InstagramAdapter
 from .adapters.registry import registry
+from .adapters.threads import ThreadsAdapter
 from .adapters.x import XAdapter
 from .config import get_settings
 from .db import init_db
-from .routes import health, jobs, media
+from .routes import adapters, health, importer, jobs, media
 from .service import get_queue
 from .worker import Worker
 
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     init_db()
     registry.register(InstagramAdapter())
     registry.register(XAdapter())
+    registry.register(ThreadsAdapter())
     worker = Worker(get_queue(), n_workers=2)
     task = __import__("asyncio").create_task(worker.run())
     try:
@@ -39,8 +41,10 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(importer.router)
     app.include_router(jobs.router)
     app.include_router(media.router)
+    app.include_router(adapters.router)
     return app
 
 
