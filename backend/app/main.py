@@ -5,11 +5,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .adapters.facebook import FacebookAdapter
 from .adapters.instagram import InstagramAdapter
 from .adapters.pinterest import PinterestAdapter
 from .adapters.reddit import RedditAdapter
 from .adapters.registry import registry
 from .adapters.threads import ThreadsAdapter
+from .adapters.tiktok import TikTokAdapter
 from .adapters.x import XAdapter
 from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
@@ -28,6 +30,8 @@ async def lifespan(app: FastAPI):
     registry.register(YouTubeAdapter())
     registry.register(RedditAdapter())
     registry.register(PinterestAdapter())
+    registry.register(FacebookAdapter())
+    registry.register(TikTokAdapter())
     worker = Worker(get_queue(), n_workers=2)
     task = __import__("asyncio").create_task(worker.run())
     try:

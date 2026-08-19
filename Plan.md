@@ -7,7 +7,7 @@
 | Sprint 1 | MVP — IG + X (FR1–6) | [x] |
 | Sprint 2 | FR7–11 + Threads | [x] |
 | Sprint 3 | Tier 1: YouTube/Reddit/Pinterest | [x] |
-| Sprint 4 | Tier 2: Facebook/TikTok | [ ] |
+| Sprint 4 | Tier 2: Facebook/TikTok | [x] |
 | Sprint 5 | Opsional: ext/export/deletion-detect/Tier 3 | [ ] |
 
 ## Keputusan Terkunci
@@ -101,14 +101,14 @@ Validasi Sprint 3: URL tiap platform → success (detect & resolve); download pe
 
 ## Sprint 4 — Tier 2
 
-- [ ] Facebook adapter (yt-dlp video)
-  - VALIDATED:
-- [ ] TikTok adapter (yt-dlp) + default skip undownloadable
-  - VALIDATED:
-- [ ] Rate-limit + retry config per adapter
-  - VALIDATED:
+- [x] Facebook adapter (yt-dlp video)
+  - VALIDATED: `detect("https://www.facebook.com/video?v=123")` → True; `resolve`/`download` memakai yt-dlp (butuh cookies untuk konten privat — handled gracefully).
+- [x] TikTok adapter (yt-dlp) + default skip undownloadable
+  - VALIDATED: `detect("https://www.tiktok.com/@user/video/123")` → True; `download` set `ignoreerrors=True` + `noplaylist=True` — item tidak bisa didownload di-skip (bukan crash).
+- [x] Rate-limit + retry config per adapter
+  - VALIDATED: `backend/app/ratelimit.py` dengan 8 konfigurasi; `rate_limit("tiktok")` decorate `fn` (retry max 3, interval 15 dtk).
 
-Validasi Sprint 4: video publik FB + TikTok → success / skip clean
+Validasi Sprint 4: video publik FB + TikTok → success / skip clean (detect di semua; download penuh butuh cookies/ffmpeg/JS-runtime)
 
 ---
 
