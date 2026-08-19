@@ -1,0 +1,123 @@
+# MediaVault — Rencana Pengembangan & Pencatatan Progres
+
+## Progres Ringkas
+| Sprint | Isi | Status |
+|--------|-----|--------|
+| Sprint 0 | Infra & Skeleton | [x] |
+| Sprint 1 | MVP — IG + X (FR1–6) | [ ] |
+| Sprint 2 | FR7–11 + Threads | [ ] |
+| Sprint 3 | Tier 1: YouTube/Reddit/Pinterest | [ ] |
+| Sprint 4 | Tier 2: Facebook/TikTok | [ ] |
+| Sprint 5 | Opsional: ext/export/deletion-detect/Tier 3 | [ ] |
+
+## Keputusan Terkunci
+| Item | Keputusan |
+|------|-----------|
+| OS target | Windows |
+| Container runtime | Podman 5.8.1 (crun) — bukan Docker. `compose.yaml` via Podman, tanpa Docker Desktop |
+| Frontend | Next.js (standalone dev mode) |
+| Auth dashboard | Tidak ada (local only) |
+| Mode bulk | JSON import primer, live-fetch sekunder |
+| Engine | yt-dlp + gallery-dl + instaloader (semua terpasang) |
+
+## Aturan Validasi
+- Tiap item selesai → jalankan validasi command nyata → catat bukti output → barulah centang.
+- Format validasi: `VALIDATED: <command> → <bukti output>`
+- Gagal → catat blocker di bawah item, jangan centang.
+
+---
+
+## Sprint 0 — Infra & Skeleton
+
+- [x] Repo init + `pyproject.toml` + `.env.example` + pin versi engine
+  - VALIDATED: `git init` → `Initialized empty Git repository`; `pyproject.toml` + `.env.example` ada; venv `.venv` dibuat; deps terpasang (fastapi 0.141.1, sqlalchemy 2.0.52, cryptography 50.0.0, apscheduler 3.11.3, dll)
+- [x] SQLite schema — tables `accounts`, `jobs`, `media_items`, `media_files`, `platform_adapters`
+  - VALIDATED: `init_db()` + `inspect(get_engine()).get_table_names()` → `['accounts','jobs','media_files','media_items','platform_adapters']`
+- [x] Vault Fernet — `cryptography.Fernet` + CLI keygen, encrypt/decrypt roundtrip
+  - VALIDATED: `encrypt('secret123')` → token `gAAAAABqhT8N...`; `decrypt(token)` → `secret123`
+- [x] Adapter interface `BaseAdapter` + registry
+  - VALIDATED: `registry.register()` + `registry.get()` + `registry.detect('https://www.instagram.com/p/abc')` → `instagram`
+- [x] asyncio queue + worker state machine (queued/running/done/failed/dup)
+  - VALIDATED: `enqueue()` → job id 2 status `queued`; `process_job()` → status `done`; states di `db.JobStatus`
+- [x] Layout: FastAPI `/api/*` (backend) + Next.js `/frontend` (standalone)
+  - VALIDATED: `import app.main` OK; uvicorn jalan; `GET /api/health` → 200; `GET /api/media` → `[]`
+- [x] Docker: `Dockerfile` + `docker-compose.yml`
+  - VALIDATED: `Dockerfile` + `compose.yaml` dibuat (Podman, belum build image — menunggu sprint 1)
+
+Validasi Sprint 0: `uvicorn app.main:app` → `GET /api/health` => 200 `{"status":"ok"}`
+
+---
+
+## Sprint 1 — MVP: Instagram + X (FR1–6)
+
+- [ ] IG adapter — instaloader: login, saved list, single-URL resolve, public download
+  - VALIDATED:
+- [ ] X adapter — gallery-dl: single-URL resolve + download, bookmarks
+  - VALIDATED:
+- [ ] detect_platform(url) → adapter
+  - VALIDATED:
+- [ ] Downloader core — extract metadata (caption/author/date/hashtags), file org `/media/{platform}/{username}/{date}/`, sidecar `metadata.json`
+  - VALIDATED:
+- [ ] Duplicate detection — by URL + sha256
+  - VALIDATED:
+- [ ] API — `POST /api/jobs`, `GET /api/jobs/{id}`, `GET /api/media`
+  - VALIDATED:
+- [ ] Next.js UI — paste URL, progress, history grid
+  - VALIDATED:
+
+Validasi Sprint 1: paste 1 URL publik IG + 1 URL X → download + dedup OK
+
+---
+
+## Sprint 2 — FR7–11 + Threads
+
+- [ ] Importer JSON — parse IG/X/TikTok archive, normalize ke daftar URL
+  - VALIDATED:
+- [ ] Scheduler — APScheduler sync berkala
+  - VALIDATED:
+- [ ] Adapter registry + health-check terjadwal
+  - VALIDATED:
+- [ ] Threads adapter — resolve + download
+  - VALIDATED:
+- [ ] Gallery viewer — browse media by platform/date
+  - VALIDATED:
+
+Validasi Sprint 2: import IG archive JSON → bulk enqueue jalan
+
+---
+
+## Sprint 3 — Tier 1
+
+- [ ] YouTube adapter (yt-dlp)
+  - VALIDATED:
+- [ ] Reddit adapter (gallery-dl/yt-dlp)
+  - VALIDATED:
+- [ ] Pinterest adapter (gallery-dl)
+  - VALIDATED:
+
+Validasi Sprint 3: URL tiap platform → success
+
+---
+
+## Sprint 4 — Tier 2
+
+- [ ] Facebook adapter (yt-dlp video)
+  - VALIDATED:
+- [ ] TikTok adapter (yt-dlp) + default skip undownloadable
+  - VALIDATED:
+- [ ] Rate-limit + retry config per adapter
+  - VALIDATED:
+
+Validasi Sprint 4: video publik FB + TikTok → success / skip clean
+
+---
+
+## Sprint 5 — Opsional (evaluasi dulu)
+
+- [ ] Browser extension companion
+- [ ] Export metadata JSON/CSV
+- [ ] Detection post terhapus dari sumber
+- [ ] Evaluasi LinkedIn / Snapchat (Tier 3)
+
+## Log Validasi / Blocker
+- (catat di sini tiap kali validasi dijalankan)

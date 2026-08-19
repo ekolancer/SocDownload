@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - VAULT_KEY=${VAULT_KEY:-change-me-generate-via-keygen}
+      - DATABASE_URL=sqlite:////app/data/mediavault.db
+      - MEDIA_ROOT=/app/media
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/media
+      - ./backend:/app/backend
