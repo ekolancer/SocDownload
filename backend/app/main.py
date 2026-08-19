@@ -6,9 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .adapters.instagram import InstagramAdapter
+from .adapters.pinterest import PinterestAdapter
+from .adapters.reddit import RedditAdapter
 from .adapters.registry import registry
 from .adapters.threads import ThreadsAdapter
 from .adapters.x import XAdapter
+from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
 from .db import init_db
 from .routes import adapters, health, importer, jobs, media
@@ -22,6 +25,9 @@ async def lifespan(app: FastAPI):
     registry.register(InstagramAdapter())
     registry.register(XAdapter())
     registry.register(ThreadsAdapter())
+    registry.register(YouTubeAdapter())
+    registry.register(RedditAdapter())
+    registry.register(PinterestAdapter())
     worker = Worker(get_queue(), n_workers=2)
     task = __import__("asyncio").create_task(worker.run())
     try:
