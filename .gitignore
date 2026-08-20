@@ -13,3 +13,5 @@ frontend/out/
 frontend/next-env.d.ts
 config/*.txt
 config/*.session
+/graphify-out
+.agents/

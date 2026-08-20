@@ -1,346 +1,229 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
-
-interface MediaFile {
-  id: number;
-  kind: 'image' | 'video';
-  url: string;
-  name: string;
-}
-
-interface MediaItem {
-  id: number;
-  platform: string;
-  source_url: string;
-  username: string | null;
-  caption: string | null;
-  posted_at: string | null;
-  created_at: string | null;
-  files: MediaFile[];
-}
-
-interface JobRow {
-  id: number;
-  platform: string;
-  url: string;
-  status: string;
-  error: string | null;
-  created_at: string;
-}
+import { Navbar } from './components/Navbar';
+import { DownloadStudio } from './components/DownloadStudio';
+import { MediaGallery } from './components/MediaGallery';
+import { MediaLightboxModal, MediaItem } from './components/MediaLightboxModal';
+import { JobPipeline, JobRow } from './components/JobPipeline';
+import { AdapterHealthDrawer } from './components/AdapterHealthDrawer';
+import { ArchiveImportModal } from './components/ArchiveImportModal';
+import { IconLayers, IconActivity } from './components/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
-type PlatformFilter = 'all' | 'instagram' | 'threads' | 'x' | 'tiktok';
+type ActiveViewTab = 'vault' | 'activity';
 
 const API = '/api';
-const PLATFORMS: { value: PlatformFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'threads', label: 'Threads' },
-  { value: 'x', label: 'X' },
-  { value: 'tiktok', label: 'TikTok' },
-];
-
-function detectPlatform(url: string): PlatformFilter {
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    if (hostname.includes('instagram.com') || hostname.includes('instagr.am')) return 'instagram';
-    if (hostname.includes('threads.net')) return 'threads';
-    if (hostname.includes('x.com') || hostname.includes('twitter.com')) return 'x';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-  } catch {
-    // ignore
-  }
-  return 'all';
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return 'Unknown date';
-  try {
-    return new Date(iso).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return 'Invalid date';
-  }
-}
-
-function truncate(str: string, max: number): string {
-  return str.length > max ? str.slice(0, max) + '…' : str;
-}
 
 export default function Home() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
-  const [url, setUrl] = useState('');
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [activeTab, setActiveTab] = useState<ActiveViewTab>('vault');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
+  const [mediaError, setMediaError] = useState<string>('');
+
+  // Modals state
+  const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
+
+  // Form submission state
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
-  const [mediaError, setMediaError] = useState('');
-  const refreshRef = useRef<() => Promise<void>>();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const healthRes = await fetch(`${API}/health`);
-      setBackendStatus(healthRes.ok ? 'ok' : 'offline');
-    } catch {
-      setBackendStatus('offline');
-    }
+  // Polling guard
+  const isFetchingRef = useRef(false);
+
+  const refreshData = useCallback(async (showIndicator = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (showIndicator) setIsRefreshing(true);
 
     try {
-      const jobsRes = await fetch(`${API}/jobs`);
-      if (!jobsRes.ok) throw new Error('Failed to fetch jobs');
-      setJobs(await jobsRes.json());
-    } catch (e) {
-      console.error('Jobs fetch error:', e);
-    }
+      // 1. Health check
+      const healthRes = await fetch(`${API}/health`).catch(() => null);
+      if (healthRes && healthRes.ok) {
+        setBackendStatus('ok');
+      } else {
+        setBackendStatus('offline');
+      }
 
-    try {
+      // 2. Fetch Jobs
+      const jobsRes = await fetch(`${API}/jobs?limit=50`).catch(() => null);
+      if (jobsRes && jobsRes.ok) {
+        const jobsData = await jobsRes.json();
+        setJobs(jobsData);
+      }
+
+      // 3. Fetch Media
       const params = new URLSearchParams();
-      if (platformFilter !== 'all') params.set('platform', platformFilter);
-      params.set('limit', '100');
-      const mediaRes = await fetch(`${API}/media?${params.toString()}`);
-      if (!mediaRes.ok) throw new Error('Failed to fetch media');
-      setMedia(await mediaRes.json());
-      setMediaError('');
-    } catch (e) {
-      setMediaError('Failed to load media library');
-      console.error('Media fetch error:', e);
+      params.set('limit', '120');
+      const mediaRes = await fetch(`${API}/media?${params.toString()}`).catch(() => null);
+      if (mediaRes && mediaRes.ok) {
+        const mediaData = await mediaRes.json();
+        setMedia(mediaData);
+        setMediaError('');
+      } else {
+        setMediaError('Could not sync media library');
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+    } finally {
+      isFetchingRef.current = false;
+      if (showIndicator) {
+        setTimeout(() => setIsRefreshing(false), 400);
+      }
     }
-  }, [platformFilter]);
+  }, []);
 
-  refreshRef.current = refresh;
-
+  // Initial fetch and 2-second background heartbeat
   useEffect(() => {
-    refresh();
-    const interval = setInterval(() => refresh(), 2000);
+    refreshData();
+    const interval = setInterval(() => refreshData(false), 2000);
     return () => clearInterval(interval);
-  }, [refresh]);
+  }, [refreshData]);
 
-  const submit = async () => {
-    if (!url.trim() || submitting) return;
+  // Handle URL download submission
+  const handleDownload = async (targetUrl: string): Promise<boolean> => {
+    if (!targetUrl.trim() || submitting) return false;
     setSubmitting(true);
     setSubmitError('');
+
     try {
       const response = await fetch(`${API}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: targetUrl.trim() }),
       });
+
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || `Backend returned ${response.status}`);
+        throw new Error(err.detail || `Backend returned status ${response.status}`);
       }
-      setUrl('');
-      await refresh();
+
+      // Refresh immediately
+      await refreshData(true);
+      return true;
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Unable to reach backend');
+      setSubmitError(err instanceof Error ? err.message : 'Unable to enqueue download job');
+      return false;
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !submitting) submit();
-  };
-
-  const filteredMedia = media;
-
-  const statusLabel: Record<string, string> = {
-    queued: 'Queued',
-    running: 'Running',
-    done: 'Done',
-    failed: 'Failed',
-    dup: 'Duplicate',
-  };
-
-  const statusClass: Record<string, string> = {
-    queued: 'status-queued',
-    running: 'status-running',
-    done: 'status-done',
-    failed: 'status-failed',
-    dup: 'status-dup',
-  };
+  const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text)]">
-      <header className="app-header">
-        <div className="app-header-brand">MediaVault</div>
-        <div className="app-header-status">
-          <span className={`status-dot ${backendStatus === 'ok' ? 'online' : backendStatus === 'loading' ? 'loading' : 'offline'}`} aria-hidden="true" />
-          <span>{backendStatus === 'ok' ? 'Backend online' : backendStatus === 'loading' ? 'Connecting…' : 'Backend offline'}</span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#08090D] text-[#EDEDF2] flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
+      {/* Top Navbar Header */}
+      <Navbar
+        backendStatus={backendStatus}
+        mediaCount={media.length}
+        activeJobsCount={activeJobsCount}
+        onOpenImport={() => setIsImportModalOpen(true)}
+        onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
+        onRefresh={() => refreshData(true)}
+        isRefreshing={isRefreshing}
+      />
 
-      <div className="app-layout">
-        <aside className="app-sidebar" role="complementary" aria-label="Platform filters">
-          <div>
-            <h2 className="section-title" style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-4)' }}>
-              Platforms
-            </h2>
-            <div className="filter-group" role="group" aria-label="Filter by platform">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p.value}
-                  className={`filter-btn ${platformFilter === p.value ? 'active' : ''}`}
-                  onClick={() => setPlatformFilter(p.value)}
-                  aria-pressed={platformFilter === p.value}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
+      {/* Main Workspace Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+        {/* Hero Ingestion Studio */}
+        <DownloadStudio
+          onDownload={handleDownload}
+          submitting={submitting}
+          submitError={submitError}
+          onClearError={() => setSubmitError('')}
+        />
 
-        <main className="app-main" role="main">
-          <section className="workspace-section" aria-labelledby="composer-heading">
-            <div className="section-header">
-              <h2 id="composer-heading" className="section-title">Download</h2>
-            </div>
+        {/* View Switcher Tabs (Media Vault vs Activity Pipeline) */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-2 p-1 rounded-xl bg-[#12141F] border border-white/5">
+            <button
+              onClick={() => setActiveTab('vault')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'vault'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              <IconLayers className="w-4 h-4" />
+              <span>Media Library</span>
+              <span className="px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono">
+                {media.length}
+              </span>
+            </button>
 
-            <form className="composer-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-              <label htmlFor="url-input" className="composer-label">
-                Post URL
-              </label>
-              <div className="composer-input-group">
-                <input
-                  id="url-input"
-                  type="url"
-                  className="input"
-                  placeholder="https://www.instagram.com/p/…  or  https://x.com/…/status/…"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={submitting}
-                  aria-describedby={submitError ? 'submit-error' : undefined}
-                  aria-invalid={!!submitError}
-                />
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={submitting || !url.trim()}
-                >
-                  {submitting ? 'Enqueueing…' : 'Download'}
-                </button>
-              </div>
-              {url && (
-                <span className="platform-tag" aria-label={`Detected platform: ${detectPlatform(url)}`}>
-                  {detectPlatform(url) !== 'all' ? detectPlatform(url) : 'Unknown platform'}
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'activity'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              <IconActivity className="w-4 h-4" />
+              <span>Jobs & Queue</span>
+              {activeJobsCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono animate-pulse">
+                  {activeJobsCount}
                 </span>
               )}
-              {submitError && (
-                <p id="submit-error" className="error-inline" role="alert">{submitError}</p>
-              )}
-            </form>
-          </section>
+            </button>
+          </div>
 
-          <section className="workspace-section" aria-labelledby="jobs-heading">
-            <div className="section-header">
-              <h2 id="jobs-heading" className="section-title">Job History</h2>
-            </div>
+          <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 font-mono">
+            <span>Encrypted At-Rest</span>
+            <span>•</span>
+            <span>Local Vault</span>
+          </div>
+        </div>
 
-            {jobs.length === 0 ? (
-              <div className="empty-state">
-                <p className="empty-state-title">No jobs yet</p>
-                <p>Paste a post URL above to start downloading.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
-                {jobs.map((job) => (
-                  <article key={job.id} className="job-row">
-                    <span className="job-id">#{job.id}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div className="job-url" title={job.url}>{truncate(job.url, 80)}</div>
-                      <span className="job-platform">{job.platform}</span>
-                    </div>
-                    <span className={`status-badge ${statusClass[job.status] || 'status-queued'}`}>
-                      {statusLabel[job.status] || job.status}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+        {/* Dynamic Content Views */}
+        {activeTab === 'vault' ? (
+          <MediaGallery
+            media={media}
+            selectedPlatform={selectedPlatform}
+            onSelectPlatform={setSelectedPlatform}
+            onOpenLightbox={(item) => setLightboxItem(item)}
+            error={mediaError}
+          />
+        ) : (
+          <JobPipeline jobs={jobs} />
+        )}
+      </main>
 
-          <section className="workspace-section" aria-labelledby="media-heading">
-            <div className="section-header">
-              <h2 id="media-heading" className="section-title">Media Library</h2>
-            </div>
+      {/* Footer */}
+      <footer className="w-full border-t border-white/5 py-6 mt-12 bg-[#06070B] text-center text-xs text-slate-400 font-mono">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>MediaVault • Personal Self-Hosted Archiver</span>
+          <span className="text-slate-400">
+            Instagram • Threads • X • TikTok • YouTube • Reddit • Pinterest • Facebook
+          </span>
+        </div>
+      </footer>
 
-            {mediaError && (
-              <div className="empty-state" style={{ color: 'var(--color-error)' }}>
-                <p className="empty-state-title">Failed to load media</p>
-                <p>{mediaError}</p>
-              </div>
-            )}
+      {/* Lightbox Modal */}
+      <MediaLightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />
 
-            {filteredMedia.length === 0 && !mediaError && (
-              <div className="empty-state">
-                <p className="empty-state-title">No media downloaded yet</p>
-                <p>Completed downloads will appear here.</p>
-              </div>
-            )}
+      {/* Adapter Health Drawer */}
+      <AdapterHealthDrawer
+        isOpen={isAdaptersDrawerOpen}
+        onClose={() => setIsAdaptersDrawerOpen(false)}
+      />
 
-            {filteredMedia.length > 0 && (
-              <div className="media-grid" role="list" aria-label="Downloaded media">
-                {filteredMedia.map((item) => (
-                  <article key={item.id} className="media-tile" role="listitem">
-                    {item.files.length > 0 ? (
-                      <div className="media-preview">
-                        {item.files[0].kind === 'image' ? (
-                          <img
-                            src={item.files[0].url}
-                            alt={item.caption || `${item.platform} post by ${item.username || 'unknown'}`}
-                            loading="lazy"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        ) : (
-                          <video
-                            src={item.files[0].url}
-                            controls
-                            preload="metadata"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="media-preview" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-                        No preview
-                      </div>
-                    )}
-                    <div className="media-info">
-                      <div className="media-platform">{item.platform}</div>
-                      <div className="media-meta">
-                        {item.username ? `@${item.username}` : 'Unknown user'}
-                        {item.posted_at && ` · ${formatDate(item.posted_at)}`}
-                      </div>
-                      {item.caption && (
-                        <p className="media-caption" title={item.caption}>{truncate(item.caption, 120)}</p>
-                      )}
-                      {!item.caption && (
-                        <p className="media-caption" style={{ color: 'var(--color-text-muted)' }}>
-                          <a href={item.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
-                            {truncate(item.source_url, 60)}
-                          </a>
-                        </p>
-                      )}
-                      {item.files.length > 1 && (
-                        <p className="media-meta" style={{ marginTop: 'var(--spacing-2)' }}>
-                          +{item.files.length - 1} more file{item.files.length - 1 > 1 ? 's' : ''}
-                        </p>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
-      </div>
+      {/* Archive Import Modal */}
+      <ArchiveImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          refreshData(true);
+          setActiveTab('activity');
+        }}
+      />
     </div>
   );
 }
