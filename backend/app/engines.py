@@ -73,9 +73,13 @@ def gdl_download(url: str, dest_dir: str) -> list[str]:
 
 def gdl_first_item(url: str) -> dict:
     import gallery_dl
+    from gallery_dl.extractor.message import Message
 
     with gdl_config():
         extractor = gallery_dl.extractor.find(url)
-        for _item_url, metadata in extractor.items():
-            return metadata
+        if not extractor:
+            raise RuntimeError("gallery-dl found no extractor")
+        for message, _item_url, metadata in extractor:
+            if message in (Message.Directory, Message.Url):
+                return metadata
     raise RuntimeError("gallery-dl found no media")

@@ -45,11 +45,18 @@ def test_gdl_config_applies_and_restores_cookies(monkeypatch, tmp_path: Path) ->
 
 
 def test_gdl_first_item_uses_extractor_metadata(monkeypatch) -> None:
-    class FakeExtractor:
-        def items(self):
-            yield "https://cdn.example/media.jpg", {"author": "user"}
+    from gallery_dl.extractor.message import Message
 
-    monkeypatch.setattr(gallery_dl.extractor, "find", lambda url: FakeExtractor())
+    class FakeExtractor:
+        initialized = False
+
+        def __iter__(self):
+            self.initialized = True
+            yield Message.Directory, "", {"author": "user"}
+
+    extractor = FakeExtractor()
+    monkeypatch.setattr(gallery_dl.extractor, "find", lambda url: extractor)
     monkeypatch.setattr(engines, "_cookies", lambda: None)
 
     assert engines.gdl_first_item("https://example.com/post") == {"author": "user"}
+    assert extractor.initialized
