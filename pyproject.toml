@@ -20,6 +20,9 @@ engines = [
     "gallery-dl>=1.27",
     "instaloader==4.13",
 ]
+test = [
+    "pytest>=8.0",
+]
 
 [build-system]
 requires = ["hatchling"]

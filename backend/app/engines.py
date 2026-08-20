@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
+from pathlib import Path
+from threading import RLock
 
 from .config import get_settings
+
+_gdl_lock = RLock()
 
 
 def _cookies() -> str | None:
@@ -26,3 +31,51 @@ def gdl_options() -> dict:
     if ck:
         opts["cookies"] = ck
     return opts
+
+
+@contextmanager
+def gdl_config(dest_dir: str | None = None):
+    import gallery_dl
+
+    config = []
+    if dest_dir:
+        config.extend(
+            [
+                ((), "base-directory", str(Path(dest_dir).resolve())),
+                ((), "directory", []),
+            ]
+        )
+    cookies = _cookies()
+    if cookies:
+        config.append(((), "cookies", cookies))
+
+    with _gdl_lock, gallery_dl.config.apply(config):
+        yield
+
+
+def gdl_download(url: str, dest_dir: str) -> list[str]:
+    import gallery_dl
+
+    with gdl_config(dest_dir):
+        status = gallery_dl.job.DownloadJob(url).run()
+
+    files = [
+        os.path.join(dest_dir, name)
+        for name in os.listdir(dest_dir)
+        if os.path.isfile(os.path.join(dest_dir, name))
+    ]
+    if status:
+        raise RuntimeError(f"gallery-dl failed with status {status}")
+    if not files:
+        raise RuntimeError("gallery-dl downloaded no files")
+    return files
+
+
+def gdl_first_item(url: str) -> dict:
+    import gallery_dl
+
+    with gdl_config():
+        extractor = gallery_dl.extractor.find(url)
+        for _item_url, metadata in extractor.items():
+            return metadata
+    raise RuntimeError("gallery-dl found no media")

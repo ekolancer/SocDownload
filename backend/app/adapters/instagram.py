@@ -3,18 +3,20 @@ from __future__ import annotations
 import os
 import re
 
-import gallery_dl
 import instaloader
 
 from .base import BaseAdapter, ResolvedMedia
-from ..engines import gdl_options
+from ..engines import gdl_download, gdl_first_item
 
 
 class InstagramAdapter(BaseAdapter):
     platform = "instagram"
 
     def __init__(self) -> None:
-        self._loader = instaloader.Instaloader()
+        self._loader = instaloader.Instaloader(
+            max_connection_attempts=1,
+            fatal_status_codes=[401, 403, 429],
+        )
         self._username: str | None = None
 
     def detect(self, url: str) -> bool:
@@ -30,58 +32,65 @@ class InstagramAdapter(BaseAdapter):
         return instaloader.Post.from_shortcode(self._loader.context, self._shortcode(url))
 
     def _gallery_resolve(self, url: str) -> ResolvedMedia:
-        extractor = gallery_dl.extractor.find(url)
-        for _item_url, kv in extractor.items():
-            author = kv.get("author") or kv.get("user") or kv.get("uploader")
-            username = author.get("nick") if isinstance(author, dict) else author
-            return ResolvedMedia(
-                platform=self.platform,
-                source_url=url,
-                username=username,
-                caption=kv.get("content") or kv.get("description"),
-                posted_at=str(kv.get("date")) if kv.get("date") else None,
-                hashtags=[],
-            )
-        raise ValueError("no media found")
+        kv = gdl_first_item(url)
+        author = kv.get("author") or kv.get("user") or kv.get("uploader")
+        username = author.get("nick") if isinstance(author, dict) else author
+        return ResolvedMedia(
+            platform=self.platform,
+            source_url=url,
+            username=username,
+            caption=kv.get("content") or kv.get("description"),
+            posted_at=str(kv.get("date")) if kv.get("date") else None,
+            hashtags=[],
+        )
+
+    @staticmethod
+    def _is_rate_limited(error: Exception) -> bool:
+        text = str(error).lower()
+        return "401 unauthorized" in text or "please wait a few minutes" in text
 
     def resolve(self, url: str) -> ResolvedMedia:
         try:
-            p = self._post(url)
-            return ResolvedMedia(
-                platform=self.platform,
-                source_url=url,
-                username=p.owner_username,
-                caption=p.caption,
-                posted_at=p.date_utc.isoformat() if p.date_utc else None,
-                hashtags=list(p.caption_hashtags) if p.caption_hashtags else [],
-            )
-        except Exception as instaloader_error:
+            return self._gallery_resolve(url)
+        except Exception as gallery_error:
             try:
-                return self._gallery_resolve(url)
-            except Exception as gallery_error:
-                raise RuntimeError(
-                    "Instagram blocked public extraction. Configure COOKIES_FILE or retry later. "
-                    f"Instaloader: {instaloader_error}; gallery-dl: {gallery_error}"
-                ) from gallery_error
+                p = self._post(url)
+                return ResolvedMedia(
+                    platform=self.platform,
+                    source_url=url,
+                    username=p.owner_username,
+                    caption=p.caption,
+                    posted_at=p.date_utc.isoformat() if p.date_utc else None,
+                    hashtags=list(p.caption_hashtags) if p.caption_hashtags else [],
+                )
+            except Exception as instaloader_error:
+                raise self._error(instaloader_error, gallery_error) from gallery_error
 
     def download(self, url: str, dest_dir: str) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)
         try:
-            post = self._post(url)
-            self._loader.download_post(post, target=dest_dir)
-        except Exception as instaloader_error:
+            return gdl_download(url, dest_dir)
+        except Exception as gallery_error:
             try:
-                gallery_dl.job.DownloadJob(url, {"directory": dest_dir, **gdl_options()}).run()
-            except Exception as gallery_error:
-                raise RuntimeError(
-                    "Instagram download blocked. Configure COOKIES_FILE or retry later. "
-                    f"Instaloader: {instaloader_error}; gallery-dl: {gallery_error}"
-                ) from gallery_error
-        return [
-            os.path.join(dest_dir, f)
-            for f in os.listdir(dest_dir)
-            if os.path.isfile(os.path.join(dest_dir, f))
-        ]
+                post = self._post(url)
+                self._loader.download_post(post, target=dest_dir)
+                return [
+                    os.path.join(dest_dir, f)
+                    for f in os.listdir(dest_dir)
+                    if os.path.isfile(os.path.join(dest_dir, f))
+                ]
+            except Exception as instaloader_error:
+                raise self._error(instaloader_error, gallery_error) from gallery_error
+
+    def _error(self, instaloader_error: Exception, gallery_error: Exception) -> RuntimeError:
+        if self._is_rate_limited(instaloader_error):
+            prefix = "instagram_rate_limited"
+        else:
+            prefix = "instagram_cookies_required"
+        return RuntimeError(
+            f"{prefix}: Configure COOKIES_FILE with valid Netscape cookies or retry later. "
+            f"gallery-dl: {gallery_error}; instaloader: {instaloader_error}"
+        )
 
     def login(self, username: str, password: str) -> None:
         self._loader.login(username, password)
