@@ -17,6 +17,7 @@ from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
 from .db import init_db
 from .routes import adapters, health, importer, jobs, media
+from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue
 from .worker import Worker
 
@@ -24,7 +25,14 @@ from .worker import Worker
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    registry.register(InstagramAdapter())
+    instagram = InstagramAdapter()
+    settings = get_settings()
+    if settings.instagram_session_file:
+        import os
+
+        if os.path.isfile(settings.instagram_session_file):
+            instagram.load_session(settings.instagram_session_file, settings.instagram_username)
+    registry.register(instagram)
     registry.register(XAdapter())
     registry.register(ThreadsAdapter())
     registry.register(YouTubeAdapter())
@@ -32,6 +40,8 @@ async def lifespan(app: FastAPI):
     registry.register(PinterestAdapter())
     registry.register(FacebookAdapter())
     registry.register(TikTokAdapter())
+    check_adapters_health()
+    start_scheduler()
     worker = Worker(get_queue(), n_workers=2)
     task = __import__("asyncio").create_task(worker.run())
     try:

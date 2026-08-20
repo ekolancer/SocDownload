@@ -20,6 +20,17 @@ from .downloader import (
 _queue: asyncio.Queue[int] | None = None
 
 
+def _parse_posted_at(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    for parser in (datetime.fromisoformat, lambda text: datetime.strptime(text, "%Y%m%d")):
+        try:
+            return parser(value)
+        except ValueError:
+            continue
+    return None
+
+
 def get_queue() -> asyncio.Queue[int]:
     global _queue
     if _queue is None:
@@ -126,7 +137,7 @@ async def process_job(job_id: int) -> None:
                 source_url=job.url,
                 username=res.username,
                 caption=res.caption,
-                posted_at=datetime.fromisoformat(res.posted_at) if res.posted_at else None,
+                posted_at=_parse_posted_at(res.posted_at),
                 hashtags=",".join(res.hashtags) if res.hashtags else None,
                 sha256=first_hash,
             )

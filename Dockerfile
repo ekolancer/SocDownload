@@ -11,7 +11,7 @@ COPY backend/ ./backend/
 COPY backend/app ./backend/app
 
 RUN pip install --no-cache-dir \
-    fastapi "uvicorn[standard]" sqlalchemy cryptography httpx apscheduler pydantic-settings \
+    fastapi "uvicorn[standard]" sqlalchemy cryptography httpx apscheduler pydantic-settings python-multipart \
     yt-dlp gallery-dl instaloader
 
 EXPOSE 8000

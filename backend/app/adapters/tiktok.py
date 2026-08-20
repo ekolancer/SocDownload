@@ -6,6 +6,7 @@ import re
 import yt_dlp
 
 from .base import BaseAdapter, ResolvedMedia
+from ..engines import ydl_opts
 
 
 class TikTokAdapter(BaseAdapter):
@@ -16,7 +17,7 @@ class TikTokAdapter(BaseAdapter):
         return bool(re.search(r"(?i)(tiktok\.com)", url))
 
     def resolve(self, url: str) -> ResolvedMedia:
-        opts = {"quiet": True, "skip_download": True}
+        opts = ydl_opts(skip_download=True)
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
         return ResolvedMedia(
@@ -30,12 +31,10 @@ class TikTokAdapter(BaseAdapter):
 
     def download(self, url: str, dest_dir: str) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)
-        opts = {
-            "quiet": True,
-            "outtmpl": os.path.join(dest_dir, "%(id)s.%(ext)s"),
-            "noplaylist": True,
-            "ignoreerrors": True,
-        }
+        opts = ydl_opts(
+            outtmpl=os.path.join(dest_dir, "%(id)s.%(ext)s"),
+            noplaylist=True,
+        )
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
         return [

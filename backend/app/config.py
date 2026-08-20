@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     vault_key: str = "change-me-generate-via-keygen"
     database_url: str = "sqlite:///./data/mediavault.db"
     media_root: str = "./media"
+    cookies_file: str = ""
+    instagram_session_file: str = ""
+    instagram_username: str = ""
 
     class Config:
         env_file = ROOT / ".env"

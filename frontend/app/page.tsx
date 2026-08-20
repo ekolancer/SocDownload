@@ -21,7 +21,7 @@ interface JobRow {
   created_at: string;
 }
 
-const API = 'http://localhost:8000/api';
+const API = '/api';
 
 export default function Home() {
   const [status, setStatus] = useState('loading');
@@ -29,6 +29,7 @@ export default function Home() {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [media, setMedia] = useState<MediaRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -52,14 +53,20 @@ export default function Home() {
   const submit = async () => {
     if (!url.trim()) return;
     setBusy(true);
+    setError('');
     try {
-      await fetch(`${API}/jobs`, {
+      const response = await fetch(`${API}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
+      if (!response.ok) {
+        throw new Error(`Backend returned HTTP ${response.status}`);
+      }
       setUrl('');
       refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to reach backend');
     } finally {
       setBusy(false);
     }
@@ -98,6 +105,7 @@ export default function Home() {
           {busy ? 'Enqueueing…' : 'Download'}
         </button>
       </div>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <h2>History</h2>
       {jobs.length === 0 ? (

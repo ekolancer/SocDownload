@@ -7,7 +7,11 @@ services:
       - VAULT_KEY=${VAULT_KEY:-change-me-generate-via-keygen}
       - DATABASE_URL=sqlite:////app/data/mediavault.db
       - MEDIA_ROOT=/app/media
+      - COOKIES_FILE=/app/config/cookies.txt
+      - INSTAGRAM_SESSION_FILE=/app/config/instagram.session
+      - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME:-}
     volumes:
       - ./data:/app/data
       - ./media:/app/media
       - ./backend:/app/backend
+      - ./config:/app/config:ro
