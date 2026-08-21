@@ -5,15 +5,22 @@ from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
 
-from .config import get_settings
+from .config import ROOT, get_settings
 
 _gdl_lock = RLock()
 
 
 def _cookies() -> str | None:
     cf = get_settings().cookies_file
-    if cf and os.path.isfile(cf):
+    if not cf:
+        return None
+    if os.path.isabs(cf) and os.path.isfile(cf):
         return cf
+    candidate = str((ROOT / cf).resolve())
+    if os.path.isfile(candidate):
+        return candidate
+    if os.path.isfile(cf):
+        return os.path.abspath(cf)
     return None
 
 

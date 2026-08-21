@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconDownload,
   IconSparkles,
   IconPaste,
   IconAlertCircle,
-  IconCheckCircle,
   IconInstagram,
   IconThreads,
   IconX,
@@ -156,18 +156,18 @@ export function DownloadStudio({
   useEffect(() => {
     if (submitting || activeJobStatus === 'running' || activeJobStatus === 'queued') {
       setProgressPercent(15);
-      setProgressStep('Enqueuing & validating link...');
+      setProgressStep('Validating and enqueuing link...');
 
       let current = 15;
       progressTimerRef.current = setInterval(() => {
         current += Math.floor(Math.random() * 8) + 4;
         if (current >= 92) {
           current = 92;
-          setProgressStep('Extracting media & organizing vault...');
+          setProgressStep('Finalizing streams & archiving to vault...');
         } else if (current >= 65) {
-          setProgressStep('Downloading high-resolution streams...');
+          setProgressStep('Downloading high-resolution media streams...');
         } else if (current >= 35) {
-          setProgressStep('Resolving platform metadata & author...');
+          setProgressStep('Resolving platform metadata & author credentials...');
         }
         setProgressPercent(current);
       }, 400);
@@ -219,152 +219,186 @@ export function DownloadStudio({
   const isProgressActive = submitting || (progressPercent > 0 && progressPercent <= 100);
 
   return (
-    <section className="relative w-full">
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+      className="relative w-full"
+    >
       {/* Outer Double-Bezel Hardware Enclosure (Neumorphic Card) */}
-      <div className="rounded-[2.2rem] bg-[#EEF2F7] shadow-[12px_12px_28px_#cbd5e1,-12px_-12px_28px_#ffffff] p-3 sm:p-5 border border-white/80">
+      <div className="rounded-[2.4rem] bg-[#EEF2F7] shadow-[14px_14px_32px_#cbd5e1,-14px_-14px_32px_#ffffff] p-4 sm:p-6 border border-white/80 transition-all duration-300">
         
         {/* Inner Concentric Core */}
-        <div className="rounded-[calc(2.2rem-0.75rem)] bg-[#F4F7FB] border border-white/90 p-5 sm:p-8 shadow-[inset_2px_2px_5px_#e2e8f0,inset_-2px_-2px_5px_#ffffff] flex flex-col gap-6">
+        <div className="rounded-[calc(2.4rem-0.75rem)] bg-[#F4F7FB] border border-white/90 p-6 sm:p-10 shadow-[inset_2px_2px_6px_#e2e8f0,inset_-2px_-2px_6px_#ffffff] flex flex-col gap-8">
           
-          {/* Header Eyebrow & Title */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex flex-col gap-1">
+          {/* Header Eyebrow & Title with generous line-heights */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-[2px_2px_5px_#d1d9e6,-2px_-2px_5px_#ffffff]">
+                <span className="px-3.5 py-1 rounded-full text-[10px] uppercase tracking-[0.2em] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-[2px_2px_5px_#d1d9e6,-2px_-2px_5px_#ffffff]">
                   ⚡ Studio Ingestion Engine
                 </span>
-                <span className="hidden sm:inline-flex text-[11px] text-slate-500 font-mono">
-                  Press <kbd className="px-1.5 py-0.5 rounded bg-[#EEF2F7] text-slate-700 shadow-[2px_2px_4px_#cbd5e1,-2px_-2px_4px_#ffffff] text-[10px]"> / </kbd> to focus
+                <span className="hidden sm:inline-flex text-xs text-slate-400 font-mono">
+                  Press <kbd className="mx-1 px-2 py-0.5 rounded-lg bg-[#EEF2F7] text-slate-700 shadow-[2px_2px_4px_#cbd5e1,-2px_-2px_4px_#ffffff] text-[10px] font-bold"> / </kbd> to focus
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight">
                 Archive High-Res Social Media
               </h1>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
+                Save photos, full reels, audio tracks, and carousels locally with encrypted hash validation.
+              </p>
             </div>
 
             {/* Live Detected Platform Pill */}
-            {detected !== 'unknown' && (
-              <div
-                className="self-start sm:self-auto flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold border transition-all duration-300 shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] animate-spring-pop"
-                style={{
-                  backgroundColor: currentConfig.bg,
-                  color: currentConfig.color,
-                  borderColor: currentConfig.border,
-                }}
-              >
-                {currentConfig.icon}
-                <span>{currentConfig.name} Detected</span>
-              </div>
-            )}
+            <AnimatePresence>
+              {detected !== 'unknown' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold border shadow-[4px_4px_10px_#cbd5e1,-4px_-4px_10px_#ffffff]"
+                  style={{
+                    backgroundColor: currentConfig.bg,
+                    color: currentConfig.color,
+                    borderColor: currentConfig.border,
+                  }}
+                >
+                  {currentConfig.icon}
+                  <span>{currentConfig.name} Detected</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Form Input Box */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="relative flex items-center w-full">
               
               {/* Sunken Neumorphic Input Well */}
-              <div className="w-full flex items-center rounded-2xl bg-[#E5EBF2] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#ffffff] p-1.5 sm:p-2 border border-white/40 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-transparent transition-all duration-200">
+              <div className="w-full flex items-center rounded-2xl bg-[#E5EBF2] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#ffffff] p-2 sm:p-2.5 border border-white/40 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-transparent transition-all duration-300">
                 
                 <input
                   ref={inputRef}
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="Paste Instagram, TikTok, X, YouTube, Reddit, or Pinterest link..."
+                  placeholder="masukan url yang ingin didownload disini..."
                   disabled={submitting}
-                  className="w-full bg-transparent px-3 sm:px-4 py-2.5 text-sm sm:text-base text-slate-800 placeholder-slate-400 font-medium focus:outline-none disabled:opacity-50"
+                  className="w-full bg-transparent px-3 sm:px-5 py-3 text-sm sm:text-base text-slate-800 placeholder-slate-400 font-medium focus:outline-none disabled:opacity-50"
                 />
 
                 {/* Inside Input Action Buttons */}
-                <div className="flex items-center gap-2 pr-1 sm:pr-2 shrink-0">
+                <div className="flex items-center gap-2.5 pr-1 sm:pr-2 shrink-0">
                   {/* Paste Button */}
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.95 }}
                     type="button"
                     onClick={handlePaste}
-                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
                     title="Paste from clipboard"
                   >
-                    <IconPaste className="w-3.5 h-3.5 text-slate-500" />
+                    <IconPaste className="w-4 h-4 text-slate-500" />
                     <span className="hidden sm:inline">Paste</span>
-                  </button>
+                  </motion.button>
 
-                  {/* Primary Download CTA Button (Button-in-Button Architecture) */}
-                  <button
+                  {/* Primary Download CTA Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.96 }}
                     type="submit"
                     disabled={!url.trim() || submitting}
-                    className="group relative flex items-center gap-2.5 pl-4 pr-2 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 shadow-[4px_4px_12px_rgba(79,70,229,0.35),-2px_-2px_6px_rgba(255,255,255,0.8)] hover:shadow-[5px_5px_18px_rgba(79,70,229,0.5)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer overflow-hidden"
+                    className="group relative flex items-center gap-3 pl-5 pr-2.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 shadow-[4px_4px_14px_rgba(79,70,229,0.35),-2px_-2px_8px_rgba(255,255,255,0.8)] hover:shadow-[6px_6px_20px_rgba(79,70,229,0.45)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer overflow-hidden"
                   >
                     <span>{submitting ? 'Processing...' : 'Download'}</span>
                     
                     {/* Nested Circular Trailing Icon */}
-                    <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200">
+                    <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200">
                       {submitting ? (
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <IconDownload className="w-3.5 h-3.5 text-white" />
+                        <IconDownload className="w-4 h-4 text-white" />
                       )}
                     </div>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </div>
 
             {/* REAL-TIME PROGRESS BAR UNDER INPUT */}
-            {isProgressActive && (
-              <div className="flex flex-col gap-2 p-3.5 rounded-2xl bg-[#EEF2F7] shadow-[4px_4px_10px_#cbd5e1,-4px_-4px_10px_#ffffff] border border-white/80 animate-spring-pop">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <div className="flex items-center gap-2 font-bold text-slate-700">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
-                    <span>{progressStep || 'Processing download job...'}</span>
+            <AnimatePresence>
+              {isProgressActive && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  transition={{ type: 'spring', stiffness: 140, damping: 18 }}
+                  className="flex flex-col gap-2.5 p-4 rounded-2xl bg-[#EEF2F7] shadow-[5px_5px_12px_#cbd5e1,-5px_-5px_12px_#ffffff] border border-white/80"
+                >
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2 font-bold text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping" />
+                      <span>{progressStep || 'Processing download job...'}</span>
+                    </div>
+                    <span className="font-extrabold text-indigo-600 font-mono text-sm">
+                      {progressPercent}%
+                    </span>
                   </div>
-                  <span className="font-extrabold text-indigo-600 font-mono">
-                    {progressPercent}%
-                  </span>
-                </div>
 
-                {/* Sunken Progress Track */}
-                <div className="w-full h-3 rounded-full bg-[#E2E8F0] shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] overflow-hidden p-0.5">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-300 ease-out animate-progress-shimmer"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            )}
+                  {/* Sunken Progress Track */}
+                  <div className="w-full h-3.5 rounded-full bg-[#E2E8F0] shadow-[inset_2px_2px_5px_#cbd5e1,inset_-2px_-2px_5px_#ffffff] overflow-hidden p-0.5">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 shadow-[0_0_12px_rgba(99,102,241,0.5)] animate-progress-shimmer"
+                      style={{ width: `${progressPercent}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Error Banner */}
-            {submitError && (
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] animate-spring-pop">
-                <div className="flex items-center gap-2">
-                  <IconAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{submitError}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClearError}
-                  className="px-2 py-1 rounded-lg bg-rose-100/80 text-rose-800 text-[11px] font-bold hover:bg-rose-200 transition-colors"
+            <AnimatePresence>
+              {submitError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff]"
                 >
-                  Dismiss
-                </button>
-              </div>
-            )}
+                  <div className="flex items-center gap-2.5">
+                    <IconAlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <span className="leading-relaxed">{submitError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onClearError}
+                    className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold hover:bg-rose-200 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </form>
 
           {/* Supported Platform Badges */}
-          <div className="flex items-center justify-center sm:justify-start flex-wrap gap-2 pt-2 border-t border-slate-200/60">
-            <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider font-mono mr-1">
-              Platforms:
+          <div className="flex items-center justify-center sm:justify-start flex-wrap gap-2.5 pt-3 border-t border-slate-200/70">
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider font-mono mr-1">
+              Supported Platforms:
             </span>
             {(['instagram', 'tiktok', 'x', 'youtube', 'reddit', 'pinterest', 'threads'] as PlatformType[]).map(
               (p) => {
                 const cfg = PLATFORM_CONFIG[p];
                 const isSelected = detected === p;
                 return (
-                  <div
+                  <motion.div
                     key={p}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                    whileHover={{ scale: 1.05 }}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                       isSelected
-                        ? 'shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] scale-105'
+                        ? 'shadow-[4px_4px_10px_#cbd5e1,-4px_-4px_10px_#ffffff] scale-105'
                         : 'bg-[#EEF2F7] text-slate-600 shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-slate-900'
                     }`}
                     style={
@@ -379,7 +413,7 @@ export function DownloadStudio({
                   >
                     {cfg.icon}
                     <span>{cfg.name}</span>
-                  </div>
+                  </motion.div>
                 );
               }
             )}
@@ -387,6 +421,6 @@ export function DownloadStudio({
 
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

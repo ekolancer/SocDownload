@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   IconLayers,
   IconInstagram,
@@ -72,29 +73,31 @@ export function MediaGallery({
   }, [media]);
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-8 w-full">
       {/* Search & Platform Filter Controls */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5">
         
         {/* Platform Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#E5EBF2] shadow-[inset_2px_2px_5px_#cbd5e1,inset_-2px_-2px_5px_#ffffff] overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] overflow-x-auto no-scrollbar">
           {PLATFORM_FILTERS.map((f) => {
             const count = counts[f.id] || 0;
             const isSelected = selectedPlatform === f.id;
             return (
-              <button
+              <motion.button
                 key={f.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => onSelectPlatform(f.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#EEF2F7] text-indigo-600 shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff]'
+                    ? 'bg-[#EEF2F7] text-indigo-600 shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff]'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <span>{f.label}</span>
                 {count > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-mono ${
                       isSelected
                         ? 'bg-indigo-100 text-indigo-700 font-extrabold'
                         : 'bg-[#EEF2F7] text-slate-500'
@@ -103,15 +106,15 @@ export function MediaGallery({
                     {count}
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
         {/* Sunken Search Input */}
-        <div className="relative min-w-[240px] sm:min-w-[300px]">
-          <div className="w-full flex items-center rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] px-3.5 py-2 border border-white/40 focus-within:ring-2 focus-within:ring-indigo-400">
-            <svg className="w-4 h-4 text-slate-400 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="relative min-w-[260px] sm:min-w-[320px]">
+          <div className="w-full flex items-center rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_7px_#cbd5e1,inset_-3px_-3px_7px_#ffffff] px-4 py-2.5 border border-white/40 focus-within:ring-2 focus-within:ring-indigo-400">
+            <svg className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -124,7 +127,7 @@ export function MediaGallery({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-xs text-slate-400 hover:text-slate-700 px-1"
+                className="text-xs text-slate-400 hover:text-slate-700 px-1.5"
               >
                 ✕
               </button>
@@ -135,37 +138,42 @@ export function MediaGallery({
 
       {/* Error Feedback */}
       {error && (
-        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff]">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] leading-relaxed">
           {error}
         </div>
       )}
 
-      {/* Media Grid Cards */}
+      {/* Media Grid Cards with Scroll Animation */}
       {filteredMedia.length === 0 ? (
-        <div className="rounded-[2rem] bg-[#EEF2F7] shadow-[8px_8px_20px_#cbd5e1,-8px_-8px_20px_#ffffff] border border-white/80 p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] flex items-center justify-center mb-3 text-slate-400">
-            <IconLayers className="w-8 h-8 text-slate-400" />
+        <div className="rounded-[2.4rem] bg-[#EEF2F7] shadow-[10px_10px_24px_#cbd5e1,-10px_-10px_24px_#ffffff] border border-white/80 p-16 flex flex-col items-center justify-center text-center">
+          <div className="w-18 h-18 rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] flex items-center justify-center mb-4 text-slate-400">
+            <IconLayers className="w-9 h-9 text-slate-400" />
           </div>
-          <h3 className="text-base font-extrabold text-slate-700">No media found in vault</h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm">
+          <h3 className="text-lg font-extrabold text-slate-700 leading-snug">No media found in vault</h3>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-md leading-relaxed">
             {searchQuery || selectedPlatform !== 'all'
               ? 'No media matches your filter criteria. Try clearing search or selecting another platform.'
               : 'Download your first social media post from the Studio tab above!'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredMedia.map((item) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-7">
+          {filteredMedia.map((item, idx) => {
             const firstFile = item.files?.[0];
             const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
             const fileCount = item.files?.length || 0;
             const previewUrl = firstFile ? `/api/media/files/${firstFile.id}` : '';
 
             return (
-              <div
+              <motion.div
                 key={item.id}
+                initial={{ opacity: 0, y: 25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.45, delay: (idx % 6) * 0.05, ease: [0.32, 0.72, 0, 1] }}
+                whileHover={{ y: -6 }}
                 onClick={() => onOpenLightbox(item)}
-                className="group relative rounded-[1.8rem] bg-[#EEF2F7] shadow-[6px_6px_16px_#cbd5e1,-6px_-6px_16px_#ffffff] border border-white/90 p-3 flex flex-col gap-3 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden"
+                className="group relative rounded-[2rem] bg-[#EEF2F7] shadow-[7px_7px_18px_#cbd5e1,-7px_-7px_18px_#ffffff] border border-white/90 p-3.5 flex flex-col gap-3.5 transition-shadow duration-300 cursor-pointer overflow-hidden"
               >
                 {/* Media Preview Container */}
                 <div className="relative aspect-square w-full rounded-2xl bg-[#E5EBF2] shadow-[inset_2px_2px_5px_#cbd5e1,inset_-2px_-2px_5px_#ffffff] overflow-hidden">
@@ -193,8 +201,8 @@ export function MediaGallery({
                   )}
 
                   {/* Top Badges (Platform + Carousel Count + Video Badge) */}
-                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-                    <span className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wide bg-white/90 backdrop-blur-md text-slate-800 shadow-sm border border-white/80 flex items-center gap-1">
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                    <span className="px-3 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-white/90 backdrop-blur-md text-slate-800 shadow-sm border border-white/80 flex items-center gap-1">
                       {item.platform}
                     </span>
 
@@ -205,7 +213,7 @@ export function MediaGallery({
                         </span>
                       )}
                       {isVideo && (
-                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-indigo-600/90 backdrop-blur-md text-white shadow-sm">
+                        <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-indigo-600/90 backdrop-blur-md text-white shadow-sm">
                           VIDEO
                         </span>
                       )}
@@ -213,13 +221,13 @@ export function MediaGallery({
                   </div>
                 </div>
 
-                {/* Bottom Card Metadata */}
-                <div className="flex flex-col gap-1 px-1">
+                {/* Bottom Card Metadata with looser line height */}
+                <div className="flex flex-col gap-1.5 px-1.5 pb-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-slate-800 truncate">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-800 truncate">
                       {item.username ? `@${item.username}` : 'Anonymous'}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                    <span className="text-[11px] font-mono text-slate-400 shrink-0">
                       {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
                     </span>
                   </div>
@@ -230,7 +238,7 @@ export function MediaGallery({
                     </p>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

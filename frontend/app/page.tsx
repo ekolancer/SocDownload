@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { DownloadStudio } from './components/DownloadStudio';
 import { JobPipeline, JobRow } from './components/JobPipeline';
@@ -27,6 +28,12 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Parallax scrolling hooks
+  const { scrollY } = useScroll();
+  const orbY1 = useTransform(scrollY, [0, 800], [0, 150]);
+  const orbY2 = useTransform(scrollY, [0, 800], [0, -100]);
+  const contentY = useTransform(scrollY, [0, 800], [0, 20]);
 
   // Keep track of previous jobs to trigger pop-up animations on completion
   const prevJobStatusMap = useRef<Record<number, string>>({});
@@ -71,15 +78,10 @@ export default function Home() {
       }
 
       // 3. Fetch Media count
-      const mediaRes = await fetch(`${API}/media?limit=1`).catch(() => null);
-      if (mediaRes && mediaRes.ok) {
-        const mediaData: MediaItem[] = await mediaRes.json();
-        // Also fetch total media count
-        const allMediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
-        if (allMediaRes && allMediaRes.ok) {
-          const allMedia = await allMediaRes.json();
-          setMediaCount(allMedia.length);
-        }
+      const allMediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
+      if (allMediaRes && allMediaRes.ok) {
+        const allMedia: MediaItem[] = await allMediaRes.json();
+        setMediaCount(allMedia.length);
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -144,8 +146,19 @@ export default function Home() {
   const activeJobStatus = activeJobs.length > 0 ? (activeJobs[0].status as 'running' | 'queued') : null;
 
   return (
-    <div className="min-h-screen bg-[#EEF2F7] text-slate-800 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-800">
-      {/* Top Navbar Header */}
+    <div className="relative min-h-screen bg-[#EEF2F7] text-slate-800 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-800 overflow-x-hidden">
+      
+      {/* Ambient Parallax Background Floating Elements */}
+      <motion.div
+        style={{ y: orbY1 }}
+        className="pointer-events-none fixed top-24 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-indigo-200/40 to-purple-200/20 blur-3xl -z-10"
+      />
+      <motion.div
+        style={{ y: orbY2 }}
+        className="pointer-events-none fixed top-1/2 -right-32 w-[28rem] h-[28rem] rounded-full bg-gradient-to-tl from-teal-200/30 via-indigo-200/20 to-transparent blur-3xl -z-10"
+      />
+
+      {/* Full-width Sticky Top Navbar */}
       <Navbar
         backendStatus={backendStatus}
         mediaCount={mediaCount}
@@ -156,8 +169,11 @@ export default function Home() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Main Workspace Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
+      {/* Main Workspace Container with Parallax Ease */}
+      <motion.main
+        style={{ y: contentY }}
+        className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex flex-col gap-12 sm:gap-16"
+      >
         {/* Hero Ingestion Studio with Real-time Progress Bar */}
         <DownloadStudio
           onDownload={handleDownload}
@@ -169,11 +185,11 @@ export default function Home() {
 
         {/* Activity & Job Pipeline Queue */}
         <JobPipeline jobs={jobs} onClearJobs={handleClearJobs} />
-      </main>
+      </motion.main>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-slate-200/80 py-6 mt-12 bg-[#EEF2F7] text-center text-xs text-slate-500 font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      {/* Footer with airy spacing */}
+      <footer className="w-full border-t border-slate-200/80 py-8 mt-16 bg-[#EEF2F7]/80 backdrop-blur-md text-center text-xs text-slate-500 font-mono">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span>MediaVault • Personal Self-Hosted Archiver</span>
           <span className="text-slate-400">
             Instagram • TikTok • X • YouTube • Reddit • Pinterest • Threads
