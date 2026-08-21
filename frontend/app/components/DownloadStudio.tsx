@@ -94,11 +94,11 @@ export function DownloadStudio({
       <div className="flex flex-col items-center text-center gap-3 max-w-4xl px-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-[8px] text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
           <IconSparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Social Media Archiver</span>
+          <span>Social Media Downloader</span>
         </div>
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-extrabold text-slate-900 tracking-tight leading-tight sm:whitespace-nowrap">
-          Archive Media from Any Platform
+          Download Media from Any Platform
         </h1>
       </div>
 
@@ -120,7 +120,7 @@ export function DownloadStudio({
                 setUrl(e.target.value);
                 if (errorMsg) setErrorMsg('');
               }}
-              placeholder="Paste Instagram, TikTok, Threads, YouTube, X, Reddit link..."
+              placeholder="Input url here..."
               className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
             />
 

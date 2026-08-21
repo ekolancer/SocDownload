@@ -16,12 +16,14 @@ import { AlbumModal } from '../components/AlbumModal';
 import { AdapterHealthDrawer } from '../components/AdapterHealthDrawer';
 import { ArchiveImportModal } from '../components/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '../components/JobNotificationToast';
-import { JobRow } from '../components/JobPipeline';
+import { JobRow, JobStats } from '../components/JobPipeline';
+import Link from 'next/link';
 import {
   IconFolder,
   IconFolderPlus,
   IconUser,
   IconLayers,
+  IconDownload,
 } from '../components/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
@@ -33,6 +35,7 @@ export default function VaultPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [mediaError, setMediaError] = useState<string>('');
 
   // Navigation, Multi-Select Platform Filter & Slide-Over Sidebar State
@@ -89,7 +92,14 @@ export default function VaultPage() {
         setAlbums(albumsData);
       }
 
-      // 4. Fetch Jobs & trigger completion toast
+      // 4. Fetch Job Stats
+      const statsRes = await fetch(`${API}/jobs/stats`).catch(() => null);
+      if (statsRes && statsRes.ok) {
+        const statsData: JobStats = await statsRes.json();
+        setJobStats(statsData);
+      }
+
+      // 5. Fetch Jobs & trigger completion toast
       const jobsRes = await fetch(`${API}/jobs?limit=20`).catch(() => null);
       if (jobsRes && jobsRes.ok) {
         const jobsData: JobRow[] = await jobsRes.json();
@@ -111,7 +121,7 @@ export default function VaultPage() {
         setJobs(jobsData);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('Fetch error in Vault:', err);
     } finally {
       isFetchingRef.current = false;
       if (showIndicator) {
@@ -416,7 +426,8 @@ export default function VaultPage() {
       <Navbar
         backendStatus={backendStatus}
         mediaCount={media.length}
-        activeJobsCount={activeJobsCount}
+        activeJobsCount={jobStats ? jobStats.active_total : activeJobsCount}
+        queueStats={jobStats}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
         onRefresh={() => refreshData(true)}
@@ -426,6 +437,41 @@ export default function VaultPage() {
       {/* Main Spacious Workspace Layout */}
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
         
+        {/* Live Queue Active Notice on Vault Page */}
+        {jobStats && jobStats.active_total > 0 && (
+          <div className="w-full rounded-[20px] bg-white/95 backdrop-blur-xl border border-indigo-200/90 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center w-8 h-8 rounded-[10px] bg-indigo-600 text-white shrink-0 shadow-xs">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-[10px] bg-indigo-400 opacity-60"></span>
+                <IconDownload className="w-4 h-4 text-white relative z-10" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black text-slate-900">
+                    Background Ingestion Running:
+                  </span>
+                  <span className="text-xs font-mono font-bold text-indigo-600">
+                    {jobStats.running} active • {jobStats.queued} remaining ({jobStats.progress_percent}%)
+                  </span>
+                </div>
+                <div className="h-1.5 w-48 sm:w-64 bg-slate-100 rounded-full overflow-hidden mt-1.5 border border-slate-200">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.max(5, jobStats.progress_percent)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer shrink-0 border border-indigo-200/80"
+            >
+              <span>Open Queue →</span>
+            </Link>
+          </div>
+        )}
+
         {/* If View is Creators List Hub */}
         {currentView.type === 'creators_list' ? (
           <div className="flex flex-col gap-5">

@@ -10,6 +10,7 @@ import {
   IconRefresh,
   IconFolder,
 } from './Icons';
+import { JobStats } from './JobPipeline';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 
@@ -17,6 +18,7 @@ interface NavbarProps {
   backendStatus: BackendStatus;
   mediaCount: number;
   activeJobsCount: number;
+  queueStats?: JobStats | null;
   onOpenImport: () => void;
   onOpenAdapters: () => void;
   onRefresh: () => void;
@@ -27,6 +29,7 @@ export function Navbar({
   backendStatus,
   mediaCount,
   activeJobsCount,
+  queueStats,
   onOpenImport,
   onOpenAdapters,
   onRefresh,
@@ -102,6 +105,7 @@ export function Navbar({
 
         {/* Right: Assist Chips & Actions */}
         <div className="flex items-center gap-2 shrink-0">
+
           {/* Adapter Health Chip */}
           <button
             type="button"

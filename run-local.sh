@@ -53,7 +53,7 @@ done
 
 # 6. Start Backend
 echo "Starting Backend API on http://127.0.0.1:8000..."
-"$PYTHON" -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 > "$LOGS/backend.log" 2>&1 &
+"$PYTHON" -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload > "$LOGS/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 # 7. Start Frontend

@@ -6,6 +6,8 @@ import shutil
 import tempfile
 from datetime import datetime
 
+from sqlalchemy import select
+
 from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
 from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory
@@ -38,6 +40,20 @@ def get_queue() -> asyncio.Queue[int]:
     return _queue
 
 
+def purge_queue() -> int:
+    """Drain all pending job IDs from the in-memory queue."""
+    q = get_queue()
+    count = 0
+    while not q.empty():
+        try:
+            q.get_nowait()
+            q.task_done()
+            count += 1
+        except Exception:
+            break
+    return count
+
+
 def enqueue(url: str) -> int:
     adapter = detect_platform(url)
     platform = adapter.platform if adapter else "unknown"
@@ -58,7 +74,81 @@ def enqueue(url: str) -> int:
     return job_id
 
 
-async def process_job(job_id: int) -> None:
+def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
+    """Bulk enqueue multiple URLs with smart deduplication and batch size limit.
+
+    Skips URLs that have already been queued/processed in Job table or exist in MediaItem table.
+    Caps newly enqueued URLs to `limit`, returning any remainder in `skipped_limit` so users can
+    simply re-import the same file later.
+    """
+    if not urls:
+        return {
+            "enqueued": [],
+            "skipped_dup": [],
+            "skipped_limit": [],
+            "job_ids": [],
+        }
+
+    factory = get_session_factory()
+    with factory() as session:
+        # Check existing URLs in jobs table (any status)
+        existing_job_urls = set(
+            session.scalars(select(Job.url).where(Job.url.in_(urls))).all()
+        )
+        # Check existing URLs in media items table
+        existing_media_urls = set(
+            session.scalars(select(MediaItem.source_url).where(MediaItem.source_url.in_(urls))).all()
+        )
+
+    all_existing = existing_job_urls | existing_media_urls
+
+    new_urls: list[str] = []
+    skipped_dup: list[str] = []
+    for url in urls:
+        if url in all_existing:
+            skipped_dup.append(url)
+        else:
+            new_urls.append(url)
+
+    to_enqueue = new_urls[:limit]
+    skipped_limit = new_urls[limit:]
+
+    if not to_enqueue:
+        return {
+            "enqueued": [],
+            "skipped_dup": skipped_dup,
+            "skipped_limit": skipped_limit,
+            "job_ids": [],
+        }
+
+    jobs_to_create = []
+    for url in to_enqueue:
+        adapter = detect_platform(url)
+        platform = adapter.platform if adapter else "unknown"
+        jobs_to_create.append(Job(platform=platform, url=url, status=JobStatus.QUEUED.value))
+
+    with factory() as session:
+        session.add_all(jobs_to_create)
+        session.commit()
+        job_ids = [j.id for j in jobs_to_create]
+
+    q = get_queue()
+    for job_id in job_ids:
+        try:
+            q.put_nowait(job_id)
+        except Exception:
+            pass
+
+    return {
+        "enqueued": to_enqueue,
+        "skipped_dup": skipped_dup,
+        "skipped_limit": skipped_limit,
+        "job_ids": job_ids,
+    }
+
+
+def _sync_process_job(job_id: int) -> None:
+    """Synchronous core job processing running inside a worker thread."""
     factory = get_session_factory()
     with factory() as session:
         job = session.get(Job, job_id)
@@ -165,3 +255,9 @@ async def process_job(job_id: int) -> None:
             raise
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+async def process_job(job_id: int) -> None:
+    """Offload blocking job processing to thread pool so FastAPI event loop never hangs."""
+    await asyncio.to_thread(_sync_process_job, job_id)
+

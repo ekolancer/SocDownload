@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     cookies_file: str = ""
     instagram_session_file: str = ""
     instagram_username: str = ""
+    job_cooldown_seconds: int = 3
+    import_url_limit: int = 500
 
     class Config:
         env_file = ROOT / ".env"

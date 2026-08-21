@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { DownloadStudio } from './components/DownloadStudio';
-import { JobPipeline, JobRow } from './components/JobPipeline';
+import { JobPipeline, JobRow, JobStats } from './components/JobPipeline';
 import { AdapterHealthDrawer } from './components/AdapterHealthDrawer';
 import { ArchiveImportModal } from './components/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from './components/JobNotificationToast';
@@ -16,6 +16,7 @@ export default function StudioPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [mediaCount, setMediaCount] = useState<number>(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modals state
@@ -34,54 +35,70 @@ export default function StudioPage() {
     if (showIndicator) setIsRefreshing(true);
 
     try {
+      // Parallel fetch with individual timeouts so no single endpoint blocks the others
+      const [healthResult, mediaResult, statsResult, jobsResult] = await Promise.allSettled([
+        fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) }),
+        fetch(`${API}/media?limit=500`, { signal: AbortSignal.timeout(6000) }),
+        fetch(`${API}/jobs/stats`, { signal: AbortSignal.timeout(4000) }),
+        fetch(`${API}/jobs?limit=1000`, { signal: AbortSignal.timeout(6000) }),
+      ]);
+
       // 1. Health check
-      const healthRes = await fetch(`${API}/health`).catch(() => null);
-      if (healthRes && healthRes.ok) {
+      if (healthResult.status === 'fulfilled' && healthResult.value.ok) {
         setBackendStatus('ok');
       } else {
         setBackendStatus('offline');
       }
 
       // 2. Fetch Media Count
-      const mediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
-      if (mediaRes && mediaRes.ok) {
-        const mediaData = await mediaRes.json();
-        setMediaCount(mediaData.length);
+      if (mediaResult.status === 'fulfilled' && mediaResult.value.ok) {
+        const mediaData = await mediaResult.value.json().catch(() => null);
+        if (Array.isArray(mediaData)) {
+          setMediaCount(mediaData.length);
+        }
       }
 
-      // 3. Fetch Jobs
-      const jobsRes = await fetch(`${API}/jobs?limit=20`).catch(() => null);
-      if (jobsRes && jobsRes.ok) {
-        const jobsData: JobRow[] = await jobsRes.json();
-
-        // Check if any job just completed from 'running' or 'queued' to 'done'
-        if (prevJobsRef.current.length > 0) {
-          jobsData.forEach((newJob) => {
-            const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
-            const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
-            
-            if (
-              (wasInProgress || !notifiedJobIdsRef.current.has(newJob.id)) &&
-              newJob.status === 'done' &&
-              !notifiedJobIdsRef.current.has(newJob.id)
-            ) {
-              notifiedJobIdsRef.current.add(newJob.id);
-              setCompletedNotice({
-                id: newJob.id,
-                platform: newJob.platform,
-                url: newJob.url,
-              });
-            }
-          });
-        } else {
-          // Initialize notified set with existing completed jobs so we only notify on new ones
-          jobsData.forEach((j) => {
-            if (j.status === 'done') notifiedJobIdsRef.current.add(j.id);
-          });
+      // 3. Fetch Jobs Stats
+      if (statsResult.status === 'fulfilled' && statsResult.value.ok) {
+        const statsData: JobStats = await statsResult.value.json().catch(() => null);
+        if (statsData) {
+          setJobStats(statsData);
         }
+      }
 
-        prevJobsRef.current = jobsData;
-        setJobs(jobsData);
+      // 4. Fetch Recent Jobs
+      if (jobsResult.status === 'fulfilled' && jobsResult.value.ok) {
+        const jobsData: JobRow[] = await jobsResult.value.json().catch(() => null);
+        if (Array.isArray(jobsData)) {
+          // Check if any job just completed from 'running' or 'queued' to 'done'
+          if (prevJobsRef.current.length > 0) {
+            jobsData.forEach((newJob) => {
+              const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
+              const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
+              
+              if (
+                (wasInProgress || !notifiedJobIdsRef.current.has(newJob.id)) &&
+                newJob.status === 'done' &&
+                !notifiedJobIdsRef.current.has(newJob.id)
+              ) {
+                notifiedJobIdsRef.current.add(newJob.id);
+                setCompletedNotice({
+                  id: newJob.id,
+                  platform: newJob.platform,
+                  url: newJob.url,
+                });
+              }
+            });
+          } else {
+            // Initialize notified set with existing completed jobs so we only notify on new ones
+            jobsData.forEach((j) => {
+              if (j.status === 'done') notifiedJobIdsRef.current.add(j.id);
+            });
+          }
+
+          prevJobsRef.current = jobsData;
+          setJobs(jobsData);
+        }
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -95,7 +112,7 @@ export default function StudioPage() {
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(() => refreshData(false), 2500);
+    const interval = setInterval(() => refreshData(false), 2000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -126,19 +143,43 @@ export default function StudioPage() {
     }
   };
 
+  // Handle Cancel & Stop Active Queue
+  const handleCancelQueue = async () => {
+    try {
+      const res = await fetch(`${API}/jobs/cancel-all`, { method: 'POST' });
+      if (res.ok) {
+        await refreshData(true);
+      }
+    } catch (err) {
+      console.error('Cancel queue error:', err);
+    }
+  };
+
+  // Handle Delete Single Job
+  const handleDeleteJob = async (jobId: number) => {
+    try {
+      const res = await fetch(`${API}/jobs/${jobId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await refreshData(true);
+      }
+    } catch (err) {
+      console.error('Delete job error:', err);
+    }
+  };
+
   // Handle Clear Finished Jobs
   const handleClearJobs = async () => {
     try {
-      const res = await fetch(`${API}/jobs/clear`, { method: 'POST' });
+      const res = await fetch(`${API}/jobs`, { method: 'DELETE' });
       if (res.ok) {
-        refreshData(true);
+        await refreshData(true);
       }
     } catch (err) {
       console.error('Clear jobs error:', err);
     }
   };
 
-  const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
+  const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
     <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
@@ -148,6 +189,7 @@ export default function StudioPage() {
         backendStatus={backendStatus}
         mediaCount={mediaCount}
         activeJobsCount={activeJobsCount}
+        queueStats={jobStats}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
         onRefresh={() => refreshData(true)}
@@ -166,7 +208,10 @@ export default function StudioPage() {
         {/* Live Job Pipeline & Activity Stream */}
         <JobPipeline
           jobs={jobs}
+          stats={jobStats}
+          onCancelQueue={handleCancelQueue}
           onClearJobs={handleClearJobs}
+          onDeleteJob={handleDeleteJob}
         />
       </main>
 

@@ -15,11 +15,20 @@ interface ArchiveImportModalProps {
   onSuccess: () => void;
 }
 
+interface ImportResult {
+  total_found: number;
+  imported_count: number;
+  skipped_dup_count: number;
+  skipped_limit_count: number;
+  limit: number;
+  urls: string[];
+}
+
 export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ imported_count: number; urls: string[] } | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -61,7 +70,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
         throw new Error(errData.detail || `Upload failed with status ${res.status}`);
       }
 
-      const data = await res.json();
+      const data: ImportResult = await res.json();
       setResult(data);
       onSuccess();
     } catch (e) {
@@ -83,10 +92,10 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900">
-                Import Archive Export
+                Import Url Metadata Bulk
               </h3>
               <span className="text-[10px] text-slate-400 font-mono">
-                Official JSON exports from Instagram / X / Platforms
+                Official JSON & HTML exports from Instagram / X / TikTok / Threads
               </span>
             </div>
           </div>
@@ -104,12 +113,12 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200"
+          className="rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200"
         >
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.html,.htm,.txt"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -130,10 +139,10 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
           ) : (
             <div className="flex flex-col items-center">
               <span className="text-sm font-extrabold text-slate-700">
-                Drop your JSON archive here
+                Drop your JSON or HTML archive here
               </span>
               <span className="text-xs text-slate-400 mt-1">
-                Supports `saved_posts.json`, `posts.json`, `likes.json`
+                Supports `saved_posts.html`, `saved_posts.json`, `liked_posts.html`, `.txt`
               </span>
             </div>
           )}
@@ -141,21 +150,50 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
 
         {/* Error Feedback */}
         {error && (
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
             {error}
           </div>
         )}
 
-        {/* Success Feedback */}
+        {/* Smart Success Feedback */}
         {result && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 font-bold">
-              <IconCheckCircle className="w-4 h-4 text-emerald-600" />
-              <span>Imported {result.imported_count} posts into download queue!</span>
-            </div>
-            <span className="text-[10px] text-slate-500 font-mono">
-              Jobs have been queued for processing.
-            </span>
+          <div className="flex flex-col gap-2.5">
+            {result.imported_count > 0 ? (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <IconCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Enqueued {result.imported_count} posts for download!</span>
+                </div>
+                <span className="text-[11px] text-emerald-700 font-mono">
+                  {result.total_found} URLs found in file.
+                </span>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs flex items-center gap-2">
+                <IconAlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>All {result.total_found} URLs in this file have already been processed!</span>
+              </div>
+            )}
+
+            {/* Skipped Duplicates Info */}
+            {result.skipped_dup_count > 0 && (
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600 font-mono">
+                ⏭ <strong>{result.skipped_dup_count}</strong> URLs skipped (already downloaded or in queue).
+              </div>
+            )}
+
+            {/* Batch Limit Remaining Guidance */}
+            {result.skipped_limit_count > 0 && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col gap-1">
+                <div className="font-bold flex items-center gap-1">
+                  <span>⚠ Batch Limit:</span>
+                  <span>{result.skipped_limit_count} URLs saved for next batch</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed font-sans">
+                  Max <strong>{result.limit}</strong> URLs per batch. When this batch finishes downloading, simply <strong>upload this same file again</strong> to continue downloading the rest automatically without duplicates!
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -166,18 +204,28 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
             onClick={onClose}
             className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
-            Cancel
+            {result ? 'Close' : 'Cancel'}
           </button>
 
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed m3-elevation-1 transition-all cursor-pointer"
-          >
-            <IconSparkles className="w-4 h-4" />
-            <span>{uploading ? 'Extracting URLs...' : 'Queue Archive Import'}</span>
-          </button>
+          {result ? (
+            <a
+              href="/"
+              onClick={() => onClose()}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 m3-elevation-1 transition-all cursor-pointer shadow-md shadow-indigo-200"
+            >
+              <span>View Queue in Studio →</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleUpload}
+              disabled={!file || uploading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed m3-elevation-1 transition-all cursor-pointer"
+            >
+              <IconSparkles className="w-4 h-4" />
+              <span>{uploading ? 'Extracting & Queueing...' : 'Process Metadata'}</span>
+            </button>
+          )}
         </div>
 
       </div>

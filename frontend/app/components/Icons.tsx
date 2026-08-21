@@ -344,3 +344,22 @@ export function IconLink({ className = 'w-4 h-4' }: { className?: string }) {
     </svg>
   );
 }
+
+export function IconStop({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg width="18" height="18" className={className} viewBox="0 0 24 24" fill="currentColor">
+      <rect x="5" y="5" width="14" height="14" rx="3" />
+    </svg>
+  );
+}
+
+export function IconClock({ className = 'w-4 h-4', style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg width="18" height="18" className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+
