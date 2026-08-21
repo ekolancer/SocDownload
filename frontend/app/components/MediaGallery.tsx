@@ -367,7 +367,7 @@ export function MediaGallery({
                           type="button"
                           onClick={() => handlePageChange(safeCurrentPage - 1)}
                           disabled={safeCurrentPage <= 1}
-                          className="p-1.5 rounded-[8px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs active:scale-95"
+                          className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
                           title="Previous Page"
                         >
                           <IconChevronLeft className="w-3.5 h-3.5" />
@@ -381,7 +381,7 @@ export function MediaGallery({
                           type="button"
                           onClick={() => handlePageChange(safeCurrentPage + 1)}
                           disabled={safeCurrentPage >= totalPages}
-                          className="p-1.5 rounded-[8px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs active:scale-95"
+                          className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
                           title="Next Page"
                         >
                           <IconChevronRight className="w-3.5 h-3.5" />
@@ -393,7 +393,7 @@ export function MediaGallery({
                 </div>
               </div>
 
-              {/* 5-Column Ultra-Modern Gallery Grid */}
+              {/* 5-Column Ultra-Modern Portrait Gallery Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
                 {group.items.map((item) => {
                   const firstFile = item.files?.[0];
@@ -413,8 +413,8 @@ export function MediaGallery({
                       }`}
                       onClick={() => onOpenLightbox(item)}
                     >
-                      {/* Media Thumbnail Canvas */}
-                      <div className="relative aspect-[4/3] w-full bg-slate-100/90 overflow-hidden flex items-center justify-center border-b border-slate-100">
+                      {/* Media Thumbnail Canvas - Portrait 4:5 */}
+                      <div className="relative aspect-[4/5] w-full bg-slate-950 overflow-hidden flex items-center justify-center border-b border-slate-100">
                         {previewUrl ? (
                           isVideo ? (
                             <video
@@ -437,7 +437,7 @@ export function MediaGallery({
                         )}
 
                         {/* Subtle Ambient Vignette on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/15 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                         {/* Top Left: Multi-Select Checkbox Squircle */}
                         {onToggleSelect && (
@@ -447,7 +447,7 @@ export function MediaGallery({
                               e.stopPropagation();
                               onToggleSelect(item.id);
                             }}
-                            className={`absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-[6px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                            className={`absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                               isSelected
                                 ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
                                 : 'bg-white/90 backdrop-blur-md border-slate-300/90 text-transparent hover:border-indigo-500 hover:bg-white'
@@ -466,7 +466,7 @@ export function MediaGallery({
                               e.stopPropagation();
                               onToggleFavorite(item.id);
                             }}
-                            className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-[6px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                            className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                               item.is_favorite
                                 ? 'bg-amber-500 border-amber-400 text-white shadow-sm'
                                 : 'bg-white/90 backdrop-blur-md border-slate-200/90 text-slate-400 hover:text-amber-500 hover:bg-white'
@@ -482,7 +482,7 @@ export function MediaGallery({
                         )}
 
                         {/* Bottom Left: Platform Squircle Tag */}
-                        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-white/95 backdrop-blur-md border border-slate-200/90 text-slate-800 text-[10px] font-mono font-extrabold shadow-sm">
+                        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-slate-200/90 text-slate-800 text-[10px] font-mono font-extrabold shadow-sm">
                           {getPlatformIcon(item.platform)}
                           <span className="capitalize">{item.platform}</span>
                         </div>
@@ -490,13 +490,13 @@ export function MediaGallery({
                         {/* Bottom Right: Media Type Indicators */}
                         <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1">
                           {isVideo && (
-                            <div className="flex items-center px-1.5 py-0.5 rounded-[6px] bg-white/95 backdrop-blur-md border border-emerald-200 text-emerald-700 text-[10px] font-mono font-extrabold shadow-sm">
+                            <div className="flex items-center px-1.5 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-emerald-200 text-emerald-700 text-[10px] font-mono font-extrabold shadow-sm">
                               <IconVideoCamera className="w-3.5 h-3.5 text-emerald-600" />
                             </div>
                           )}
 
                           {item.files && item.files.length > 1 && (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-white/95 backdrop-blur-md border border-indigo-200 text-indigo-700 text-[10px] font-mono font-extrabold shadow-sm">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-indigo-200 text-indigo-700 text-[10px] font-mono font-extrabold shadow-sm">
                               <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
                               <span>{item.files.length}</span>
                             </div>
@@ -504,8 +504,8 @@ export function MediaGallery({
                         </div>
                       </div>
 
-                      {/* Card Content Footer: Author & Date Only */}
-                      <div className="p-2.5 sm:p-3 flex items-center justify-between gap-2 bg-white">
+                      {/* Card Content Footer: Author & Date */}
+                      <div className="p-3 flex items-center justify-between gap-2 bg-white">
                         <span className="text-xs font-black text-slate-900 truncate">
                           {item.username ? `@${item.username}` : 'Archived Media'}
                         </span>

@@ -143,7 +143,7 @@ export function Navbar({
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-[10px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 active:scale-95 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+            className="w-8 h-8 rounded-[9px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0 active:scale-95 transition-all cursor-pointer disabled:opacity-50 shadow-sm aspect-square"
             title="Sync library"
           >
             <IconRefresh

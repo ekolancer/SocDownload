@@ -102,7 +102,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-colors cursor-pointer"
           >
             <IconClose className="w-4 h-4" />
           </button>
