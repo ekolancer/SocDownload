@@ -13,7 +13,6 @@ import {
   IconYouTube,
   IconReddit,
   IconPinterest,
-  IconFacebook,
 } from './Icons';
 
 interface AdapterInfo {
@@ -58,123 +57,126 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
   if (!isOpen) return null;
 
   const getPlatformIcon = (platform: string) => {
-    const p = platform.toLowerCase();
-    if (p.includes('instagram')) return <IconInstagram className="w-4 h-4 text-rose-400" />;
-    if (p.includes('threads')) return <IconThreads className="w-4 h-4 text-slate-200" />;
-    if (p.includes('x') || p.includes('twitter')) return <IconX className="w-4 h-4 text-sky-400" />;
-    if (p.includes('tiktok')) return <IconTikTok className="w-4 h-4 text-teal-300" />;
-    if (p.includes('youtube')) return <IconYouTube className="w-4 h-4 text-red-400" />;
-    if (p.includes('reddit')) return <IconReddit className="w-4 h-4 text-orange-400" />;
-    if (p.includes('pinterest')) return <IconPinterest className="w-4 h-4 text-rose-500" />;
-    if (p.includes('facebook')) return <IconFacebook className="w-4 h-4 text-blue-400" />;
-    return <IconShieldCheck className="w-4 h-4 text-indigo-400" />;
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        return <IconInstagram className="w-5 h-5 text-pink-600" />;
+      case 'threads':
+        return <IconThreads className="w-5 h-5 text-slate-800" />;
+      case 'x':
+        return <IconX className="w-5 h-5 text-slate-800" />;
+      case 'tiktok':
+        return <IconTikTok className="w-5 h-5 text-teal-600" />;
+      case 'youtube':
+        return <IconYouTube className="w-5 h-5 text-red-600" />;
+      case 'reddit':
+        return <IconReddit className="w-5 h-5 text-orange-600" />;
+      case 'pinterest':
+        return <IconPinterest className="w-5 h-5 text-red-600" />;
+      default:
+        return <IconShieldCheck className="w-5 h-5 text-indigo-600" />;
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div
-        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl glass-panel-elevated border border-white/10 overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#12141F]">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <IconShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Platform Adapters & Extraction Engines
-              </h3>
-              <p className="text-xs text-slate-400">
-                Health verification for all 8 supported social media adapters
-              </p>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/50 backdrop-blur-sm animate-spring-pop">
+      {/* Backdrop Click */}
+      <div className="absolute inset-0" onClick={onClose} />
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchAdapters}
-              disabled={loading}
-              className="p-2 rounded-lg text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-              title="Refresh status"
-            >
-              <IconRefresh className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
-            </button>
+      {/* Drawer Container */}
+      <div className="relative w-full max-w-md h-full bg-[#EEF2F7] shadow-[-14px_0_30px_rgba(0,0,0,0.15)] border-l border-white/80 p-6 flex flex-col justify-between overflow-y-auto">
+        
+        {/* Header */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-[#EEF2F7] shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff]">
+                <IconShieldCheck className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800">
+                  Platform Adapters
+                </h3>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Engine & Ingestion Health Check
+                </span>
+              </div>
+            </div>
+
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] text-slate-500 hover:text-slate-900 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
             >
               <IconClose className="w-4 h-4" />
             </button>
           </div>
-        </div>
 
-        {/* Body */}
-        <div className="p-5 overflow-y-auto max-h-[60vh] flex flex-col gap-3">
+          {/* Error Message */}
           {error && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
               {error}
             </div>
           )}
 
-          {loading && adapters.length === 0 && (
-            <div className="py-12 text-center text-slate-400 text-xs font-mono">
-              Checking adapter health...
-            </div>
-          )}
+          {/* Adapters List */}
+          <div className="flex flex-col gap-3">
+            {loading && adapters.length === 0 ? (
+              <div className="py-8 text-center text-xs font-mono text-slate-400">
+                Checking adapter engines...
+              </div>
+            ) : (
+              adapters.map((ad) => (
+                <div
+                  key={ad.platform}
+                  className="p-4 rounded-2xl bg-[#F4F7FB] border border-white/90 shadow-[3px_3px_8px_#d5dde9,-3px_-3px_8px_#ffffff] flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-[#EEF2F7] shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff]">
+                      {getPlatformIcon(ad.platform)}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-extrabold text-slate-800 capitalize">
+                        {ad.platform}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Engine: {ad.engine}
+                      </span>
+                    </div>
+                  </div>
 
-          {adapters.map((adapter) => (
-            <div
-              key={adapter.platform}
-              className="flex items-center justify-between p-3.5 rounded-xl bg-[#12141F] border border-white/[0.08] hover:border-white/15 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-white/5 border border-white/10">
-                  {getPlatformIcon(adapter.platform)}
-                </div>
-                <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-200 capitalize">
-                      {adapter.platform}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/5 text-slate-400 border border-white/10">
-                      {adapter.engine}
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-extrabold shadow-[inset_1px_1px_2px_#cbd5e1,inset_-1px_-1px_2px_#ffffff] ${
+                        ad.health_ok
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          ad.health_ok ? 'bg-emerald-500' : 'bg-rose-500'
+                        }`}
+                      />
+                      {ad.health_ok ? 'HEALTHY' : 'DEGRADED'}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-400 font-mono">
-                    {adapter.adapter_name}
-                  </span>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {adapter.health_ok ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span>Operational</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                    <IconAlertCircle className="w-3 h-3 text-amber-400" />
-                    <span>Check Required</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+              ))
+            )}
+          </div>
         </div>
 
-        {/* Footer info */}
-        <div className="p-4 border-t border-white/10 bg-[#0C0E17] text-xs text-slate-400 flex items-center justify-between">
-          <span>Engines: yt-dlp • gallery-dl • instaloader</span>
+        {/* Footer Actions */}
+        <div className="pt-4 border-t border-slate-200">
           <button
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-semibold cursor-pointer"
+            onClick={fetchAdapters}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
           >
-            Done
+            <IconRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Testing Adapters...' : 'Re-test All Adapters'}</span>
           </button>
         </div>
+
       </div>
     </div>
   );

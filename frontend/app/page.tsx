@@ -3,37 +3,33 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { DownloadStudio } from './components/DownloadStudio';
-import { MediaGallery } from './components/MediaGallery';
-import { MediaLightboxModal, MediaItem } from './components/MediaLightboxModal';
 import { JobPipeline, JobRow } from './components/JobPipeline';
+import { JobNotificationToast, JobNotification } from './components/JobNotificationToast';
 import { AdapterHealthDrawer } from './components/AdapterHealthDrawer';
 import { ArchiveImportModal } from './components/ArchiveImportModal';
-import { IconLayers, IconActivity } from './components/Icons';
+import { MediaItem } from './components/MediaLightboxModal';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
-type ActiveViewTab = 'vault' | 'activity';
 
 const API = '/api';
 
 export default function Home() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [jobs, setJobs] = useState<JobRow[]>([]);
-  const [media, setMedia] = useState<MediaItem[]>([]);
-  const [activeTab, setActiveTab] = useState<ActiveViewTab>('vault');
-  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
-  const [mediaError, setMediaError] = useState<string>('');
+  const [mediaCount, setMediaCount] = useState<number>(0);
 
   // Modals state
-  const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
+  const [latestNotification, setLatestNotification] = useState<JobNotification | null>(null);
 
   // Form submission state
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Polling guard
+  // Keep track of previous jobs to trigger pop-up animations on completion
+  const prevJobStatusMap = useRef<Record<number, string>>({});
   const isFetchingRef = useRef(false);
 
   const refreshData = useCallback(async (showIndicator = false) => {
@@ -53,20 +49,37 @@ export default function Home() {
       // 2. Fetch Jobs
       const jobsRes = await fetch(`${API}/jobs?limit=50`).catch(() => null);
       if (jobsRes && jobsRes.ok) {
-        const jobsData = await jobsRes.json();
+        const jobsData: JobRow[] = await jobsRes.json();
         setJobs(jobsData);
+
+        // Check for newly completed or failed jobs to trigger popup notification
+        jobsData.forEach((j) => {
+          const prev = prevJobStatusMap.current[j.id];
+          if (prev && (prev === 'queued' || prev === 'running')) {
+            if (j.status === 'done' || j.status === 'failed' || j.status === 'dup') {
+              setLatestNotification({
+                id: j.id,
+                platform: j.platform,
+                url: j.url,
+                status: j.status,
+                error: j.error || undefined,
+              });
+            }
+          }
+          prevJobStatusMap.current[j.id] = j.status;
+        });
       }
 
-      // 3. Fetch Media
-      const params = new URLSearchParams();
-      params.set('limit', '120');
-      const mediaRes = await fetch(`${API}/media?${params.toString()}`).catch(() => null);
+      // 3. Fetch Media count
+      const mediaRes = await fetch(`${API}/media?limit=1`).catch(() => null);
       if (mediaRes && mediaRes.ok) {
-        const mediaData = await mediaRes.json();
-        setMedia(mediaData);
-        setMediaError('');
-      } else {
-        setMediaError('Could not sync media library');
+        const mediaData: MediaItem[] = await mediaRes.json();
+        // Also fetch total media count
+        const allMediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
+        if (allMediaRes && allMediaRes.ok) {
+          const allMedia = await allMediaRes.json();
+          setMediaCount(allMedia.length);
+        }
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -114,15 +127,29 @@ export default function Home() {
     }
   };
 
-  const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
+  // Clear Job Queue Action
+  const handleClearJobs = async () => {
+    try {
+      const res = await fetch(`${API}/jobs`, { method: 'DELETE' });
+      if (res.ok) {
+        prevJobStatusMap.current = {};
+        await refreshData(true);
+      }
+    } catch (err) {
+      console.error('Error clearing jobs:', err);
+    }
+  };
+
+  const activeJobs = jobs.filter((j) => j.status === 'running' || j.status === 'queued');
+  const activeJobStatus = activeJobs.length > 0 ? (activeJobs[0].status as 'running' | 'queued') : null;
 
   return (
-    <div className="min-h-screen bg-[#08090D] text-[#EDEDF2] flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="min-h-screen bg-[#EEF2F7] text-slate-800 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-800">
       {/* Top Navbar Header */}
       <Navbar
         backendStatus={backendStatus}
-        mediaCount={media.length}
-        activeJobsCount={activeJobsCount}
+        mediaCount={mediaCount}
+        activeJobsCount={activeJobs.length}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
         onRefresh={() => refreshData(true)}
@@ -130,84 +157,35 @@ export default function Home() {
       />
 
       {/* Main Workspace Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        {/* Hero Ingestion Studio */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
+        {/* Hero Ingestion Studio with Real-time Progress Bar */}
         <DownloadStudio
           onDownload={handleDownload}
           submitting={submitting}
           submitError={submitError}
           onClearError={() => setSubmitError('')}
+          activeJobStatus={activeJobStatus}
         />
 
-        {/* View Switcher Tabs (Media Vault vs Activity Pipeline) */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2 p-1 rounded-xl bg-[#12141F] border border-white/5">
-            <button
-              onClick={() => setActiveTab('vault')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'vault'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              }`}
-            >
-              <IconLayers className="w-4 h-4" />
-              <span>Media Library</span>
-              <span className="px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono">
-                {media.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('activity')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'activity'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              }`}
-            >
-              <IconActivity className="w-4 h-4" />
-              <span>Jobs & Queue</span>
-              {activeJobsCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono animate-pulse">
-                  {activeJobsCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 font-mono">
-            <span>Encrypted At-Rest</span>
-            <span>•</span>
-            <span>Local Vault</span>
-          </div>
-        </div>
-
-        {/* Dynamic Content Views */}
-        {activeTab === 'vault' ? (
-          <MediaGallery
-            media={media}
-            selectedPlatform={selectedPlatform}
-            onSelectPlatform={setSelectedPlatform}
-            onOpenLightbox={(item) => setLightboxItem(item)}
-            error={mediaError}
-          />
-        ) : (
-          <JobPipeline jobs={jobs} />
-        )}
+        {/* Activity & Job Pipeline Queue */}
+        <JobPipeline jobs={jobs} onClearJobs={handleClearJobs} />
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-white/5 py-6 mt-12 bg-[#06070B] text-center text-xs text-slate-400 font-mono">
+      <footer className="w-full border-t border-slate-200/80 py-6 mt-12 bg-[#EEF2F7] text-center text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>MediaVault • Personal Self-Hosted Archiver</span>
           <span className="text-slate-400">
-            Instagram • Threads • X • TikTok • YouTube • Reddit • Pinterest
+            Instagram • TikTok • X • YouTube • Reddit • Pinterest • Threads
           </span>
         </div>
       </footer>
 
-      {/* Lightbox Modal */}
-      <MediaLightboxModal item={lightboxItem} onClose={() => setLightboxItem(null)} />
+      {/* Animated Job Result Pop-up Toast */}
+      <JobNotificationToast
+        notification={latestNotification}
+        onDismiss={() => setLatestNotification(null)}
+      />
 
       {/* Adapter Health Drawer */}
       <AdapterHealthDrawer
@@ -221,7 +199,6 @@ export default function Home() {
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => {
           refreshData(true);
-          setActiveTab('activity');
         }}
       />
     </div>

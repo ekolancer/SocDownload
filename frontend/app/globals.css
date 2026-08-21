@@ -4,164 +4,191 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-bg-base: #08090D;
-  --color-bg-subtle: #0D0F17;
-  --color-surface-card: #12141F;
-  --color-surface-elevated: #181B2A;
-  --color-surface-overlay: #1E2235;
-
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-default: rgba(255, 255, 255, 0.10);
-  --color-border-active: rgba(129, 140, 248, 0.40);
-
-  --color-brand-indigo: #6366F1;
-  --color-brand-violet: #8B5CF6;
-  --color-brand-fuchsia: #D946EF;
-  --color-brand-cyan: #06B6D4;
-
-  --color-text-primary: #F3F4F8;
-  --color-text-secondary: #94A3B8;
+  --color-canvas: #EEF2F7;
+  --color-surface-raised: #F4F7FB;
+  --color-surface-sunken: #E5EBF2;
+  --color-text-main: #1E293B;
   --color-text-muted: #64748B;
-  --color-text-faint: #475569;
+  --color-text-sub: #94A3B8;
+
+  --color-accent-indigo: #4F46E5;
+  --color-accent-violet: #7C3AED;
+  --color-accent-emerald: #10B981;
+  --color-accent-amber: #F59E0B;
+  --color-accent-rose: #EF4444;
 }
 
 @layer base {
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
-
-  html {
-    font-family: var(--font-sans);
-    color: var(--color-text-primary);
-    background-color: var(--color-bg-base);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    color-scheme: dark;
+  * {
+    border-color: rgba(203, 213, 225, 0.6);
   }
 
   body {
-    min-height: 100dvh;
-    margin: 0;
+    background-color: #EEF2F7;
+    color: #1E293B;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
     overflow-x: hidden;
-    background-color: #08090D;
-    background-image: 
-      radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.06) 0px, transparent 40%),
-      radial-gradient(at 90% 90%, rgba(217, 70, 239, 0.04) 0px, transparent 40%);
-    background-attachment: fixed;
-  }
-
-  /* Custom Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #08090D;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 9999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.22);
-  }
-
-  :focus-visible {
-    outline: 2px solid #818CF8;
-    outline-offset: 2px;
   }
 }
 
-/* Glassmorphism & Surface Utilities */
-.glass-panel {
-  background: rgba(18, 20, 31, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+/* =========================================
+   NEUMORPHISM LIGHT DESIGN TOKENS
+   ========================================= */
+
+.neu-canvas {
+  background-color: #EEF2F7;
 }
 
-.glass-panel-elevated {
-  background: rgba(24, 27, 42, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+/* Outer Extruded Elements */
+.neu-raised {
+  background: #EEF2F7;
+  box-shadow: 8px 8px 18px #cbd5e1, -8px -8px 18px #ffffff;
 }
 
-.glow-violet {
-  box-shadow: 0 0 30px -5px rgba(139, 92, 246, 0.25);
+.neu-raised-sm {
+  background: #EEF2F7;
+  box-shadow: 4px 4px 10px #d5dde9, -4px -4px 10px #ffffff;
 }
 
-.glow-indigo {
-  box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.3);
+.neu-raised-floating {
+  background: #EEF2F7;
+  box-shadow: 14px 14px 28px #cbd5e1, -14px -14px 28px #ffffff;
 }
 
-.gradient-text-brand {
-  background: linear-gradient(135deg, #A5B4FC 0%, #C084FC 50%, #F472B6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Inlaid / Sunken Wells (Inputs, Sliders, Progress Tracks) */
+.neu-sunken {
+  background: #E5EBF2;
+  box-shadow: inset 4px 4px 8px #cbd5e1, inset -4px -4px 8px #ffffff;
 }
 
-.gradient-btn-primary {
-  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A855F7 100%);
-  color: #FFFFFF;
-  box-shadow: 0 4px 18px -2px rgba(124, 58, 237, 0.4);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.neu-sunken-sm {
+  background: #E8EEF5;
+  box-shadow: inset 2px 2px 5px #cbd5e1, inset -2px -2px 5px #ffffff;
 }
 
-.gradient-btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #9333EA 100%);
-  box-shadow: 0 6px 24px -2px rgba(124, 58, 237, 0.55);
+/* Interactive Buttons */
+.neu-button {
+  background: #EEF2F7;
+  box-shadow: 5px 5px 12px #cbd5e1, -5px -5px 12px #ffffff;
+  transition: all 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.neu-button:hover {
+  box-shadow: 6px 6px 16px #cbd5e1, -6px -6px 16px #ffffff;
   transform: translateY(-1px);
 }
 
-.gradient-btn-primary:active:not(:disabled) {
-  transform: scale(0.98);
+.neu-button:active,
+.neu-button-active {
+  box-shadow: inset 3px 3px 6px #cbd5e1, inset -3px -3px 6px #ffffff !important;
+  transform: translateY(1px);
 }
 
-/* Animations */
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+/* Primary Vibrant Neumorphic Button */
+.neu-button-primary {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  box-shadow: 5px 5px 15px rgba(79, 70, 229, 0.35), -3px -3px 10px rgba(255, 255, 255, 0.8);
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.animate-shimmer {
-  position: relative;
-  overflow: hidden;
+.neu-button-primary:hover {
+  box-shadow: 6px 6px 20px rgba(79, 70, 229, 0.45), -4px -4px 12px rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px) scale(1.01);
 }
 
-.animate-shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  animation: shimmer 2s infinite;
+.neu-button-primary:active {
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.35) !important;
+  transform: translateY(1px) scale(0.99);
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.15); }
+/* Double-Bezel Architecture (Hardware Card Look) */
+.neu-bezel-outer {
+  background: #EEF2F7;
+  box-shadow: 10px 10px 22px #cbd5e1, -10px -10px 22px #ffffff;
+  padding: 0.5rem;
+  border-radius: 2rem;
 }
 
-.pulse-glow {
-  animation: pulseGlow 2.5s ease-in-out infinite;
+.neu-bezel-inner {
+  background: #F4F7FB;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 3px 3px 8px #d5dde9, -3px -3px 8px #ffffff;
+  border-radius: calc(2rem - 0.5rem);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* =========================================
+   ANIMATIONS & KEYFRAMES
+   ========================================= */
+
+@keyframes progress-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-progress-shimmer {
+  background-size: 200% 100%;
+  animation: progress-shimmer 2s infinite linear;
+}
+
+@keyframes spring-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-spring-pop {
+  animation: spring-pop 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2.5s infinite ease-in-out;
+}
+
+/* Custom Neumorphic Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EEF2F7;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+  box-shadow: inset 1px 1px 2px #94A3B8;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

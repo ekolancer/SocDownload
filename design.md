@@ -1,84 +1,70 @@
-# Design System: savefromins.com
+# 9Router
 
-> Extracted 2026-08-20
+## Mission
+Create implementation-ready, token-driven UI guidance for 9Router that is optimized for consistency, accessibility, and fast delivery across documentation site.
 
----
+## Brand
+- Product/brand: 9Router
+- URL: http://localhost:20128/dashboard/providers/codex
+- Audience: developers and technical teams
+- Product surface: documentation site
 
-## 1. Design Language Overview
+## Style Foundations
+- Visual style: structured, tokenized, content-first
+- Main font style: `font.family.primary=Inter`, `font.family.stack=Inter, -apple-system, system-ui, SF Pro Text, SF Pro Display, system-ui, sans-serif`, `font.size.base=16px`, `font.weight.base=400`, `font.lineHeight.base=24px`
+- Typography scale: `font.size.xs=10px`, `font.size.sm=11px`, `font.size.md=12px`, `font.size.lg=14px`, `font.size.xl=16px`, `font.size.2xl=18px`, `font.size.3xl=30px`
+- Color palette: `color.text.primary=#6b7280`, `color.text.secondary=#0a0a0a`, `color.text.tertiary=#e56a4a`, `color.text.inverse=#ffffff`, `color.surface.base=#000000`, `color.surface.muted=#f4f4f5`, `color.surface.strong=#fdfaf6`, `color.border.strong=oklab(0 0 0 / 0.1)`
+- Spacing scale: `space.1=2px`, `space.2=4px`, `space.3=6px`, `space.4=8px`, `space.5=10px`, `space.6=12px`, `space.7=16px`
+- Radius/shadow/motion tokens: `radius.xs=4px`, `radius.sm=6px`, `radius.md=8px`, `radius.lg=16777200px` | `shadow.1=rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px` | `motion.duration.instant=150ms`, `motion.duration.fast=200ms`, `motion.duration.normal=300ms`
 
-**Vibe:** vibrant · rounded · Dark theme
-**Built with:** shadcn/ui
+## Accessibility
+- Target: WCAG 2.2 AA
+- Keyboard-first interactions required.
+- Focus-visible rules required.
+- Contrast constraints required.
 
-**Design rhythm:** 4px grid · pill buttons · very rounded · generous line-height (1.6) · flat (no shadows)
+## Writing Tone
+Concise, confident, implementation-focused.
 
-## 2. Color System
+## Rules: Do
+- Use semantic tokens, not raw hex values, in component guidance.
+- Every component must define states for default, hover, focus-visible, active, disabled, loading, and error.
+- Component behavior should specify responsive and edge-case handling.
+- Interactive components must document keyboard, pointer, and touch behavior.
+- Accessibility acceptance criteria must be testable in implementation.
 
-| Role     | Hex      | Usage |
-|----------|----------|-------|
-| Primary  | `#743CF3` | CTAs, primary actions, links |
-| Accent   | `#9063F5` | Highlights, success states, decorative |
-| Surface  | `#000000` | Main page background |
-| Elevated | `#FFFFFF` | Cards, raised containers |
-| Text     | `#E5E7EB` | Body and heading text |
-| Muted    | `#666666` | Secondary text, captions |
-| Border   | `#E5E5E5` | Dividers, borders |
+## Rules: Don't
+- Do not allow low-contrast text or hidden focus indicators.
+- Do not introduce one-off spacing or typography exceptions.
+- Do not use ambiguous labels or non-descriptive actions.
+- Do not ship component guidance without explicit state rules.
 
-## 3. Typography
+## Guideline Authoring Workflow
+1. Restate design intent in one sentence.
+2. Define foundations and semantic tokens.
+3. Define component anatomy, variants, interactions, and state behavior.
+4. Add accessibility acceptance criteria with pass/fail checks.
+5. Add anti-patterns, migration notes, and edge-case handling.
+6. End with a QA checklist.
 
-- **H1** — Arial 50px / weight 700, line-height 1.5
-- **H2** — Arial 44px / weight 700, line-height 1.2
-- **H3** — Arial 36px / weight 700, line-height 1.18
-- **Body** — Arial 16px / weight 400, line-height 1.5
-- **Scale:** 36px / 24px / 16px
+## Required Output Structure
+- Context and goals.
+- Design tokens and foundations.
+- Component-level rules (anatomy, variants, states, responsive behavior).
+- Accessibility requirements and testable acceptance criteria.
+- Content and tone standards with examples.
+- Anti-patterns and prohibited implementations.
+- QA checklist.
 
-## 4. Spacing & Layout
+## Component Rule Expectations
+- Include keyboard, pointer, and touch behavior.
+- Include spacing and typography token requirements.
+- Include long-content, overflow, and empty-state handling.
+- Include known page component density: buttons (48), links (29), inputs (3), navigation (3).
 
-- **Spacing scale:** 8,12,16,20,24,28,32,36,40,60
-- **Border radius:** pill buttons, 18px cards
-- **Radius vocabulary:** button → pill, card → 18px
 
-## 5. Effects
-
-### Gradients
-- `#76B4FF,#FF11F2,#FF9F7A`
-
-## 6. Component Specs
-
-### Button
-- #743CF3 bg
-- #FFFFFF text
-- 9999px radius
-- 700 weight
-
-### Card
-- #FFFFFF bg
-- 1px solid #F3F4F6
-- 18px radius
-- 28px 36px padding
-
-### Input
-- default input
-
-### Link
-- #2F294B
-
-## 7. Implementation Rules
-
-**DO:**
-- Use `#743CF3` for all primary CTAs and interactive accents
-- Reserve `#9063F5` for accent moments — don't overuse
-- Stick to the spacing scale (8,12,16,20,24,28,32,36,40,60) — don't introduce arbitrary values
-- Match the radius vocabulary: pill buttons, 18px cards
-- Pair Arial 700 headings with Arial 16px 400, 1.6 line-height
-- Honour the visual hierarchy: bold colour on primary actions, muted tones on secondary
-
-**DON'T:**
-- Copy this design verbatim — use the tokens as a system to build something original
-- Mix in colours outside this palette (especially competing primary colours)
-- Break the radius scale by introducing one-off values
-- Use the same shadow tier for everything — match elevation to importance
-
----
-
-*Source: savefromins.com · 2026-08-20*
-*Do not copy the design. Use these tokens to build similar UI with the same feel.*
+## Quality Gates
+- Every non-negotiable rule must use "must".
+- Every recommendation should use "should".
+- Every accessibility rule must be testable in implementation.
+- Teams should prefer system consistency over local visual exceptions.

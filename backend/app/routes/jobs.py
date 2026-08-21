@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 
-from ..db import Job, get_session_factory
+from ..db import Job, JobStatus, MediaItem, get_session_factory
 
 router = APIRouter(prefix="/api", tags=["jobs"])
 
@@ -37,6 +37,29 @@ def list_jobs(limit: int = 50):
             }
             for j in jobs
         ]
+
+
+@router.delete("/jobs")
+def clear_jobs():
+    factory = get_session_factory()
+    with factory() as session:
+        # Detach foreign keys from MediaItem first to keep media files safe
+        session.execute(update(MediaItem).values(job_id=None))
+        # Clear finished, failed, duplicate, or queued jobs (leaving running jobs if any)
+        session.execute(
+            delete(Job).where(
+                Job.status.in_(
+                    [
+                        JobStatus.DONE.value,
+                        JobStatus.FAILED.value,
+                        JobStatus.DUP.value,
+                        JobStatus.QUEUED.value,
+                    ]
+                )
+            )
+        )
+        session.commit()
+    return {"status": "cleared"}
 
 
 @router.get("/jobs/{job_id}")
