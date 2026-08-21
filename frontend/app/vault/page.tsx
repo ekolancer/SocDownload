@@ -523,7 +523,7 @@ export default function VaultPage() {
                   }
                   className="group rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
                 >
-                  <div className="relative aspect-video w-full rounded-[12px] bg-slate-950 overflow-hidden flex items-center justify-center text-slate-400">
+                  <div className="relative aspect-video w-full rounded-[12px] bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
                     {a.cover_file_url ? (
                       <img
                         src={a.cover_file_url}

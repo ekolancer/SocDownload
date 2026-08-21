@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 import re
-
+import urllib.request
+import html as html_lib
 import instaloader
 
 from .base import BaseAdapter, ResolvedMedia
@@ -23,7 +24,7 @@ class InstagramAdapter(BaseAdapter):
         return bool(re.search(r"(?i)(instagram\.com|instagr\.am)", url))
 
     def _shortcode(self, url: str) -> str:
-        m = re.search(r"(?:instagram\.com|instagr\.am)/(?:p|reel|tv)/([A-Za-z0-9_-]+)", url)
+        m = re.search(r"(?:instagram\.com|instagr\.am)/(?:p|reel|tv|reels)/([A-Za-z0-9_-]+)", url)
         if not m:
             raise ValueError("not an instagram post url")
         return m.group(1)
@@ -31,17 +32,47 @@ class InstagramAdapter(BaseAdapter):
     def _post(self, url: str) -> instaloader.Post:
         return instaloader.Post.from_shortcode(self._loader.context, self._shortcode(url))
 
+    def _extract_username_from_url(self, url: str) -> str | None:
+        m = re.search(r"instagram\.com/([^/?#]+)/(?:p|reel|tv|reels)/", url)
+        if m and m.group(1).lower() not in ("p", "reel", "tv", "reels", "stories", "share", "direct", "explore"):
+            return m.group(1)
+        return None
+
     def _gallery_resolve(self, url: str) -> ResolvedMedia:
         kv = gdl_first_item(url)
-        author = kv.get("author") or kv.get("user") or kv.get("uploader")
-        username = author.get("nick") if isinstance(author, dict) else author
+        username = (
+            kv.get("username")
+            or kv.get("owner_username")
+            or kv.get("fullname")
+            or kv.get("uploader_id")
+            or kv.get("uploader")
+        )
+        if not username:
+            user = kv.get("user") or kv.get("author") or kv.get("owner")
+            if isinstance(user, dict):
+                username = (
+                    user.get("username")
+                    or user.get("name")
+                    or user.get("nick")
+                    or user.get("full_name")
+                )
+            elif isinstance(user, str):
+                username = user
+
+        if not username:
+            username = self._extract_username_from_url(url)
+
+        caption = kv.get("description") or kv.get("content") or kv.get("caption") or ""
+        posted_at = str(kv.get("date")) if kv.get("date") else None
+        tags = kv.get("tags") or kv.get("hashtags") or []
+
         return ResolvedMedia(
             platform=self.platform,
             source_url=url,
             username=username,
-            caption=kv.get("content") or kv.get("description"),
-            posted_at=str(kv.get("date")) if kv.get("date") else None,
-            hashtags=[],
+            caption=caption,
+            posted_at=posted_at,
+            hashtags=tags if isinstance(tags, list) else [],
         )
 
     @staticmethod
@@ -55,15 +86,30 @@ class InstagramAdapter(BaseAdapter):
         except Exception as gallery_error:
             try:
                 p = self._post(url)
+                username = p.owner_username or (p.owner_profile.username if p.owner_profile else None)
+                if not username:
+                    username = self._extract_username_from_url(url)
+
                 return ResolvedMedia(
                     platform=self.platform,
                     source_url=url,
-                    username=p.owner_username,
+                    username=username,
                     caption=p.caption,
                     posted_at=p.date_utc.isoformat() if p.date_utc else None,
                     hashtags=list(p.caption_hashtags) if p.caption_hashtags else [],
                 )
             except Exception as instaloader_error:
+                # If both failed, attempt OpenGraph extraction before throwing
+                url_user = self._extract_username_from_url(url)
+                if url_user:
+                    return ResolvedMedia(
+                        platform=self.platform,
+                        source_url=url,
+                        username=url_user,
+                        caption="",
+                        posted_at=None,
+                        hashtags=[],
+                    )
                 raise self._error(instaloader_error, gallery_error) from gallery_error
 
     def download(self, url: str, dest_dir: str) -> list[str]:
