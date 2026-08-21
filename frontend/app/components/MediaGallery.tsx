@@ -37,7 +37,6 @@ const PLATFORM_FILTERS = [
   { id: 'youtube', label: 'YouTube' },
   { id: 'reddit', label: 'Reddit' },
   { id: 'pinterest', label: 'Pinterest' },
-  { id: 'facebook', label: 'Facebook' },
 ];
 
 export function MediaGallery({

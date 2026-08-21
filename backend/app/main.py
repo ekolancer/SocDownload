@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     registry.register(YouTubeAdapter())
     registry.register(RedditAdapter())
     registry.register(PinterestAdapter())
-    registry.register(FacebookAdapter())
+    # registry.register(FacebookAdapter())  # Temporarily disabled
     registry.register(TikTokAdapter())
     check_adapters_health()
     start_scheduler()

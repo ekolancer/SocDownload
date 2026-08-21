@@ -287,7 +287,7 @@ export function DownloadStudio({
           <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider font-mono mr-1">
             Supported:
           </span>
-          {(['instagram', 'threads', 'x', 'tiktok', 'youtube', 'reddit', 'pinterest', 'facebook'] as PlatformType[]).map(
+          {(['instagram', 'threads', 'x', 'tiktok', 'youtube', 'reddit', 'pinterest'] as PlatformType[]).map(
             (p) => {
               const cfg = PLATFORM_CONFIG[p];
               const isSelected = detected === p;

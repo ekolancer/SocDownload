@@ -201,7 +201,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>MediaVault • Personal Self-Hosted Archiver</span>
           <span className="text-slate-400">
-            Instagram • Threads • X • TikTok • YouTube • Reddit • Pinterest • Facebook
+            Instagram • Threads • X • TikTok • YouTube • Reddit • Pinterest
           </span>
         </div>
       </footer>
