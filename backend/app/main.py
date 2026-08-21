@@ -16,7 +16,7 @@ from .adapters.x import XAdapter
 from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
 from .db import init_db
-from .routes import adapters, health, importer, jobs, media
+from .routes import adapters, albums, health, importer, jobs, media
 from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue
 from .worker import Worker
@@ -64,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(importer.router)
     app.include_router(jobs.router)
     app.include_router(media.router)
+    app.include_router(albums.router)
     app.include_router(adapters.router)
     return app
 

@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   IconClose,
+  IconChevronLeft,
+  IconChevronRight,
   IconDownload,
   IconExternalLink,
-  IconLayers,
   IconCheckCircle,
+  IconTrash,
   IconInstagram,
   IconThreads,
   IconX,
@@ -30,6 +32,7 @@ export interface MediaItem {
   source_url: string;
   username: string | null;
   caption: string | null;
+  is_favorite?: boolean;
   posted_at: string | null;
   created_at: string | null;
   hashtags?: string | null;
@@ -39,11 +42,13 @@ export interface MediaItem {
 interface MediaLightboxModalProps {
   item: MediaItem | null;
   onClose: () => void;
+  onDelete?: (id: number) => Promise<void>;
 }
 
-export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
+export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxModalProps) {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Reset file index when opening a new item
   useEffect(() => {
@@ -51,7 +56,7 @@ export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
     setCopiedLink(false);
   }, [item?.id]);
 
-  // Esc key listener
+  // Esc and arrow keys listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -69,13 +74,26 @@ export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
   if (!item) return null;
 
   const currentFile = item.files?.[activeFileIndex];
-  const isVideo = currentFile?.kind === 'video' || currentFile?.path?.endsWith('.mp4');
+  const isVideo = currentFile?.kind === 'video' || Boolean(currentFile?.path?.endsWith('.mp4'));
   const fileUrl = currentFile ? `/api/media/files/${currentFile.id}` : '';
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(item.source_url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete || deleting) return;
+    if (confirm('Hapus media ini secara permanen dari vault dan storage disk?')) {
+      setDeleting(true);
+      try {
+        await onDelete(item.id);
+        onClose();
+      } finally {
+        setDeleting(false);
+      }
+    }
   };
 
   return (
@@ -98,73 +116,67 @@ export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
           {fileUrl ? (
             isVideo ? (
               <video
-                key={fileUrl}
                 src={fileUrl}
                 controls
                 autoPlay
-                className="max-h-[70vh] max-w-full rounded-2xl object-contain shadow-md"
+                className="max-h-[70vh] w-auto max-w-full rounded-2xl shadow-lg"
               />
             ) : (
               <img
-                key={fileUrl}
                 src={fileUrl}
-                alt={item.caption || 'Media Detail'}
-                className="max-h-[70vh] max-w-full rounded-2xl object-contain shadow-md"
+                alt={item.caption || 'Media Preview'}
+                className="max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-lg"
               />
             )
           ) : (
-            <div className="text-slate-400 text-sm">No preview available</div>
+            <div className="text-slate-500 font-mono text-sm p-6 text-center">
+              No direct preview available
+            </div>
           )}
 
-          {/* Carousel Arrows if multiple files */}
+          {/* Carousel Arrows (If multiple files) */}
           {item.files.length > 1 && (
             <>
-              <button
-                onClick={() => setActiveFileIndex((prev) => Math.max(0, prev - 1))}
-                disabled={activeFileIndex === 0}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-[#EEF2F7]/90 backdrop-blur-md shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff] text-slate-700 hover:text-indigo-600 disabled:opacity-30 disabled:pointer-events-none transition-all"
-              >
-                ◀
-              </button>
-              <button
-                onClick={() => setActiveFileIndex((prev) => Math.min(item.files.length - 1, prev + 1))}
-                disabled={activeFileIndex === item.files.length - 1}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-[#EEF2F7]/90 backdrop-blur-md shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff] text-slate-700 hover:text-indigo-600 disabled:opacity-30 disabled:pointer-events-none transition-all"
-              >
-                ▶
-              </button>
-            </>
-          )}
-
-          {/* Carousel Pagination Dots */}
-          {item.files.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEF2F7]/90 backdrop-blur-md shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff]">
-              {item.files.map((_, idx) => (
+              {activeFileIndex > 0 && (
                 <button
-                  key={idx}
-                  onClick={() => setActiveFileIndex(idx)}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeFileIndex === idx
-                      ? 'bg-indigo-600 w-6'
-                      : 'bg-slate-300 hover:bg-slate-400'
-                  }`}
-                />
-              ))}
-            </div>
+                  onClick={() => setActiveFileIndex((prev) => prev - 1)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/80 backdrop-blur-md shadow-md text-slate-800 hover:bg-white transition-all cursor-pointer"
+                  title="Previous item"
+                >
+                  <IconChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+
+              {activeFileIndex < item.files.length - 1 && (
+                <button
+                  onClick={() => setActiveFileIndex((prev) => prev + 1)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/80 backdrop-blur-md shadow-md text-slate-800 hover:bg-white transition-all cursor-pointer"
+                  title="Next item"
+                >
+                  <IconChevronRight className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Indicator Pill */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-white text-xs font-mono font-bold">
+                {activeFileIndex + 1} / {item.files.length}
+              </div>
+            </>
           )}
         </div>
 
-        {/* Right Side: Metadata Sidecar */}
-        <div className="w-full lg:w-96 p-6 sm:p-8 flex flex-col justify-between gap-6 overflow-y-auto max-h-[50vh] lg:max-h-full">
+        {/* Right Side: Metadata & Action Sidecar */}
+        <div className="w-full lg:w-96 p-6 sm:p-8 flex flex-col justify-between gap-6 overflow-y-auto bg-[#EEF2F7]">
           
           <div className="flex flex-col gap-4">
-            {/* Platform & Author */}
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-xl text-xs font-extrabold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-200">
+            
+            {/* Header: Platform Badge + Username */}
+            <div className="flex items-center gap-2.5">
+              <span className="px-3.5 py-1 rounded-xl text-xs font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-[2px_2px_4px_#cbd5e1,-2px_-2px_4px_#ffffff]">
                 {item.platform}
               </span>
-              <span className="text-sm font-extrabold text-slate-800">
-                {item.username ? `@${item.username}` : 'Vault Item'}
+              <span className="font-extrabold text-sm sm:text-base text-slate-800 truncate">
+                {item.username ? `@${item.username}` : 'Unknown Author'}
               </span>
             </div>
 
@@ -181,8 +193,8 @@ export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
             )}
           </div>
 
-          {/* Bottom Actions: Copy Link, Download Raw File */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-slate-200">
+          {/* Bottom Actions: Copy Link, Download Raw File, Delete Item */}
+          <div className="flex flex-col gap-2.5 pt-4 border-t border-slate-200">
             {/* Copy Source Link */}
             <button
               onClick={handleCopyLink}
@@ -211,6 +223,19 @@ export function MediaLightboxModal({ item, onClose }: MediaLightboxModalProps) {
                 <IconDownload className="w-4 h-4 text-white" />
                 <span>Save File to Device</span>
               </a>
+            )}
+
+            {/* Delete from Vault Button */}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <IconTrash className={`w-4 h-4 ${deleting ? 'animate-spin' : ''}`} />
+                <span>{deleting ? 'Deleting...' : 'Delete from Vault & Disk'}</span>
+              </button>
             )}
           </div>
 

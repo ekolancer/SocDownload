@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from enum import Enum
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -10,9 +12,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
-from enum import Enum
-
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import ROOT, get_settings
@@ -69,6 +70,7 @@ class MediaItem(Base):
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     hashtags: Mapped[str | None] = mapped_column(Text, nullable=True)
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     __table_args__ = (
@@ -84,6 +86,30 @@ class MediaFile(Base):
     path: Mapped[str] = mapped_column(Text, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class Album(Base):
+    __tablename__ = "albums"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cover_media_id: Mapped[int | None] = mapped_column(ForeignKey("media_items.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AlbumMediaItem(Base):
+    __tablename__ = "album_media_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    album_id: Mapped[int] = mapped_column(ForeignKey("albums.id", ondelete="CASCADE"), nullable=False)
+    media_item_id: Mapped[int] = mapped_column(ForeignKey("media_items.id", ondelete="CASCADE"), nullable=False)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("album_id", "media_item_id", name="uq_album_media"),
+    )
 
 
 class PlatformAdapter(Base):
@@ -126,4 +152,14 @@ def get_session_factory():
 
 
 def init_db() -> None:
-    Base.metadata.create_all(get_engine())
+    eng = get_engine()
+    Base.metadata.create_all(eng)
+
+    # Safe migration for existing sqlite database: ensure is_favorite exists in media_items
+    with eng.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE media_items ADD COLUMN is_favorite BOOLEAN DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            # Column already exists
+            pass
