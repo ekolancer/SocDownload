@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   IconClose,
   IconFolder,
   IconFolderPlus,
   IconCheck,
-  IconSparkles,
 } from './Icons';
 import { AlbumSummary } from './VaultSidebar';
 
@@ -66,45 +65,45 @@ export function AlbumModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-spring-pop">
-      <div className="relative w-full max-w-md rounded-[2.2rem] bg-[#EEF2F7] shadow-[16px_16px_36px_rgba(0,0,0,0.25),-10px_-10px_30px_rgba(255,255,255,0.9)] border border-white/90 p-6 sm:p-8 flex flex-col gap-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-[28px] bg-white m3-elevation-3 border border-slate-200/90 p-6 sm:p-7 flex flex-col gap-5 shadow-2xl">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-[#EEF2F7] shadow-[4px_4px_10px_#cbd5e1,-4px_-4px_10px_#ffffff]">
-              <IconFolderPlus className="w-5 h-5 text-indigo-600" />
+            <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200/60">
+              <IconFolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-slate-800 tracking-tight leading-snug">
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight leading-snug">
                 {mode === 'create_only' ? 'Create New Album' : 'Add to Album'}
               </h3>
               <p className="text-xs text-slate-500 font-mono">
                 {selectedMediaIds.length > 0
                   ? `Assign ${selectedMediaIds.length} items to album`
-                  : 'Organize your archived media'}
+                  : 'Organize your media collections'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <IconClose className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tab Switcher if in add_to_album mode */}
+        {/* Tab Switcher */}
         {mode === 'add_to_album' && albums.length > 0 && (
-          <div className="flex items-center p-1 rounded-xl bg-[#E5EBF2] shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff]">
+          <div className="flex items-center p-1 rounded-full bg-slate-100 border border-slate-200/80">
             <button
               type="button"
               onClick={() => setActiveTab('existing')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+              className={`flex-1 py-1.5 text-xs font-bold rounded-full transition-all ${
                 activeTab === 'existing'
-                  ? 'bg-[#EEF2F7] text-indigo-600 shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff]'
-                  : 'text-slate-500'
+                  ? 'bg-white text-indigo-950 m3-elevation-1 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Choose Existing ({albums.length})
@@ -112,10 +111,10 @@ export function AlbumModal({
             <button
               type="button"
               onClick={() => setActiveTab('new')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+              className={`flex-1 py-1.5 text-xs font-bold rounded-full transition-all ${
                 activeTab === 'new'
-                  ? 'bg-[#EEF2F7] text-indigo-600 shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff]'
-                  : 'text-slate-500'
+                  ? 'bg-white text-indigo-950 m3-elevation-1 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               + Create New
@@ -134,12 +133,12 @@ export function AlbumModal({
                     onClick={() => setSelectedAlbumId(album.id)}
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff]'
-                        : 'bg-[#EEF2F7] border-white/80 shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] text-slate-700 hover:bg-white/50'
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-950 m3-elevation-1'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <IconFolder className="w-4 h-4 text-indigo-500" />
+                      <IconFolder className="w-4 h-4 text-indigo-600" />
                       <div className="flex flex-col">
                         <span className="text-xs font-bold">{album.name}</span>
                         <span className="text-[10px] text-slate-400 font-mono">
@@ -157,62 +156,56 @@ export function AlbumModal({
               })}
             </div>
           ) : (
-            <div className="flex flex-col gap-3.5">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-extrabold text-slate-600 uppercase tracking-wider font-mono">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider font-mono">
                   Album Name
                 </label>
-                <div className="rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] p-2.5">
-                  <input
-                    type="text"
-                    required
-                    value={albumName}
-                    onChange={(e) => setAlbumName(e.target.value)}
-                    placeholder="e.g. Liburan Bali, Inspirasi Desain..."
-                    className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none px-2"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={albumName}
+                  onChange={(e) => setAlbumName(e.target.value)}
+                  placeholder="e.g. Travel, Design Inspiration..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-extrabold text-slate-600 uppercase tracking-wider font-mono">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider font-mono">
                   Description (Optional)
                 </label>
-                <div className="rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] p-2.5">
-                  <textarea
-                    rows={2}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Short description of this album..."
-                    className="w-full bg-transparent text-xs sm:text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none px-2 resize-none"
-                  />
-                </div>
+                <textarea
+                  rows={2}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Short description of this album..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none"
+                />
               </div>
             </div>
           )}
 
           {/* Submit Action */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-slate-900 cursor-pointer"
+              className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
             >
               Cancel
             </button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               type="submit"
               disabled={submitting || (activeTab === 'new' && !albumName.trim())}
-              className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 shadow-[3px_3px_10px_rgba(79,70,229,0.35),-2px_-2px_6px_#ffffff] hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 m3-elevation-1 transition-all cursor-pointer"
             >
               {submitting
                 ? 'Saving...'
                 : mode === 'create_only'
                 ? 'Create Album'
                 : 'Confirm & Add'}
-            </motion.button>
+            </button>
           </div>
         </form>
 

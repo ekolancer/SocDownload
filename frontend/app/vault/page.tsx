@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { MediaGallery } from '../components/MediaGallery';
 import { MediaLightboxModal, MediaItem } from '../components/MediaLightboxModal';
@@ -15,9 +14,7 @@ import {
   IconFolder,
   IconFolderPlus,
   IconUser,
-  IconStarFilled,
   IconLayers,
-  IconPlus,
 } from '../components/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
@@ -49,14 +46,9 @@ export default function VaultPage() {
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Parallax scroll hooks
-  const { scrollY } = useScroll();
-  const orbY1 = useTransform(scrollY, [0, 800], [0, 140]);
-  const orbY2 = useTransform(scrollY, [0, 800], [0, -120]);
-
   const isFetchingRef = useRef(false);
 
-  // 1. Refresh Data (Media, Albums, Jobs)
+  // Refresh Data
   const refreshData = useCallback(async (showIndicator = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -99,7 +91,7 @@ export default function VaultPage() {
     } finally {
       isFetchingRef.current = false;
       if (showIndicator) {
-        setTimeout(() => setIsRefreshing(false), 400);
+        setTimeout(() => setIsRefreshing(false), 300);
       }
     }
   }, []);
@@ -260,7 +252,6 @@ export default function VaultPage() {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      // Toggle favorite for all selected
       await Promise.all(
         selectedIds.map((id) =>
           fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
@@ -341,19 +332,9 @@ export default function VaultPage() {
   const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="relative min-h-screen bg-[#EEF2F7] text-slate-800 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-800 overflow-x-hidden">
+    <div className="relative min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
-      {/* Ambient Parallax Background Orbs */}
-      <motion.div
-        style={{ y: orbY1 }}
-        className="pointer-events-none fixed top-32 -right-32 w-[30rem] h-[30rem] rounded-full bg-gradient-to-bl from-indigo-200/40 via-purple-200/20 to-transparent blur-3xl -z-10"
-      />
-      <motion.div
-        style={{ y: orbY2 }}
-        className="pointer-events-none fixed top-2/3 -left-32 w-[26rem] h-[26rem] rounded-full bg-gradient-to-tr from-teal-200/30 to-indigo-200/20 blur-3xl -z-10"
-      />
-
-      {/* Full-width Sticky Top Navbar */}
+      {/* Top App Bar */}
       <Navbar
         backendStatus={backendStatus}
         mediaCount={media.length}
@@ -365,9 +346,9 @@ export default function VaultPage() {
       />
 
       {/* Main Workspace Layout (Sidebar + Gallery Canvas) */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-start gap-8">
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-start gap-8">
         
-        {/* Left Sidebar */}
+        {/* Left Navigation Drawer */}
         <VaultSidebar
           currentView={currentView}
           onSelectView={(view) => {
@@ -387,47 +368,47 @@ export default function VaultPage() {
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 flex flex-col gap-8">
+        <main className="flex-1 min-w-0 flex flex-col gap-6">
           
-          {/* Top Bar for Mobile Sidebar Toggle */}
-          <div className="flex lg:hidden items-center justify-between p-3 rounded-2xl bg-[#EEF2F7] shadow-[4px_4px_10px_#cbd5e1,-4px_-4px_10px_#ffffff]">
+          {/* Mobile Sidebar Toggle Button */}
+          <div className="flex lg:hidden items-center justify-between p-3 rounded-2xl bg-white border border-slate-200 m3-elevation-1">
             <button
+              type="button"
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#E5EBF2] shadow-[inset_1px_1px_3px_#cbd5e1,inset_-1px_-1px_3px_#ffffff] text-xs font-bold text-slate-700"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
             >
-              <IconLayers className="w-4 h-4 text-indigo-500" />
+              <IconLayers className="w-4 h-4 text-indigo-600" />
               <span>Menu & Albums</span>
             </button>
 
-            <span className="text-xs font-mono text-slate-500 font-bold">
+            <span className="text-xs font-mono text-slate-600 font-bold">
               {displayMedia.length} Media
             </span>
           </div>
 
           {/* If View is Creators List Hub */}
           {currentView.type === 'creators_list' ? (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-extrabold text-slate-800">Creators Hub</h1>
+                <h1 className="text-2xl font-extrabold text-slate-900">Creators Hub</h1>
                 <p className="text-xs text-slate-500 font-mono">
                   Explore media archived by content creators
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {creators.map((c) => (
-                  <motion.div
+                  <div
                     key={c.username}
-                    whileHover={{ y: -4 }}
                     onClick={() => setCurrentView({ type: 'creator_detail', username: c.username })}
-                    className="p-5 rounded-[2rem] bg-[#EEF2F7] shadow-[6px_6px_16px_#cbd5e1,-6px_-6px_16px_#ffffff] border border-white/90 flex items-center justify-between gap-4 cursor-pointer hover:border-indigo-200 transition-all"
+                    className="p-4 rounded-2xl bg-white border border-slate-200 m3-elevation-1 hover:m3-elevation-2 flex items-center justify-between gap-3 cursor-pointer transition-all"
                   >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-11 h-11 rounded-2xl bg-[#E5EBF2] shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] flex items-center justify-center text-indigo-600 font-extrabold shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
                         <IconUser className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-extrabold text-slate-800 truncate">
+                        <span className="text-sm font-extrabold text-slate-900 truncate">
                           @{c.username}
                         </span>
                         <span className="text-[11px] text-slate-400 font-mono">
@@ -436,43 +417,41 @@ export default function VaultPage() {
                       </div>
                     </div>
 
-                    <span className="px-3 py-1 rounded-xl text-xs font-mono font-bold bg-[#E5EBF2] text-indigo-600 shadow-[inset_1px_1px_3px_#cbd5e1,inset_-1px_-1px_3px_#ffffff]">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 shrink-0">
                       {c.count} items
                     </span>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
           ) : currentView.type === 'albums_list' ? (
             /* If View is Albums List Hub */
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <h1 className="text-2xl font-extrabold text-slate-800">My Albums</h1>
+                  <h1 className="text-2xl font-extrabold text-slate-900">My Albums</h1>
                   <p className="text-xs text-slate-500 font-mono">
                     Custom collections and categorized media
                   </p>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
+                <button
+                  type="button"
                   onClick={() => {
                     setAlbumModalMode('create_only');
                     setIsAlbumModalOpen(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 shadow-[3px_3px_10px_rgba(79,70,229,0.35),-2px_-2px_6px_#ffffff] hover:bg-indigo-700 cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 m3-elevation-1 transition-all cursor-pointer"
                 >
                   <IconFolderPlus className="w-4 h-4" />
                   <span>New Album</span>
-                </motion.button>
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {albums.map((a) => (
-                  <motion.div
+                  <div
                     key={a.id}
-                    whileHover={{ y: -5 }}
                     onClick={() =>
                       setCurrentView({
                         type: 'album_detail',
@@ -480,19 +459,19 @@ export default function VaultPage() {
                         albumName: a.name,
                       })
                     }
-                    className="group rounded-[2rem] bg-[#EEF2F7] shadow-[7px_7px_18px_#cbd5e1,-7px_-7px_18px_#ffffff] border border-white/90 p-4 flex flex-col gap-3 cursor-pointer overflow-hidden"
+                    className="group rounded-2xl bg-white border border-slate-200 m3-elevation-1 hover:m3-elevation-2 p-3 flex flex-col gap-2.5 cursor-pointer overflow-hidden transition-all"
                   >
-                    <div className="relative aspect-video w-full rounded-2xl bg-[#E5EBF2] shadow-[inset_2px_2px_5px_#cbd5e1,inset_-2px_-2px_5px_#ffffff] overflow-hidden flex items-center justify-center text-slate-400">
+                    <div className="relative aspect-video w-full rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400">
                       {a.cover_file_url ? (
                         <img
                           src={a.cover_file_url}
                           alt={a.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <IconFolder className="w-10 h-10 text-slate-300" />
                       )}
-                      <span className="absolute bottom-2.5 right-2.5 px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md">
+                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md">
                         {a.items_count} items
                       </span>
                     </div>
@@ -503,12 +482,12 @@ export default function VaultPage() {
                         <span className="text-xs text-slate-400 truncate">{a.description}</span>
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
           ) : (
-            /* Default Gallery View (Timeline, Favorites, Album Detail, Creator Detail, Type Filter) */
+            /* Default Gallery View */
             <MediaGallery
               media={displayMedia}
               selectedPlatform={selectedPlatform}
@@ -537,7 +516,11 @@ export default function VaultPage() {
                   : undefined
               }
               onBackToTimeline={
-                currentView.type !== 'timeline'
+                currentView.type === 'creator_detail'
+                  ? () => setCurrentView({ type: 'creators_list' })
+                  : currentView.type === 'album_detail'
+                  ? () => setCurrentView({ type: 'albums_list' })
+                  : currentView.type !== 'timeline'
                   ? () => setCurrentView({ type: 'timeline' })
                   : undefined
               }
@@ -548,7 +531,7 @@ export default function VaultPage() {
         </main>
       </div>
 
-      {/* Floating Bottom Action Bar for Multi-Selection */}
+      {/* Floating Bottom Action Bar */}
       <BatchActionBar
         selectedIds={selectedIds}
         onDeselectAll={handleDeselectAll}

@@ -9,13 +9,6 @@ import {
   IconExternalLink,
   IconCheckCircle,
   IconTrash,
-  IconInstagram,
-  IconThreads,
-  IconX,
-  IconTikTok,
-  IconYouTube,
-  IconReddit,
-  IconPinterest,
 } from './Icons';
 
 export interface MediaFile {
@@ -97,117 +90,121 @@ export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-md animate-spring-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-md">
       
-      {/* Modal Card Enclosure */}
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col lg:flex-row rounded-[2.2rem] bg-[#EEF2F7] shadow-[16px_16px_36px_rgba(0,0,0,0.25),-10px_-10px_30px_rgba(255,255,255,0.9)] border border-white/90 overflow-hidden">
+      {/* Modal Dialog Card */}
+      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row rounded-3xl bg-white m3-elevation-4 border border-slate-200 overflow-hidden shadow-2xl">
         
         {/* Close Button Top Right */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 p-2.5 rounded-2xl bg-[#EEF2F7] shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff] text-slate-500 hover:text-slate-900 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+          className="absolute top-3 right-3 z-30 p-2 rounded-full bg-white/90 hover:bg-slate-100 text-slate-700 shadow-md transition-all cursor-pointer"
           title="Close Modal"
         >
-          <IconClose className="w-5 h-5" />
+          <IconClose className="w-4 h-4" />
         </button>
 
         {/* Left Side: Media Preview Canvas */}
-        <div className="flex-1 relative flex items-center justify-center bg-[#E5EBF2] p-4 sm:p-8 min-h-[300px] lg:min-h-[550px] overflow-hidden">
+        <div className="flex-1 relative flex items-center justify-center bg-slate-950 p-4 sm:p-6 min-h-[280px] md:min-h-[460px] overflow-hidden">
           {fileUrl ? (
             isVideo ? (
               <video
                 src={fileUrl}
                 controls
                 autoPlay
-                className="max-h-[70vh] w-auto max-w-full rounded-2xl shadow-lg"
+                className="max-h-[65vh] w-auto max-w-full rounded-xl shadow-xl object-contain"
               />
             ) : (
               <img
                 src={fileUrl}
                 alt={item.caption || 'Media Preview'}
-                className="max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-lg"
+                className="max-h-[65vh] w-auto max-w-full object-contain rounded-xl shadow-xl"
               />
             )
           ) : (
-            <div className="text-slate-500 font-mono text-sm p-6 text-center">
+            <div className="text-slate-400 font-mono text-sm p-6 text-center">
               No direct preview available
             </div>
           )}
 
-          {/* Carousel Arrows (If multiple files) */}
+          {/* Carousel Arrows */}
           {item.files.length > 1 && (
             <>
               {activeFileIndex > 0 && (
                 <button
+                  type="button"
                   onClick={() => setActiveFileIndex((prev) => prev - 1)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/80 backdrop-blur-md shadow-md text-slate-800 hover:bg-white transition-all cursor-pointer"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 hover:bg-white text-slate-900 shadow-md transition-all cursor-pointer"
                   title="Previous item"
                 >
-                  <IconChevronLeft className="w-5 h-5" />
+                  <IconChevronLeft className="w-4 h-4" />
                 </button>
               )}
 
               {activeFileIndex < item.files.length - 1 && (
                 <button
+                  type="button"
                   onClick={() => setActiveFileIndex((prev) => prev + 1)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/80 backdrop-blur-md shadow-md text-slate-800 hover:bg-white transition-all cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 hover:bg-white text-slate-900 shadow-md transition-all cursor-pointer"
                   title="Next item"
                 >
-                  <IconChevronRight className="w-5 h-5" />
+                  <IconChevronRight className="w-4 h-4" />
                 </button>
               )}
 
               {/* Indicator Pill */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-white text-xs font-mono font-bold">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-xs font-mono font-bold">
                 {activeFileIndex + 1} / {item.files.length}
               </div>
             </>
           )}
         </div>
 
-        {/* Right Side: Metadata & Action Sidecar */}
-        <div className="w-full lg:w-96 p-6 sm:p-8 flex flex-col justify-between gap-6 overflow-y-auto bg-[#EEF2F7]">
+        {/* Right Side: Metadata & Actions */}
+        <div className="w-full md:w-80 p-5 sm:p-6 flex flex-col justify-between gap-5 overflow-y-auto bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200">
           
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             
-            {/* Header: Platform Badge + Username */}
-            <div className="flex items-center gap-2.5">
-              <span className="px-3.5 py-1 rounded-xl text-xs font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-[2px_2px_4px_#cbd5e1,-2px_-2px_4px_#ffffff]">
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
                 {item.platform}
               </span>
-              <span className="font-extrabold text-sm sm:text-base text-slate-800 truncate">
+              <span className="font-extrabold text-sm text-slate-900 truncate">
                 {item.username ? `@${item.username}` : 'Unknown Author'}
               </span>
             </div>
 
-            {/* Date & ID */}
+            {/* Date */}
             <div className="text-[11px] font-mono text-slate-400">
-              Archived on {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}
+              Archived on {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
             </div>
 
-            {/* Full Caption */}
+            {/* Caption */}
             {item.caption && (
-              <div className="p-4 rounded-2xl bg-[#E5EBF2] shadow-[inset_2px_2px_5px_#cbd5e1,inset_-2px_-2px_5px_#ffffff] text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap max-h-48 overflow-y-auto">
+              <div className="p-3 rounded-2xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap max-h-44 overflow-y-auto">
                 {item.caption}
               </div>
             )}
           </div>
 
-          {/* Bottom Actions: Copy Link, Download Raw File, Delete Item */}
-          <div className="flex flex-col gap-2.5 pt-4 border-t border-slate-200">
+          {/* Bottom Actions */}
+          <div className="flex flex-col gap-2 pt-3 border-t border-slate-200">
             {/* Copy Source Link */}
             <button
+              type="button"
               onClick={handleCopyLink}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+              className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer"
             >
               {copiedLink ? (
                 <>
-                  <IconCheckCircle className="w-4 h-4 text-emerald-600" />
+                  <IconCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Copied Link!</span>
                 </>
               ) : (
                 <>
-                  <IconExternalLink className="w-4 h-4 text-slate-500" />
+                  <IconExternalLink className="w-4 h-4 text-slate-500 shrink-0" />
                   <span>Copy Source URL</span>
                 </>
               )}
@@ -218,23 +215,23 @@ export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxMod
               <a
                 href={fileUrl}
                 download
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 shadow-[4px_4px_10px_rgba(79,70,229,0.35),-2px_-2px_6px_#ffffff] hover:bg-indigo-700 active:scale-98 transition-all text-center"
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all text-center"
               >
-                <IconDownload className="w-4 h-4 text-white" />
-                <span>Save File to Device</span>
+                <IconDownload className="w-4 h-4 text-white shrink-0" />
+                <span>Save to Device</span>
               </a>
             )}
 
-            {/* Delete from Vault Button */}
+            {/* Delete Button */}
             {onDelete && (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
               >
-                <IconTrash className={`w-4 h-4 ${deleting ? 'animate-spin' : ''}`} />
-                <span>{deleting ? 'Deleting...' : 'Delete from Vault & Disk'}</span>
+                <IconTrash className={`w-4 h-4 shrink-0 ${deleting ? 'animate-spin' : ''}`} />
+                <span>{deleting ? 'Deleting...' : 'Delete from Vault'}</span>
               </button>
             )}
           </div>

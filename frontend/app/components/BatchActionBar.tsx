@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   IconFolderPlus,
   IconStarFilled,
@@ -34,17 +34,17 @@ export function BatchActionBar({
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-2xl pointer-events-none">
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        initial={{ opacity: 0, y: 25, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 30, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-        className="pointer-events-auto flex items-center justify-between gap-3 p-3 sm:p-4 rounded-[2rem] bg-[#EEF2F7]/95 backdrop-blur-xl shadow-[12px_12px_32px_#cbd5e1,-12px_-12px_32px_#ffffff] border border-white/90"
+        exit={{ opacity: 0, y: 25, scale: 0.96 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="pointer-events-auto flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-full bg-white/95 backdrop-blur-xl m3-elevation-4 border border-slate-200/90 shadow-2xl"
       >
         {/* Left: Selected Count & Deselect Button */}
-        <div className="flex items-center gap-2.5 pl-2">
+        <div className="flex items-center gap-2 pl-2">
           <button
             onClick={onDeselectAll}
-            className="p-1.5 rounded-xl bg-[#E5EBF2] shadow-[inset_1px_1px_3px_#cbd5e1,inset_-1px_-1px_3px_#ffffff] text-slate-500 hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
             title="Deselect all"
           >
             <IconClose className="w-3.5 h-3.5" />
@@ -53,65 +53,57 @@ export function BatchActionBar({
             <span className="font-extrabold text-sm text-indigo-600 font-mono">
               {selectedIds.length}
             </span>
-            <span className="text-xs font-extrabold text-slate-700 hidden sm:inline">
+            <span className="text-xs font-bold text-slate-800 hidden sm:inline">
               Selected
             </span>
           </div>
         </div>
 
         {/* Right: Actions Suite */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Add to Album */}
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={onAddToAlbum}
             disabled={isProcessing}
-            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 transition-all cursor-pointer disabled:opacity-50"
             title="Add to Album"
           >
-            <IconFolderPlus className="w-4 h-4 text-indigo-500" />
+            <IconFolderPlus className="w-3.5 h-3.5 text-indigo-600" />
             <span className="hidden sm:inline">Add to Album</span>
-          </motion.button>
+          </button>
 
           {/* Toggle Favorite */}
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={onToggleFavoriteBatch}
             disabled={isProcessing}
-            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-amber-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-slate-700 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 transition-all cursor-pointer disabled:opacity-50"
             title="Toggle Favorite"
           >
-            <IconStarFilled className="w-4 h-4 text-amber-500" />
+            <IconStarFilled className="w-3.5 h-3.5 text-amber-500" />
             <span className="hidden sm:inline">Star</span>
-          </motion.button>
+          </button>
 
           {/* Download ZIP */}
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={onDownloadZipBatch}
             disabled={isProcessing}
-            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-800 transition-all cursor-pointer disabled:opacity-50"
             title="Download ZIP archive"
           >
-            <IconDownload className="w-4 h-4 text-indigo-500" />
-            <span className="hidden md:inline">Download ZIP</span>
-          </motion.button>
+            <IconDownload className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden md:inline">ZIP</span>
+          </button>
 
           {/* Batch Delete */}
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={onDeleteBatch}
             disabled={isProcessing}
-            className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 m3-elevation-1 transition-all cursor-pointer disabled:opacity-50"
             title="Batch delete from vault & disk"
           >
-            <IconTrash className="w-4 h-4 text-rose-500" />
+            <IconTrash className="w-3.5 h-3.5" />
             <span>Delete</span>
-          </motion.button>
+          </button>
         </div>
       </motion.div>
     </div>

@@ -72,17 +72,17 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-spring-pop">
-      <div className="relative w-full max-w-lg rounded-[2.2rem] bg-[#EEF2F7] shadow-[16px_16px_36px_rgba(0,0,0,0.2),-10px_-10px_30px_rgba(255,255,255,0.9)] border border-white/90 p-6 sm:p-8 flex flex-col gap-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="relative w-full max-w-lg rounded-[28px] bg-white m3-elevation-4 border border-slate-200 p-6 sm:p-8 flex flex-col gap-6 shadow-2xl">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-200">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#EEF2F7] shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff]">
-              <IconUpload className="w-5 h-5 text-indigo-600" />
+            <div className="p-2 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200/60">
+              <IconUpload className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-800">
+              <h3 className="text-base font-extrabold text-slate-900">
                 Import Archive Export
               </h3>
               <span className="text-[10px] text-slate-400 font-mono">
@@ -93,7 +93,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] text-slate-500 hover:text-slate-900 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <IconClose className="w-4 h-4" />
           </button>
@@ -104,7 +104,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-2xl bg-[#E5EBF2] shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#ffffff] border-2 border-dashed border-slate-300 hover:border-indigo-400 p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200"
+          className="rounded-2xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200"
         >
           <input
             ref={fileInputRef}
@@ -114,7 +114,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
             className="hidden"
           />
 
-          <div className="p-3 rounded-2xl bg-[#EEF2F7] shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] mb-3 text-indigo-600">
+          <div className="p-3 rounded-2xl bg-white border border-slate-200 text-indigo-600 mb-3 m3-elevation-1">
             <IconUpload className="w-6 h-6" />
           </div>
 
@@ -160,11 +160,11 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] hover:text-slate-900 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all"
+            className="px-4 py-2 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
             Cancel
           </button>
@@ -173,9 +173,9 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
             type="button"
             onClick={handleUpload}
             disabled={!file || uploading}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-indigo-600 shadow-[4px_4px_10px_rgba(79,70,229,0.35),-2px_-2px_6px_#ffffff] hover:bg-indigo-700 active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed m3-elevation-1 transition-all cursor-pointer"
           >
-            <IconSparkles className="w-4 h-4 text-white" />
+            <IconSparkles className="w-4 h-4" />
             <span>{uploading ? 'Extracting URLs...' : 'Queue Archive Import'}</span>
           </button>
         </div>

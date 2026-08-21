@@ -65,7 +65,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
       case 'x':
         return <IconX className="w-5 h-5 text-slate-800" />;
       case 'tiktok':
-        return <IconTikTok className="w-5 h-5 text-teal-600" />;
+        return <IconTikTok className="w-5 h-5 text-slate-900" />;
       case 'youtube':
         return <IconYouTube className="w-5 h-5 text-red-600" />;
       case 'reddit':
@@ -78,22 +78,22 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/50 backdrop-blur-sm animate-spring-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/50 backdrop-blur-sm">
       {/* Backdrop Click */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Drawer Container */}
-      <div className="relative w-full max-w-md h-full bg-[#EEF2F7] shadow-[-14px_0_30px_rgba(0,0,0,0.15)] border-l border-white/80 p-6 flex flex-col justify-between overflow-y-auto">
+      {/* M3 Side Sheet Container */}
+      <div className="relative w-full max-w-md h-full bg-white m3-elevation-4 border-l border-slate-200 p-6 flex flex-col justify-between overflow-y-auto">
         
         {/* Header */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#EEF2F7] shadow-[3px_3px_6px_#cbd5e1,-3px_-3px_6px_#ffffff]">
-                <IconShieldCheck className="w-5 h-5 text-indigo-600" />
+              <div className="p-2 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200/60">
+                <IconShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-slate-800">
+                <h3 className="text-base font-extrabold text-slate-900">
                   Platform Adapters
                 </h3>
                 <span className="text-[10px] text-slate-400 font-mono">
@@ -104,7 +104,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
 
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-[#EEF2F7] shadow-[2px_2px_5px_#cbd5e1,-2px_-2px_5px_#ffffff] text-slate-500 hover:text-slate-900 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <IconClose className="w-4 h-4" />
             </button>
@@ -112,13 +112,13 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
+            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono">
               {error}
             </div>
           )}
 
-          {/* Adapters List */}
-          <div className="flex flex-col gap-3">
+          {/* Adapters List: M3 Outlined List Items */}
+          <div className="flex flex-col gap-2.5">
             {loading && adapters.length === 0 ? (
               <div className="py-8 text-center text-xs font-mono text-slate-400">
                 Checking adapter engines...
@@ -127,10 +127,10 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
               adapters.map((ad) => (
                 <div
                   key={ad.platform}
-                  className="p-4 rounded-2xl bg-[#F4F7FB] border border-white/90 shadow-[3px_3px_8px_#d5dde9,-3px_-3px_8px_#ffffff] flex items-center justify-between gap-3"
+                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-[#EEF2F7] shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff]">
+                    <div className="p-2 rounded-xl bg-white border border-slate-200">
                       {getPlatformIcon(ad.platform)}
                     </div>
                     <div className="flex flex-col">
@@ -145,10 +145,10 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
 
                   <div className="flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-extrabold shadow-[inset_1px_1px_2px_#cbd5e1,inset_-1px_-1px_2px_#ffffff] ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold font-mono ${
                         ad.health_ok
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-800 border border-rose-200'
                       }`}
                     >
                       <span
@@ -170,7 +170,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
           <button
             onClick={fetchAdapters}
             disabled={loading}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-[#EEF2F7] shadow-[3px_3px_8px_#cbd5e1,-3px_-3px_8px_#ffffff] hover:text-indigo-600 active:shadow-[inset_2px_2px_4px_#cbd5e1,inset_-2px_-2px_4px_#ffffff] transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 transition-all cursor-pointer disabled:opacity-50"
           >
             <IconRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Testing Adapters...' : 'Re-test All Adapters'}</span>
