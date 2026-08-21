@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   IconDownload,
   IconArchive,
@@ -35,36 +36,42 @@ export function Navbar({
   const isVaultPage = pathname === '/vault';
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/90 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Brand & Logo */}
         <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center m3-elevation-1">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            {/* Symmetrical Squircle App Icon */}
+            <div className="w-9 h-9 rounded-[9px] bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">
               <IconDownload className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-base tracking-tight text-slate-900 leading-none">
                 Media<span className="text-indigo-600">Vault</span>
               </span>
-              <span className="text-[10px] font-mono text-slate-400 font-semibold tracking-wider mt-0.5">
-                Archiver
-              </span>
             </div>
           </Link>
         </div>
 
-        {/* Center: Segmented Navigation Bar */}
-        <nav className="flex items-center p-1 rounded-full bg-slate-100 border border-slate-200">
+        {/* Center: Segmented Navigation Bar with Smooth Active Pill Transition */}
+        <nav className="relative flex items-center p-1 rounded-[14px] bg-slate-100/90 border border-slate-200">
+          {/* Studio Tab */}
           <Link
             href="/"
-            className={`flex items-center gap-1.5 px-4 sm:px-5 py-1.5 rounded-full text-xs font-bold transition-all ${
+            className={`relative flex items-center gap-2 px-4 sm:px-5 py-1.5 rounded-[10px] text-xs font-bold transition-colors z-10 ${
               !isVaultPage
-                ? 'bg-white text-indigo-900 shadow-sm font-extrabold'
+                ? 'text-indigo-950 font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
+            {!isVaultPage && (
+              <motion.div
+                layoutId="nav-active-pill"
+                className="absolute inset-0 bg-white rounded-[10px] shadow-sm -z-10"
+                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+              />
+            )}
             <IconDownload className="w-3.5 h-3.5" />
             <span>Studio</span>
             {activeJobsCount > 0 && (
@@ -72,21 +79,24 @@ export function Navbar({
             )}
           </Link>
 
+          {/* Vault Tab */}
           <Link
             href="/vault"
-            className={`flex items-center gap-1.5 px-4 sm:px-5 py-1.5 rounded-full text-xs font-bold transition-all ${
+            className={`relative flex items-center gap-2 px-4 sm:px-5 py-1.5 rounded-[10px] text-xs font-bold transition-colors z-10 ${
               isVaultPage
-                ? 'bg-white text-indigo-900 shadow-sm font-extrabold'
+                ? 'text-indigo-950 font-extrabold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
+            {isVaultPage && (
+              <motion.div
+                layoutId="nav-active-pill"
+                className="absolute inset-0 bg-white rounded-[10px] shadow-sm -z-10"
+                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+              />
+            )}
             <IconFolder className="w-3.5 h-3.5" />
             <span>Vault</span>
-            {mediaCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-indigo-50 text-indigo-700 font-extrabold border border-indigo-200">
-                {mediaCount}
-              </span>
-            )}
           </Link>
         </nav>
 
@@ -94,8 +104,9 @@ export function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           {/* Adapter Health Chip */}
           <button
+            type="button"
             onClick={onOpenAdapters}
-            className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all cursor-pointer shadow-sm"
             title="Inspect Platform Adapters"
           >
             <span
@@ -108,14 +119,15 @@ export function Navbar({
               }`}
             />
             <span className="hidden md:inline font-mono text-[11px]">
-              {backendStatus === 'ok' ? 'Adapters Ready' : 'Checking...'}
+              {backendStatus === 'ok' ? 'Online' : 'Checking...'}
             </span>
           </button>
 
           {/* Import Archive Button */}
           <button
+            type="button"
             onClick={onOpenImport}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all cursor-pointer shadow-sm"
             title="Import Legacy JSON"
           >
             <IconArchive className="w-3.5 h-3.5 text-slate-500" />
@@ -124,9 +136,10 @@ export function Navbar({
 
           {/* Refresh Action */}
           <button
+            type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-full bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            className="p-2 rounded-[10px] bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 active:scale-95 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
             title="Sync library"
           >
             <IconRefresh

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   IconDownload,
   IconSparkles,
@@ -14,10 +15,13 @@ import {
   IconPinterest,
   IconThreads,
 } from './Icons';
+import { DownloadProgressBar } from './DownloadProgressBar';
+import { JobRow } from './JobPipeline';
 
 interface DownloadStudioProps {
   onQueueDownload: (url: string, platform?: string) => Promise<boolean>;
   isSubmitting?: boolean;
+  activeJob?: JobRow | null;
 }
 
 const PLATFORMS = [
@@ -31,10 +35,15 @@ const PLATFORMS = [
   { id: 'pinterest', label: 'Pinterest', icon: IconPinterest, color: 'text-red-700' },
 ];
 
-export function DownloadStudio({ onQueueDownload, isSubmitting = false }: DownloadStudioProps) {
+export function DownloadStudio({
+  onQueueDownload,
+  isSubmitting = false,
+  activeJob = null,
+}: DownloadStudioProps) {
   const [url, setUrl] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('all');
   const [errorMsg, setErrorMsg] = useState('');
+  const [submittedUrl, setSubmittedUrl] = useState('');
 
   const handlePaste = async () => {
     try {
@@ -57,6 +66,7 @@ export function DownloadStudio({ onQueueDownload, isSubmitting = false }: Downlo
     }
 
     setErrorMsg('');
+    setSubmittedUrl(cleanUrl);
     const success = await onQueueDownload(
       cleanUrl,
       selectedPlatform === 'all' ? undefined : selectedPlatform
@@ -66,30 +76,30 @@ export function DownloadStudio({ onQueueDownload, isSubmitting = false }: Downlo
     }
   };
 
+  const showActiveProgress = isSubmitting || (activeJob && (activeJob.status === 'running' || activeJob.status === 'queued'));
+  const progressUrl = activeJob?.url || submittedUrl || url;
+  const progressPlatform = activeJob?.platform || (selectedPlatform === 'all' ? undefined : selectedPlatform);
+
   return (
-    <div className="w-full flex flex-col items-center gap-8 py-4">
+    <div className="w-full flex flex-col items-center gap-7 py-2">
       
-      {/* Studio Header */}
-      <div className="flex flex-col items-center text-center gap-3 max-w-2xl px-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+      {/* Studio Header (Wider container to prevent title wrapping) */}
+      <div className="flex flex-col items-center text-center gap-3 max-w-4xl px-4">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-[8px] text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
           <IconSparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Material 3 Social Archiver</span>
+          <span>Social Media Archiver</span>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-extrabold text-slate-900 tracking-tight leading-tight sm:whitespace-nowrap">
           Archive Media from Any Platform
         </h1>
-
-        <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-          Download high-resolution photos, albums, reels, videos, and captions into your private local vault.
-        </p>
       </div>
 
-      {/* Main Ingestion Card: M3 Search Bar */}
-      <div className="w-full max-w-3xl px-4">
+      {/* Main Ingestion Card: Search & Submit */}
+      <div className="w-full max-w-3xl px-4 flex flex-col gap-4">
         <form
           onSubmit={handleSubmit}
-          className="relative flex flex-col sm:flex-row items-stretch sm:items-center rounded-3xl bg-white border border-slate-200 m3-elevation-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2 sm:p-2.5 gap-2"
+          className="relative flex flex-col sm:flex-row items-stretch sm:items-center rounded-[24px] bg-white border border-slate-200/90 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2 sm:p-2.5 gap-2"
         >
           {/* Input Field with leading icon */}
           <div className="flex-1 flex items-center gap-3 px-3 py-1.5 min-w-0">
@@ -111,7 +121,7 @@ export function DownloadStudio({ onQueueDownload, isSubmitting = false }: Downlo
             <button
               type="button"
               onClick={handlePaste}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+              className="px-3 py-1.5 rounded-[8px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
               title="Paste from clipboard"
             >
               <IconPaste className="w-3.5 h-3.5 text-slate-500" />
@@ -119,11 +129,11 @@ export function DownloadStudio({ onQueueDownload, isSubmitting = false }: Downlo
             </button>
           </div>
 
-          {/* M3 Primary Filled Button */}
+          {/* Primary Filled Button */}
           <button
             type="submit"
             disabled={isSubmitting || !url.trim()}
-            className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-full text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed m3-elevation-1 transition-all cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-[14px] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200 transition-all cursor-pointer shrink-0"
           >
             {isSubmitting ? (
               <>
@@ -137,49 +147,82 @@ export function DownloadStudio({ onQueueDownload, isSubmitting = false }: Downlo
               </>
             )}
           </button>
-
-          {/* M3 Embedded Linear Progress Indicator */}
-          {isSubmitting && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-100 overflow-hidden rounded-b-3xl">
-              <div className="h-full bg-indigo-600 animate-m3-progress rounded-full" />
-            </div>
-          )}
         </form>
+
+        {/* Dynamic High-End Progress Bar when Downloading */}
+        <AnimatePresence>
+          {showActiveProgress && (
+            <DownloadProgressBar
+              url={progressUrl}
+              platform={progressPlatform}
+              isQueued={activeJob?.status === 'queued'}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Error Feedback */}
         {errorMsg && (
-          <div className="mt-3 px-4 py-2 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-center gap-2">
+          <div className="px-4 py-2.5 rounded-[12px] bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-center gap-2">
             <span>⚠️ {errorMsg}</span>
           </div>
         )}
       </div>
 
-      {/* M3 Filter Chips: Supported Platforms */}
-      <div className="flex flex-col items-center gap-2.5 w-full max-w-4xl px-4">
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 font-mono">
-          Platform Ingestion Mode
-        </span>
+      {/* Supported Platforms Infinite Marquee Badge */}
+      <div className="flex flex-col items-center gap-2 w-full max-w-3xl px-4">
+        
+        {/* Outer Pill Container with Gradient Edge Fades */}
+        <div className="relative w-full overflow-hidden rounded-full bg-white border border-slate-200/90 shadow-sm p-1.5 flex items-center">
+          
+          {/* Left & Right Edge Fades */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white via-white/80 to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/80 to-transparent z-10" />
 
-        <div className="flex items-center justify-center gap-2 flex-wrap">
-          {PLATFORMS.map((p) => {
-            const Icon = p.icon;
-            const isSelected = selectedPlatform === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedPlatform(p.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-indigo-50 border border-indigo-300 text-indigo-950 font-extrabold shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${p.color}`} />
-                <span>{p.label}</span>
-              </button>
-            );
-          })}
+          {/* Continuous Left-Scrolling Marquee Track */}
+          <div className="animate-marquee-left flex items-center gap-2">
+            {/* First sequence */}
+            {PLATFORMS.map((p) => {
+              const Icon = p.icon;
+              const isSelected = selectedPlatform === p.id;
+              return (
+                <button
+                  key={`seq1-${p.id}`}
+                  type="button"
+                  onClick={() => setSelectedPlatform(p.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : p.color}`} />
+                  <span className="whitespace-nowrap">{p.label}</span>
+                </button>
+              );
+            })}
+
+            {/* Duplicate sequence for seamless infinite loop */}
+            {PLATFORMS.map((p) => {
+              const Icon = p.icon;
+              const isSelected = selectedPlatform === p.id;
+              return (
+                <button
+                  key={`seq2-${p.id}`}
+                  type="button"
+                  onClick={() => setSelectedPlatform(p.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : p.color}`} />
+                  <span className="whitespace-nowrap">{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
         </div>
       </div>
 

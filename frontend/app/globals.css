@@ -104,22 +104,69 @@ svg {
   scrollbar-width: none;
 }
 
-/* Custom linear indeterminate progress animation */
-@keyframes m3-linear-progress {
+/* High-End Linear Progress Animations */
+@keyframes shimmer-beam {
   0% {
-    left: -40%;
-    width: 40%;
+    transform: translateX(-100%);
   }
   50% {
-    left: 20%;
-    width: 60%;
+    transform: translateX(30%);
   }
   100% {
-    left: 100%;
-    width: 40%;
+    transform: translateX(200%);
   }
 }
 
-.animate-m3-progress {
-  animation: m3-linear-progress 1.5s infinite ease-in-out;
+.animate-shimmer-beam {
+  animation: shimmer-beam 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes stream-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-stream-flow {
+  background-size: 200% 200%;
+  animation: stream-flow 2.5s ease infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s infinite ease-in-out;
+}
+
+/* Infinite Marquee Animation to Left */
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-left {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 28s linear infinite;
+}
+
+.animate-marquee-left:hover {
+  animation-play-state: paused;
 }

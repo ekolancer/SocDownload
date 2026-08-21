@@ -10,6 +10,13 @@ import {
   IconVideoCamera,
   IconThreads,
   IconClose,
+  IconInstagram,
+  IconTikTok,
+  IconYouTube,
+  IconX,
+  IconReddit,
+  IconPinterest,
+  IconCheck,
 } from './Icons';
 
 export interface AlbumSummary {
@@ -35,6 +42,16 @@ export type VaultViewMode =
   | { type: 'creator_detail'; username: string }
   | { type: 'type_filter'; kind: 'photo' | 'video' | 'threads' };
 
+export const SUPPORTED_PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', icon: IconInstagram, color: 'text-pink-500', bg: 'bg-pink-50 text-pink-700 border-pink-200' },
+  { id: 'tiktok', label: 'TikTok', icon: IconTikTok, color: 'text-slate-900', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+  { id: 'threads', label: 'Threads', icon: IconThreads, color: 'text-slate-900', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+  { id: 'youtube', label: 'YouTube', icon: IconYouTube, color: 'text-red-500', bg: 'bg-red-50 text-red-700 border-red-200' },
+  { id: 'x', label: 'X (Twitter)', icon: IconX, color: 'text-slate-900', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+  { id: 'reddit', label: 'Reddit', icon: IconReddit, color: 'text-orange-500', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+  { id: 'pinterest', label: 'Pinterest', icon: IconPinterest, color: 'text-red-600', bg: 'bg-red-50 text-red-700 border-red-200' },
+];
+
 interface VaultSidebarProps {
   currentView: VaultViewMode;
   onSelectView: (view: VaultViewMode) => void;
@@ -42,6 +59,11 @@ interface VaultSidebarProps {
   favoritesCount: number;
   albums: AlbumSummary[];
   creators: CreatorSummary[];
+  platformCounts: Record<string, number>;
+  selectedPlatforms: string[];
+  onTogglePlatform: (platformId: string) => void;
+  onSelectAllPlatforms: () => void;
+  onClearPlatforms: () => void;
   onOpenCreateAlbum: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
@@ -54,110 +76,208 @@ export function VaultSidebar({
   favoritesCount,
   albums,
   creators,
+  platformCounts,
+  selectedPlatforms,
+  onTogglePlatform,
+  onSelectAllPlatforms,
+  onClearPlatforms,
   onOpenCreateAlbum,
   isOpenMobile,
   onCloseMobile,
 }: VaultSidebarProps) {
   const isTimelineActive = currentView.type === 'timeline';
   const isFavoritesActive = currentView.type === 'favorites';
-  const isAlbumsActive = currentView.type === 'albums_list' || currentView.type === 'album_detail';
   const isCreatorsActive = currentView.type === 'creators_list' || currentView.type === 'creator_detail';
 
   const sidebarContent = (
-    <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1 no-scrollbar">
+    <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1 no-scrollbar text-sm">
       
-      {/* Main Views Navigation Group */}
-      <div className="flex flex-col gap-1 p-2 rounded-2xl bg-white border border-slate-200 m3-elevation-1">
-        
-        {/* 1. Photos & Timeline */}
+      {/* 1. Core Navigation Library */}
+      <div className="flex flex-col gap-1 p-2 rounded-[20px] bg-white border border-slate-200/90 shadow-sm">
+        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono px-3 pt-1 pb-0.5">
+          Library
+        </span>
+
+        {/* Timeline */}
         <button
           type="button"
           onClick={() => {
             onSelectView({ type: 'timeline' });
             onCloseMobile();
           }}
-          className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center justify-between px-3 py-2 rounded-[12px] text-xs font-bold transition-all cursor-pointer ${
             isTimelineActive
-              ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
-              : 'text-slate-700 hover:bg-slate-100'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+              : 'text-slate-700 hover:bg-slate-100 hover:translate-x-0.5'
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <IconPhoto className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>Timeline</span>
+            <IconPhoto className={`w-4 h-4 shrink-0 ${isTimelineActive ? 'text-white' : 'text-indigo-600'}`} />
+            <span>All Timeline</span>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600 font-bold">
+          {/* Squircle Badge */}
+          <span
+            className={`min-w-[20px] h-5 px-1.5 rounded-[6px] flex items-center justify-center text-[10px] font-mono font-bold ${
+              isTimelineActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
             {totalMediaCount}
           </span>
         </button>
 
-        {/* 2. Favorites */}
+        {/* Favorites */}
         <button
           type="button"
           onClick={() => {
             onSelectView({ type: 'favorites' });
             onCloseMobile();
           }}
-          className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center justify-between px-3 py-2 rounded-[12px] text-xs font-bold transition-all cursor-pointer ${
             isFavoritesActive
-              ? 'bg-amber-50 text-amber-950 font-extrabold border border-amber-200'
-              : 'text-slate-700 hover:bg-slate-100'
+              ? 'bg-amber-500 text-white shadow-md shadow-amber-200'
+              : 'text-slate-700 hover:bg-slate-100 hover:translate-x-0.5'
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <IconStarFilled className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Favorites ⭐</span>
+            <IconStarFilled className={`w-4 h-4 shrink-0 ${isFavoritesActive ? 'text-white' : 'text-amber-500'}`} />
+            <span>Starred ⭐</span>
           </div>
+          {/* Squircle Badge */}
           {favoritesCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-900 font-extrabold">
+            <span
+              className={`min-w-[20px] h-5 px-1.5 rounded-[6px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                isFavoritesActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'
+              }`}
+            >
               {favoritesCount}
             </span>
           )}
         </button>
 
-        {/* 3. Creators Hub */}
+        {/* Creators Hub */}
         <button
           type="button"
           onClick={() => {
             onSelectView({ type: 'creators_list' });
             onCloseMobile();
           }}
-          className={`flex items-center justify-between px-3.5 py-2.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center justify-between px-3 py-2 rounded-[12px] text-xs font-bold transition-all cursor-pointer ${
             isCreatorsActive
-              ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
-              : 'text-slate-700 hover:bg-slate-100'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+              : 'text-slate-700 hover:bg-slate-100 hover:translate-x-0.5'
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <IconUsers className="w-4 h-4 text-indigo-600 shrink-0" />
+            <IconUsers className={`w-4 h-4 shrink-0 ${isCreatorsActive ? 'text-white' : 'text-indigo-600'}`} />
             <span>Creators Hub</span>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-600 font-bold">
+          {/* Squircle Badge */}
+          <span
+            className={`min-w-[20px] h-5 px-1.5 rounded-[6px] flex items-center justify-center text-[10px] font-mono font-bold ${
+              isCreatorsActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
             {creators.length}
           </span>
         </button>
       </div>
 
-      {/* Albums Section */}
-      <div className="flex flex-col gap-2 p-3 rounded-2xl bg-white border border-slate-200 m3-elevation-1">
-        <div className="flex items-center justify-between px-2 pt-1">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 font-mono">
-            My Albums ({albums.length})
+      {/* 2. Multi-Select Social Media Platforms Filter */}
+      <div className="flex flex-col gap-1.5 p-2.5 rounded-[20px] bg-white border border-slate-200/90 shadow-sm">
+        <div className="flex items-center justify-between px-1.5 pt-0.5 pb-1">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono">
+            Filter Platforms
+          </span>
+          <div className="flex items-center gap-1">
+            {selectedPlatforms.length > 0 ? (
+              <button
+                type="button"
+                onClick={onClearPlatforms}
+                className="text-[10px] font-mono font-bold text-indigo-600 hover:underline px-1 py-0.5"
+              >
+                Clear ({selectedPlatforms.length})
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onSelectAllPlatforms}
+                className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 px-1 py-0.5"
+              >
+                Select All
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          {SUPPORTED_PLATFORMS.map((platform) => {
+            const Icon = platform.icon;
+            const isChecked = selectedPlatforms.includes(platform.id);
+            const count = platformCounts[platform.id] || 0;
+
+            return (
+              <button
+                key={platform.id}
+                type="button"
+                onClick={() => onTogglePlatform(platform.id)}
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                  isChecked
+                    ? 'bg-indigo-50/80 text-indigo-950 border border-indigo-200'
+                    : 'text-slate-600 hover:bg-slate-50 border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {/* Symmetrical Check Squircle */}
+                  <div
+                    className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                      isChecked
+                        ? 'bg-indigo-600 border-indigo-600 text-white'
+                        : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {isChecked && <IconCheck className="w-3 h-3 text-white" />}
+                  </div>
+
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${platform.color}`} />
+                  <span className="truncate">{platform.label}</span>
+                </div>
+
+                {/* Squircle Counter Badge */}
+                <span
+                  className={`min-w-[18px] h-4.5 px-1 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                    isChecked
+                      ? 'bg-indigo-200/80 text-indigo-900'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Custom Albums */}
+      <div className="flex flex-col gap-1.5 p-2.5 rounded-[20px] bg-white border border-slate-200/90 shadow-sm">
+        <div className="flex items-center justify-between px-1.5 pt-0.5 pb-1">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono">
+            Albums ({albums.length})
           </span>
           <button
             type="button"
             onClick={onOpenCreateAlbum}
-            className="p-1 rounded-full text-indigo-600 hover:bg-indigo-50 border border-indigo-200 transition-all cursor-pointer"
+            className="w-5 h-5 rounded-[6px] text-indigo-600 hover:bg-indigo-50 border border-indigo-200 flex items-center justify-center transition-all cursor-pointer"
             title="Create New Album"
           >
-            <IconFolderPlus className="w-3.5 h-3.5" />
+            <IconFolderPlus className="w-3 h-3" />
           </button>
         </div>
 
-        <div className="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+        <div className="flex flex-col gap-1 max-h-40 overflow-y-auto no-scrollbar">
           {albums.length === 0 ? (
-            <div className="px-2 py-2.5 text-center text-xs text-slate-400">
-              <span>No custom albums yet</span>
+            <div className="px-2 py-2 text-center text-xs text-slate-400">
+              <span>No albums yet</span>
             </div>
           ) : (
             albums.map((album) => {
@@ -175,17 +295,22 @@ export function VaultSidebar({
                     });
                     onCloseMobile();
                   }}
-                  className={`flex items-center justify-between px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
+                      ? 'bg-indigo-600 text-white shadow-sm font-bold'
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <IconFolder className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <IconFolder className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-indigo-500'}`} />
                     <span className="truncate">{album.name}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400 shrink-0 ml-1">
+                  {/* Squircle Badge */}
+                  <span
+                    className={`min-w-[18px] h-4.5 px-1 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
                     {album.items_count}
                   </span>
                 </button>
@@ -195,10 +320,10 @@ export function VaultSidebar({
         </div>
       </div>
 
-      {/* Categories Section */}
-      <div className="flex flex-col gap-1 p-2 rounded-2xl bg-white border border-slate-200 m3-elevation-1">
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 font-mono px-2 pt-1">
-          Categories
+      {/* 4. Media Categories */}
+      <div className="flex flex-col gap-1 p-2 rounded-[20px] bg-white border border-slate-200/90 shadow-sm">
+        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono px-3 pt-1 pb-0.5">
+          Type
         </span>
 
         <button
@@ -207,14 +332,14 @@ export function VaultSidebar({
             onSelectView({ type: 'type_filter', kind: 'photo' });
             onCloseMobile();
           }}
-          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
             currentView.type === 'type_filter' && currentView.kind === 'photo'
-              ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
+              ? 'bg-indigo-600 text-white font-bold'
               : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
           <IconPhoto className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span>Photos & Images</span>
+          <span>Photos & Stills</span>
         </button>
 
         <button
@@ -223,14 +348,14 @@ export function VaultSidebar({
             onSelectView({ type: 'type_filter', kind: 'video' });
             onCloseMobile();
           }}
-          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
             currentView.type === 'type_filter' && currentView.kind === 'video'
-              ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
+              ? 'bg-indigo-600 text-white font-bold'
               : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
           <IconVideoCamera className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span>Videos & Reels</span>
+          <span>Reels & Videos</span>
         </button>
 
         <button
@@ -239,9 +364,9 @@ export function VaultSidebar({
             onSelectView({ type: 'type_filter', kind: 'threads' });
             onCloseMobile();
           }}
-          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
             currentView.type === 'type_filter' && currentView.kind === 'threads'
-              ? 'bg-indigo-50 text-indigo-900 font-extrabold border border-indigo-200'
+              ? 'bg-indigo-600 text-white font-bold'
               : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
@@ -255,28 +380,26 @@ export function VaultSidebar({
 
   return (
     <>
-      {/* Desktop Static Sidebar (Always visible on lg screens) */}
-      <aside className="hidden lg:flex flex-col w-60 shrink-0 sticky top-20 h-[calc(100vh-6rem)]">
+      {/* Desktop Static Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-20 h-[calc(100vh-6rem)]">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer (Visible when isOpenMobile is true) */}
+      {/* Mobile Drawer Panel */}
       {isOpenMobile && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          {/* Backdrop */}
           <div
             onClick={onCloseMobile}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
           />
 
-          {/* Drawer Panel */}
-          <div className="relative w-72 max-w-[85vw] h-full bg-slate-50 border-r border-slate-200 p-4 flex flex-col justify-between z-10 m3-elevation-4 overflow-y-auto">
+          <div className="relative w-72 max-w-[85vw] h-full bg-slate-50 border-r border-slate-200 p-4 flex flex-col justify-between z-10 shadow-2xl overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <span className="font-extrabold text-sm text-slate-900">MediaVault Menu</span>
+              <span className="font-extrabold text-sm text-slate-900">MediaVault Filter</span>
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="p-1.5 rounded-full text-slate-500 hover:bg-slate-200"
+                className="w-7 h-7 rounded-[6px] bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200"
               >
                 <IconClose className="w-4 h-4" />
               </button>

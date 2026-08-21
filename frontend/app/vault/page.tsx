@@ -4,11 +4,18 @@ import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { Navbar } from '../components/Navbar';
 import { MediaGallery } from '../components/MediaGallery';
 import { MediaLightboxModal, MediaItem } from '../components/MediaLightboxModal';
-import { VaultSidebar, VaultViewMode, AlbumSummary, CreatorSummary } from '../components/VaultSidebar';
+import {
+  VaultSidebar,
+  VaultViewMode,
+  AlbumSummary,
+  CreatorSummary,
+  SUPPORTED_PLATFORMS,
+} from '../components/VaultSidebar';
 import { BatchActionBar } from '../components/BatchActionBar';
 import { AlbumModal } from '../components/AlbumModal';
 import { AdapterHealthDrawer } from '../components/AdapterHealthDrawer';
 import { ArchiveImportModal } from '../components/ArchiveImportModal';
+import { JobNotificationToast, CompletedJobNotice } from '../components/JobNotificationToast';
 import { JobRow } from '../components/JobPipeline';
 import {
   IconFolder,
@@ -26,11 +33,11 @@ export default function VaultPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
-  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [mediaError, setMediaError] = useState<string>('');
 
-  // Navigation & View State
+  // Navigation & Multi-Select Platform Filter State
   const [currentView, setCurrentView] = useState<VaultViewMode>({ type: 'timeline' });
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [albumDetailItems, setAlbumDetailItems] = useState<MediaItem[]>([]);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -38,14 +45,16 @@ export default function VaultPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
-  // Modals state
+  // Modals & Notifications state
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album'>('create_only');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
+  const [completedNotice, setCompletedNotice] = useState<CompletedJobNotice | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const prevJobsRef = useRef<JobRow[]>([]);
   const isFetchingRef = useRef(false);
 
   // Refresh Data
@@ -80,10 +89,25 @@ export default function VaultPage() {
         setAlbums(albumsData);
       }
 
-      // 4. Fetch Jobs count
+      // 4. Fetch Jobs & trigger completion toast
       const jobsRes = await fetch(`${API}/jobs?limit=20`).catch(() => null);
       if (jobsRes && jobsRes.ok) {
-        const jobsData = await jobsRes.json();
+        const jobsData: JobRow[] = await jobsRes.json();
+
+        if (prevJobsRef.current.length > 0) {
+          jobsData.forEach((newJob) => {
+            const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
+            if (oldJob && (oldJob.status === 'running' || oldJob.status === 'queued') && newJob.status === 'done') {
+              setCompletedNotice({
+                id: newJob.id,
+                platform: newJob.platform,
+                url: newJob.url,
+              });
+            }
+          });
+        }
+
+        prevJobsRef.current = jobsData;
         setJobs(jobsData);
       }
     } catch (err) {
@@ -98,7 +122,7 @@ export default function VaultPage() {
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(() => refreshData(false), 3500);
+    const interval = setInterval(() => refreshData(false), 3000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -115,6 +139,23 @@ export default function VaultPage() {
         .catch(console.error);
     }
   }, [currentView]);
+
+  // Platform Counts Mapping
+  const platformCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    SUPPORTED_PLATFORMS.forEach((p) => {
+      counts[p.id] = 0;
+    });
+    media.forEach((item) => {
+      const p = item.platform?.toLowerCase();
+      if (counts[p] !== undefined) {
+        counts[p] += 1;
+      } else if (p === 'twitter') {
+        counts['x'] = (counts['x'] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [media]);
 
   // Compute Creators Summary
   const creators = useMemo(() => {
@@ -145,38 +186,75 @@ export default function VaultPage() {
     return media.filter((m) => m.is_favorite).length;
   }, [media]);
 
-  // Determine active media list to display
+  // Determine active media list with Platform Multi-Selection filtering
   const displayMedia = useMemo(() => {
+    let baseMedia: MediaItem[] = [];
+
     switch (currentView.type) {
       case 'timeline':
-        return media;
+        baseMedia = media;
+        break;
       case 'favorites':
-        return media.filter((m) => m.is_favorite);
+        baseMedia = media.filter((m) => m.is_favorite);
+        break;
       case 'album_detail':
-        return albumDetailItems;
+        baseMedia = albumDetailItems;
+        break;
       case 'creator_detail':
-        return media.filter((m) => (m.username || 'Anonymous') === currentView.username);
+        baseMedia = media.filter((m) => (m.username || 'Anonymous') === currentView.username);
+        break;
       case 'type_filter':
         if (currentView.kind === 'photo') {
-          return media.filter(
+          baseMedia = media.filter(
             (m) =>
               m.files?.some((f) => f.kind === 'image') &&
               !m.files?.some((f) => f.path?.endsWith('.txt'))
           );
         } else if (currentView.kind === 'video') {
-          return media.filter((m) =>
+          baseMedia = media.filter((m) =>
             m.files?.some((f) => f.kind === 'video' || f.path?.endsWith('.mp4'))
           );
         } else if (currentView.kind === 'threads') {
-          return media.filter(
+          baseMedia = media.filter(
             (m) => m.platform === 'threads' || m.files?.some((f) => f.path?.endsWith('.txt'))
           );
+        } else {
+          baseMedia = media;
         }
-        return media;
+        break;
       default:
-        return media;
+        baseMedia = media;
+        break;
     }
-  }, [currentView, media, albumDetailItems]);
+
+    // Apply Multi-Select Platform Filters if any platforms are selected
+    if (selectedPlatforms.length > 0) {
+      baseMedia = baseMedia.filter((m) => {
+        const p = m.platform?.toLowerCase();
+        return (
+          selectedPlatforms.includes(p) ||
+          (p === 'twitter' && selectedPlatforms.includes('x'))
+        );
+      });
+    }
+
+    return baseMedia;
+  }, [currentView, media, albumDetailItems, selectedPlatforms]);
+
+  // Platform Multi-Select Handlers
+  const handleTogglePlatform = (id: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllPlatforms = () => {
+    setSelectedPlatforms(SUPPORTED_PLATFORMS.map((p) => p.id));
+  };
+
+  const handleClearPlatforms = () => {
+    setSelectedPlatforms([]);
+  };
 
   // Multi-Selection handlers
   const handleToggleSelect = (id: number) => {
@@ -332,7 +410,7 @@ export default function VaultPage() {
   const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="relative min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
       {/* Top App Bar */}
       <Navbar
@@ -345,10 +423,10 @@ export default function VaultPage() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Main Workspace Layout (Sidebar + Gallery Canvas) */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-start gap-8">
+      {/* Main Workspace Layout */}
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-start gap-7">
         
-        {/* Left Navigation Drawer */}
+        {/* Left Navigation Drawer & Multi-Select Platform Filters */}
         <VaultSidebar
           currentView={currentView}
           onSelectView={(view) => {
@@ -359,6 +437,11 @@ export default function VaultPage() {
           favoritesCount={favoritesCount}
           albums={albums}
           creators={creators}
+          platformCounts={platformCounts}
+          selectedPlatforms={selectedPlatforms}
+          onTogglePlatform={handleTogglePlatform}
+          onSelectAllPlatforms={handleSelectAllPlatforms}
+          onClearPlatforms={handleClearPlatforms}
           onOpenCreateAlbum={() => {
             setAlbumModalMode('create_only');
             setIsAlbumModalOpen(true);
@@ -371,14 +454,14 @@ export default function VaultPage() {
         <main className="flex-1 min-w-0 flex flex-col gap-6">
           
           {/* Mobile Sidebar Toggle Button */}
-          <div className="flex lg:hidden items-center justify-between p-3 rounded-2xl bg-white border border-slate-200 m3-elevation-1">
+          <div className="flex lg:hidden items-center justify-between p-3 rounded-[16px] bg-white border border-slate-200/90 shadow-sm">
             <button
               type="button"
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-[8px] bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
             >
               <IconLayers className="w-4 h-4 text-indigo-600" />
-              <span>Menu & Albums</span>
+              <span>Filters & Albums</span>
             </button>
 
             <span className="text-xs font-mono text-slate-600 font-bold">
@@ -390,8 +473,8 @@ export default function VaultPage() {
           {currentView.type === 'creators_list' ? (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-extrabold text-slate-900">Creators Hub</h1>
-                <p className="text-xs text-slate-500 font-mono">
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Creators Hub</h1>
+                <p className="text-xs text-slate-500 font-normal">
                   Explore media archived by content creators
                 </p>
               </div>
@@ -401,10 +484,11 @@ export default function VaultPage() {
                   <div
                     key={c.username}
                     onClick={() => setCurrentView({ type: 'creator_detail', username: c.username })}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 m3-elevation-1 hover:m3-elevation-2 flex items-center justify-between gap-3 cursor-pointer transition-all"
+                    className="p-4 rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md flex items-center justify-between gap-3 cursor-pointer transition-all hover:-translate-y-0.5"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
+                      {/* Symmetrical Squircle Avatar */}
+                      <div className="w-10 h-10 rounded-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
                         <IconUser className="w-5 h-5" />
                       </div>
                       <div className="flex flex-col min-w-0">
@@ -417,8 +501,9 @@ export default function VaultPage() {
                       </div>
                     </div>
 
-                    <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 shrink-0">
-                      {c.count} items
+                    {/* Squircle Count Badge */}
+                    <span className="min-w-[24px] h-6 px-2 rounded-[6px] text-xs font-mono font-bold bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                      {c.count}
                     </span>
                   </div>
                 ))}
@@ -429,8 +514,8 @@ export default function VaultPage() {
             <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                  <h1 className="text-2xl font-extrabold text-slate-900">My Albums</h1>
-                  <p className="text-xs text-slate-500 font-mono">
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Albums</h1>
+                  <p className="text-xs text-slate-500 font-normal">
                     Custom collections and categorized media
                   </p>
                 </div>
@@ -441,7 +526,7 @@ export default function VaultPage() {
                     setAlbumModalMode('create_only');
                     setIsAlbumModalOpen(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 m3-elevation-1 transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm transition-all cursor-pointer"
                 >
                   <IconFolderPlus className="w-4 h-4" />
                   <span>New Album</span>
@@ -459,9 +544,9 @@ export default function VaultPage() {
                         albumName: a.name,
                       })
                     }
-                    className="group rounded-2xl bg-white border border-slate-200 m3-elevation-1 hover:m3-elevation-2 p-3 flex flex-col gap-2.5 cursor-pointer overflow-hidden transition-all"
+                    className="group rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
                   >
-                    <div className="relative aspect-video w-full rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400">
+                    <div className="relative aspect-video w-full rounded-[12px] bg-slate-950 overflow-hidden flex items-center justify-center text-slate-400">
                       {a.cover_file_url ? (
                         <img
                           src={a.cover_file_url}
@@ -469,17 +554,18 @@ export default function VaultPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <IconFolder className="w-10 h-10 text-slate-300" />
+                        <IconFolder className="w-10 h-10 text-slate-400" />
                       )}
-                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md">
+                      {/* Squircle Badge */}
+                      <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
                         {a.items_count} items
                       </span>
                     </div>
 
-                    <div className="flex flex-col px-1">
-                      <span className="text-sm font-extrabold text-slate-800">{a.name}</span>
+                    <div className="flex flex-col px-0.5">
+                      <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
                       {a.description && (
-                        <span className="text-xs text-slate-400 truncate">{a.description}</span>
+                        <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
                       )}
                     </div>
                   </div>
@@ -490,8 +576,6 @@ export default function VaultPage() {
             /* Default Gallery View */
             <MediaGallery
               media={displayMedia}
-              selectedPlatform={selectedPlatform}
-              onSelectPlatform={setSelectedPlatform}
               onOpenLightbox={(item) => setLightboxItem(item)}
               onDeleteItem={handleDeleteMedia}
               onToggleFavorite={handleToggleFavorite}
@@ -506,10 +590,14 @@ export default function VaultPage() {
                   ? '⭐ Starred Favorites'
                   : currentView.type === 'type_filter'
                   ? `🎬 ${currentView.kind.toUpperCase()} Archive`
-                  : undefined
+                  : selectedPlatforms.length > 0
+                  ? `Filtered (${selectedPlatforms.join(', ')})`
+                  : 'Media Vault'
               }
               viewSubtitle={
-                currentView.type === 'album_detail'
+                selectedPlatforms.length > 0
+                  ? `Showing media from ${selectedPlatforms.join(', ')}`
+                  : currentView.type === 'album_detail'
                   ? 'Custom Album Collection'
                   : currentView.type === 'creator_detail'
                   ? 'Media downloaded from this author'
@@ -574,6 +662,12 @@ export default function VaultPage() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => refreshData(true)}
+      />
+
+      {/* Global Job Completion Toast Notification */}
+      <JobNotificationToast
+        notice={completedNotice}
+        onClose={() => setCompletedNotice(null)}
       />
     </div>
   );

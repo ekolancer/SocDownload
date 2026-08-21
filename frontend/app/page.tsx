@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { DownloadStudio } from './components/DownloadStudio';
 import { JobPipeline, JobRow } from './components/JobPipeline';
@@ -26,6 +25,7 @@ export default function StudioPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const prevJobsRef = useRef<JobRow[]>([]);
+  const notifiedJobIdsRef = useRef<Set<number>>(new Set());
   const isFetchingRef = useRef(false);
 
   const refreshData = useCallback(async (showIndicator = false) => {
@@ -43,15 +43,10 @@ export default function StudioPage() {
       }
 
       // 2. Fetch Media Count
-      const mediaRes = await fetch(`${API}/media?limit=1`).catch(() => null);
+      const mediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
       if (mediaRes && mediaRes.ok) {
         const mediaData = await mediaRes.json();
-        // also get total count if available
-        const allMediaRes = await fetch(`${API}/media?limit=500`).catch(() => null);
-        if (allMediaRes && allMediaRes.ok) {
-          const allData = await allMediaRes.json();
-          setMediaCount(allData.length);
-        }
+        setMediaCount(mediaData.length);
       }
 
       // 3. Fetch Jobs
@@ -63,13 +58,25 @@ export default function StudioPage() {
         if (prevJobsRef.current.length > 0) {
           jobsData.forEach((newJob) => {
             const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
-            if (oldJob && (oldJob.status === 'running' || oldJob.status === 'queued') && newJob.status === 'done') {
+            const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
+            
+            if (
+              (wasInProgress || !notifiedJobIdsRef.current.has(newJob.id)) &&
+              newJob.status === 'done' &&
+              !notifiedJobIdsRef.current.has(newJob.id)
+            ) {
+              notifiedJobIdsRef.current.add(newJob.id);
               setCompletedNotice({
                 id: newJob.id,
                 platform: newJob.platform,
                 url: newJob.url,
               });
             }
+          });
+        } else {
+          // Initialize notified set with existing completed jobs so we only notify on new ones
+          jobsData.forEach((j) => {
+            if (j.status === 'done') notifiedJobIdsRef.current.add(j.id);
           });
         }
 
@@ -88,7 +95,7 @@ export default function StudioPage() {
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(() => refreshData(false), 3000);
+    const interval = setInterval(() => refreshData(false), 2500);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -134,11 +141,8 @@ export default function StudioPage() {
   const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="relative min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
-      {/* Ambient M3 Background Glows */}
-      <div className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-[50rem] h-[25rem] rounded-full bg-gradient-to-b from-indigo-100/60 via-purple-50/30 to-transparent blur-3xl -z-10" />
-
       {/* Top App Bar */}
       <Navbar
         backendStatus={backendStatus}
@@ -151,14 +155,15 @@ export default function StudioPage() {
       />
 
       {/* Main Studio Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex flex-col gap-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-10">
         {/* Download Hero Studio */}
         <DownloadStudio
           onQueueDownload={handleQueueDownload}
           isSubmitting={isSubmitting}
+          activeJob={jobs.find((j) => j.status === 'running' || j.status === 'queued') || null}
         />
 
-        {/* Live Job Pipeline & Recent Ingestion Tasks */}
+        {/* Live Job Pipeline & Activity Stream */}
         <JobPipeline
           jobs={jobs}
           onClearJobs={handleClearJobs}
@@ -166,9 +171,9 @@ export default function StudioPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-200/80 py-8 mt-16 bg-white/70 backdrop-blur-md text-center text-xs text-slate-500 font-mono">
+      <footer className="w-full border-t border-slate-200/80 py-8 mt-12 bg-white/70 backdrop-blur-md text-center text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span>MediaVault • Material Design 3 Edition</span>
+          <span>MediaVault • High Fidelity Social Archiver</span>
           <span className="text-slate-400">
             Instagram • TikTok • Threads • YouTube • X • Reddit • Pinterest
           </span>
@@ -188,7 +193,7 @@ export default function StudioPage() {
         onSuccess={() => refreshData(true)}
       />
 
-      {/* Job Completion Toast Notification */}
+      {/* Job Completion Toast Notification with Auto-Dismiss */}
       <JobNotificationToast
         notice={completedNotice}
         onClose={() => setCompletedNotice(null)}
