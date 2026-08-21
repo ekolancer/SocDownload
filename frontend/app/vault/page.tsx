@@ -35,11 +35,11 @@ export default function VaultPage() {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [mediaError, setMediaError] = useState<string>('');
 
-  // Navigation & Multi-Select Platform Filter State
+  // Navigation, Multi-Select Platform Filter & Slide-Over Sidebar State
   const [currentView, setCurrentView] = useState<VaultViewMode>({ type: 'timeline' });
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [albumDetailItems, setAlbumDetailItems] = useState<MediaItem[]>([]);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Multi-Selection State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -423,55 +423,13 @@ export default function VaultPage() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Main Workspace Layout */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-start gap-7">
+      {/* Main Spacious Workspace Layout */}
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
         
-        {/* Left Navigation Drawer & Multi-Select Platform Filters */}
-        <VaultSidebar
-          currentView={currentView}
-          onSelectView={(view) => {
-            setCurrentView(view);
-            setSelectedIds([]);
-          }}
-          totalMediaCount={media.length}
-          favoritesCount={favoritesCount}
-          albums={albums}
-          creators={creators}
-          platformCounts={platformCounts}
-          selectedPlatforms={selectedPlatforms}
-          onTogglePlatform={handleTogglePlatform}
-          onSelectAllPlatforms={handleSelectAllPlatforms}
-          onClearPlatforms={handleClearPlatforms}
-          onOpenCreateAlbum={() => {
-            setAlbumModalMode('create_only');
-            setIsAlbumModalOpen(true);
-          }}
-          isOpenMobile={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        />
-
-        {/* Main Content Area */}
-        <main className="flex-1 min-w-0 flex flex-col gap-6">
-          
-          {/* Mobile Sidebar Toggle Button */}
-          <div className="flex lg:hidden items-center justify-between p-3 rounded-[16px] bg-white border border-slate-200/90 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-[8px] bg-slate-100 text-xs font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
-            >
-              <IconLayers className="w-4 h-4 text-indigo-600" />
-              <span>Filters & Albums</span>
-            </button>
-
-            <span className="text-xs font-mono text-slate-600 font-bold">
-              {displayMedia.length} Media
-            </span>
-          </div>
-
-          {/* If View is Creators List Hub */}
-          {currentView.type === 'creators_list' ? (
-            <div className="flex flex-col gap-5">
+        {/* If View is Creators List Hub */}
+        {currentView.type === 'creators_list' ? (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Creators Hub</h1>
                 <p className="text-xs text-slate-500 font-normal">
@@ -479,46 +437,64 @@ export default function VaultPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {creators.map((c) => (
-                  <div
-                    key={c.username}
-                    onClick={() => setCurrentView({ type: 'creator_detail', username: c.username })}
-                    className="p-4 rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md flex items-center justify-between gap-3 cursor-pointer transition-all hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Symmetrical Squircle Avatar */}
-                      <div className="w-10 h-10 rounded-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
-                        <IconUser className="w-5 h-5" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-extrabold text-slate-900 truncate">
-                          @{c.username}
-                        </span>
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          {c.platforms.join(', ')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Squircle Count Badge */}
-                    <span className="min-w-[24px] h-6 px-2 rounded-[6px] text-xs font-mono font-bold bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                      {c.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer"
+              >
+                <IconLayers className="w-4 h-4 text-indigo-600" />
+                <span>Filters & Albums</span>
+              </button>
             </div>
-          ) : currentView.type === 'albums_list' ? (
-            /* If View is Albums List Hub */
-            <div className="flex flex-col gap-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Albums</h1>
-                  <p className="text-xs text-slate-500 font-normal">
-                    Custom collections and categorized media
-                  </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {creators.map((c) => (
+                <div
+                  key={c.username}
+                  onClick={() => setCurrentView({ type: 'creator_detail', username: c.username })}
+                  className="p-4 rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md flex items-center justify-between gap-3 cursor-pointer transition-all hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
+                      <IconUser className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-extrabold text-slate-900 truncate">
+                        @{c.username}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {c.platforms.join(', ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="min-w-[24px] h-6 px-2 rounded-[6px] text-xs font-mono font-bold bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    {c.count}
+                  </span>
                 </div>
+              ))}
+            </div>
+          </div>
+        ) : currentView.type === 'albums_list' ? (
+          /* If View is Albums List Hub */
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Albums</h1>
+                <p className="text-xs text-slate-500 font-normal">
+                  Custom collections and categorized media
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer"
+                >
+                  <IconLayers className="w-4 h-4 text-indigo-600" />
+                  <span>Filters</span>
+                </button>
 
                 <button
                   type="button"
@@ -532,92 +508,117 @@ export default function VaultPage() {
                   <span>New Album</span>
                 </button>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {albums.map((a) => (
-                  <div
-                    key={a.id}
-                    onClick={() =>
-                      setCurrentView({
-                        type: 'album_detail',
-                        albumId: a.id,
-                        albumName: a.name,
-                      })
-                    }
-                    className="group rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
-                  >
-                    <div className="relative aspect-video w-full rounded-[12px] bg-slate-950 overflow-hidden flex items-center justify-center text-slate-400">
-                      {a.cover_file_url ? (
-                        <img
-                          src={a.cover_file_url}
-                          alt={a.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <IconFolder className="w-10 h-10 text-slate-400" />
-                      )}
-                      {/* Squircle Badge */}
-                      <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
-                        {a.items_count} items
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col px-0.5">
-                      <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
-                      {a.description && (
-                        <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          ) : (
-            /* Default Gallery View */
-            <MediaGallery
-              media={displayMedia}
-              onOpenLightbox={(item) => setLightboxItem(item)}
-              onDeleteItem={handleDeleteMedia}
-              onToggleFavorite={handleToggleFavorite}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              viewTitle={
-                currentView.type === 'album_detail'
-                  ? `📁 ${currentView.albumName}`
-                  : currentView.type === 'creator_detail'
-                  ? `👤 @${currentView.username}'s Archive`
-                  : currentView.type === 'favorites'
-                  ? '⭐ Starred Favorites'
-                  : currentView.type === 'type_filter'
-                  ? `🎬 ${currentView.kind.toUpperCase()} Archive`
-                  : selectedPlatforms.length > 0
-                  ? `Filtered (${selectedPlatforms.join(', ')})`
-                  : 'Media Vault'
-              }
-              viewSubtitle={
-                selectedPlatforms.length > 0
-                  ? `Showing media from ${selectedPlatforms.join(', ')}`
-                  : currentView.type === 'album_detail'
-                  ? 'Custom Album Collection'
-                  : currentView.type === 'creator_detail'
-                  ? 'Media downloaded from this author'
-                  : undefined
-              }
-              onBackToTimeline={
-                currentView.type === 'creator_detail'
-                  ? () => setCurrentView({ type: 'creators_list' })
-                  : currentView.type === 'album_detail'
-                  ? () => setCurrentView({ type: 'albums_list' })
-                  : currentView.type !== 'timeline'
-                  ? () => setCurrentView({ type: 'timeline' })
-                  : undefined
-              }
-              error={mediaError}
-            />
-          )}
 
-        </main>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {albums.map((a) => (
+                <div
+                  key={a.id}
+                  onClick={() =>
+                    setCurrentView({
+                      type: 'album_detail',
+                      albumId: a.id,
+                      albumName: a.name,
+                    })
+                  }
+                  className="group rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+                >
+                  <div className="relative aspect-video w-full rounded-[12px] bg-slate-950 overflow-hidden flex items-center justify-center text-slate-400">
+                    {a.cover_file_url ? (
+                      <img
+                        src={a.cover_file_url}
+                        alt={a.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <IconFolder className="w-10 h-10 text-slate-400" />
+                    )}
+                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
+                      {a.items_count} items
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col px-0.5">
+                    <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
+                    {a.description && (
+                      <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Default Gallery View with Slideover Toggle */
+          <MediaGallery
+            media={displayMedia}
+            onOpenLightbox={(item) => setLightboxItem(item)}
+            onDeleteItem={handleDeleteMedia}
+            onToggleFavorite={handleToggleFavorite}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onToggleSidebar={() => setIsSidebarOpen(true)}
+            activePlatformsCount={selectedPlatforms.length}
+            viewTitle={
+              currentView.type === 'album_detail'
+                ? `📁 ${currentView.albumName}`
+                : currentView.type === 'creator_detail'
+                ? `👤 @${currentView.username}'s Archive`
+                : currentView.type === 'favorites'
+                ? '⭐ Starred Favorites'
+                : currentView.type === 'type_filter'
+                ? `🎬 ${currentView.kind.toUpperCase()} Archive`
+                : selectedPlatforms.length > 0
+                ? `Filtered (${selectedPlatforms.join(', ')})`
+                : 'Media Vault'
+            }
+            viewSubtitle={
+              selectedPlatforms.length > 0
+                ? `Showing media from ${selectedPlatforms.join(', ')}`
+                : currentView.type === 'album_detail'
+                ? 'Custom Album Collection'
+                : currentView.type === 'creator_detail'
+                ? 'Media downloaded from this author'
+                : undefined
+            }
+            onBackToTimeline={
+              currentView.type === 'creator_detail'
+                ? () => setCurrentView({ type: 'creators_list' })
+                : currentView.type === 'album_detail'
+                ? () => setCurrentView({ type: 'albums_list' })
+                : currentView.type !== 'timeline'
+                ? () => setCurrentView({ type: 'timeline' })
+                : undefined
+            }
+            error={mediaError}
+          />
+        )}
+
       </div>
+
+      {/* Slide-Over Drawer Panel */}
+      <VaultSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        currentView={currentView}
+        onSelectView={(view) => {
+          setCurrentView(view);
+          setSelectedIds([]);
+        }}
+        totalMediaCount={media.length}
+        favoritesCount={favoritesCount}
+        albums={albums}
+        creators={creators}
+        platformCounts={platformCounts}
+        selectedPlatforms={selectedPlatforms}
+        onTogglePlatform={handleTogglePlatform}
+        onSelectAllPlatforms={handleSelectAllPlatforms}
+        onClearPlatforms={handleClearPlatforms}
+        onOpenCreateAlbum={() => {
+          setAlbumModalMode('create_only');
+          setIsAlbumModalOpen(true);
+        }}
+      />
 
       {/* Floating Bottom Action Bar */}
       <BatchActionBar

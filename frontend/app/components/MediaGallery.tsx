@@ -31,6 +31,8 @@ interface MediaGalleryProps {
   viewTitle?: string;
   viewSubtitle?: string;
   onBackToTimeline?: () => void;
+  onToggleSidebar?: () => void;
+  activePlatformsCount?: number;
   error?: string;
 }
 
@@ -96,6 +98,8 @@ export function MediaGallery({
   viewTitle,
   viewSubtitle,
   onBackToTimeline,
+  onToggleSidebar,
+  activePlatformsCount = 0,
   error,
 }: MediaGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -137,13 +141,30 @@ export function MediaGallery({
       {/* Dynamic Header & Search Bar Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-[22px] border border-slate-200/90 shadow-sm">
         
-        {/* Title and Back Button */}
+        {/* Title, Back Button, and Sidebar Trigger */}
         <div className="flex items-center gap-3 min-w-0">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs"
+              title="Open Filters & Albums"
+            >
+              <IconLayers className="w-4 h-4 text-indigo-600" />
+              <span>Filters</span>
+              {activePlatformsCount > 0 && (
+                <span className="min-w-[18px] h-4.5 px-1 rounded-[4px] bg-indigo-600 text-white text-[10px] font-mono font-bold flex items-center justify-center">
+                  {activePlatformsCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {onBackToTimeline && (
             <button
               type="button"
               onClick={onBackToTimeline}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all shrink-0 cursor-pointer"
             >
               <span>← Back</span>
             </button>

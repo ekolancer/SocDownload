@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   IconDownload,
@@ -44,6 +44,7 @@ export function DownloadStudio({
   const [selectedPlatform, setSelectedPlatform] = useState('all');
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedUrl, setSubmittedUrl] = useState('');
+  const [dismissedJobId, setDismissedJobId] = useState<number | null>(null);
 
   const handlePaste = async () => {
     try {
@@ -67,6 +68,7 @@ export function DownloadStudio({
 
     setErrorMsg('');
     setSubmittedUrl(cleanUrl);
+    setDismissedJobId(null);
     const success = await onQueueDownload(
       cleanUrl,
       selectedPlatform === 'all' ? undefined : selectedPlatform
@@ -76,7 +78,12 @@ export function DownloadStudio({
     }
   };
 
-  const showActiveProgress = isSubmitting || (activeJob && (activeJob.status === 'running' || activeJob.status === 'queued'));
+  const isCurrentJobDismissed = activeJob && activeJob.id === dismissedJobId;
+  const isJobActiveOrRecent = activeJob && !isCurrentJobDismissed;
+  const isJobDone = activeJob?.status === 'done' || activeJob?.status === 'dup';
+  const isJobFailed = activeJob?.status === 'failed';
+  const showActiveProgress = isSubmitting || isJobActiveOrRecent;
+
   const progressUrl = activeJob?.url || submittedUrl || url;
   const progressPlatform = activeJob?.platform || (selectedPlatform === 'all' ? undefined : selectedPlatform);
 
@@ -149,13 +156,18 @@ export function DownloadStudio({
           </button>
         </form>
 
-        {/* Dynamic High-End Progress Bar when Downloading */}
+        {/* Dynamic High-End Progress Bar with Smooth Auto-Close Animation */}
         <AnimatePresence>
           {showActiveProgress && (
             <DownloadProgressBar
               url={progressUrl}
               platform={progressPlatform}
               isQueued={activeJob?.status === 'queued'}
+              isDone={isJobDone}
+              error={isJobFailed ? activeJob?.error || 'Download failed' : null}
+              onAutoClose={() => {
+                if (activeJob) setDismissedJobId(activeJob.id);
+              }}
             />
           )}
         </AnimatePresence>
