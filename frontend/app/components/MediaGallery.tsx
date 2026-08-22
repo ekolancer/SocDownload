@@ -28,6 +28,7 @@ interface MediaGalleryProps {
   onOpenLightbox: (item: MediaItem) => void;
   onDeleteItem?: (id: number) => Promise<void>;
   onToggleFavorite?: (id: number) => Promise<void>;
+  onSelectCreator?: (username: string) => void;
   selectedIds?: number[];
   onToggleSelect?: (id: number) => void;
   viewTitle?: string;
@@ -97,6 +98,7 @@ export function MediaGallery({
   onOpenLightbox,
   onDeleteItem,
   onToggleFavorite,
+  onSelectCreator,
   selectedIds = [],
   onToggleSelect,
   viewTitle,
@@ -506,9 +508,23 @@ export function MediaGallery({
 
                       {/* Card Content Footer: Author & Date */}
                       <div className="p-3 flex items-center justify-between gap-2 bg-white">
-                        <span className="text-xs font-black text-slate-900 truncate">
-                          {item.username ? `@${item.username}` : 'Archived Media'}
-                        </span>
+                        {item.username && onSelectCreator ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectCreator(item.username!);
+                            }}
+                            className="text-xs font-black text-slate-900 hover:text-indigo-600 truncate transition-colors text-left cursor-pointer"
+                            title={`Filter vault by @${item.username}`}
+                          >
+                            @{item.username}
+                          </button>
+                        ) : (
+                          <span className="text-xs font-black text-slate-900 truncate">
+                            {item.username ? `@${item.username}` : 'Archived Media'}
+                          </span>
+                        )}
                         <span className="text-[10px] font-mono font-semibold text-slate-400 shrink-0">
                           {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
                         </span>

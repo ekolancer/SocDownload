@@ -15,6 +15,7 @@ import { BatchActionBar } from '../components/BatchActionBar';
 import { AlbumModal } from '../components/AlbumModal';
 import { AdapterHealthDrawer } from '../components/AdapterHealthDrawer';
 import { ArchiveImportModal } from '../components/ArchiveImportModal';
+import { CreatorsHub, CreatorStats } from '../components/CreatorsHub';
 import { JobNotificationToast, CompletedJobNotice } from '../components/JobNotificationToast';
 import { JobRow, JobStats } from '../components/JobPipeline';
 import Link from 'next/link';
@@ -22,8 +23,13 @@ import {
   IconFolder,
   IconFolderPlus,
   IconUser,
+  IconUsers,
   IconLayers,
   IconDownload,
+  IconFileText,
+  IconFolderZip,
+  IconStar,
+  IconSparkles,
 } from '../components/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
@@ -34,6 +40,8 @@ export default function VaultPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
+  const [creatorsList, setCreatorsList] = useState<CreatorStats[]>([]);
+  const [loadingCreators, setLoadingCreators] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [mediaError, setMediaError] = useState<string>('');
@@ -43,6 +51,7 @@ export default function VaultPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [albumDetailItems, setAlbumDetailItems] = useState<MediaItem[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // Multi-Selection State
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -92,7 +101,14 @@ export default function VaultPage() {
         setAlbums(albumsData);
       }
 
-      // 4. Fetch Job Stats
+      // 4. Fetch Creators Aggregation
+      const creatorsRes = await fetch(`${API}/media/creators`).catch(() => null);
+      if (creatorsRes && creatorsRes.ok) {
+        const creatorsData = await creatorsRes.json();
+        setCreatorsList(creatorsData);
+      }
+
+      // 5. Fetch Job Stats
       const statsRes = await fetch(`${API}/jobs/stats`).catch(() => null);
       if (statsRes && statsRes.ok) {
         const statsData: JobStats = await statsRes.json();
@@ -380,6 +396,12 @@ export default function VaultPage() {
     }
   };
 
+  const handleBatchDownloadCsv = () => {
+    if (selectedIds.length === 0) return;
+    const idsParam = selectedIds.join(',');
+    window.location.href = `${API}/media/export/csv?ids=${idsParam}`;
+  };
+
   // Album CRUD handlers
   const handleCreateAlbum = async (name: string, description?: string): Promise<number | null> => {
     try {
@@ -472,55 +494,192 @@ export default function VaultPage() {
           </div>
         )}
 
-        {/* If View is Creators List Hub */}
-        {currentView.type === 'creators_list' ? (
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Creators Hub</h1>
-                <p className="text-xs text-slate-500 font-normal">
-                  Explore media archived by content creators
-                </p>
-              </div>
+        {/* Top Vault Sub-Nav Bar & Export Menu */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
+          {/* Sub Navigation Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView({ type: 'timeline' });
+                setSelectedIds([]);
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+                currentView.type === 'timeline'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <IconLayers className="w-3.5 h-3.5" />
+              <span>All Media</span>
+              <span className="opacity-70">({media.length})</span>
+            </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView({ type: 'creators_list' });
+                setSelectedIds([]);
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+                currentView.type === 'creators_list' || currentView.type === 'creator_detail'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <IconUsers className="w-3.5 h-3.5" />
+              <span>Creators Hub</span>
+              <span className="opacity-70">({creatorsList.length || creators.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView({ type: 'albums_list' });
+                setSelectedIds([]);
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+                currentView.type === 'albums_list' || currentView.type === 'album_detail'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <IconFolder className="w-3.5 h-3.5" />
+              <span>Albums</span>
+              <span className="opacity-70">({albums.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView({ type: 'favorites' });
+                setSelectedIds([]);
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+                currentView.type === 'favorites'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <IconStar className="w-3.5 h-3.5 text-amber-500" />
+              <span>Favorites</span>
+              <span className="opacity-70">({favoritesCount})</span>
+            </button>
+          </div>
+
+          {/* Right Action: Filters Drawer + Export Vault Dropdown */}
+          <div className="flex items-center gap-2 self-end sm:self-auto relative">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[12px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs cursor-pointer"
+              title="Open Filter Drawer"
+            >
+              <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Filters</span>
+              {selectedPlatforms.length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+              )}
+            </button>
+
+            {/* Export Dropdown */}
+            <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsSidebarOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer"
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 shadow-2xs transition-all cursor-pointer"
+                title="Export entire vault or filtered view"
               >
-                <IconLayers className="w-4 h-4 text-indigo-600" />
-                <span>Filters & Albums</span>
+                <IconDownload className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Export Vault</span>
+                <span className="text-[10px]">▼</span>
               </button>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {creators.map((c) => (
-                <div
-                  key={c.username}
-                  onClick={() => setCurrentView({ type: 'creator_detail', username: c.username })}
-                  className="p-4 rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md flex items-center justify-between gap-3 cursor-pointer transition-all hover:-translate-y-0.5"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center font-extrabold shrink-0">
-                      <IconUser className="w-5 h-5" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-extrabold text-slate-900 truncate">
-                        @{c.username}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {c.platforms.join(', ')}
-                      </span>
-                    </div>
+              {isExportMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
+                    onClick={() => setIsExportMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-1.5 w-60 rounded-[16px] bg-white border border-slate-200 shadow-xl p-1.5 z-30 flex flex-col gap-1">
+                    <a
+                      href={`/api/media/export/zip${
+                        currentView.type === 'creator_detail'
+                          ? `?username=${encodeURIComponent(currentView.username)}`
+                          : currentView.type === 'album_detail'
+                          ? `?album_id=${currentView.albumId}`
+                          : selectedPlatforms.length === 1
+                          ? `?platform=${selectedPlatforms[0]}`
+                          : ''
+                      }`}
+                      download
+                      onClick={() => setIsExportMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                    >
+                      <IconFolderZip className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-bold">Full Package (ZIP)</span>
+                        <span className="text-[10px] text-slate-400 font-mono">Media files + metadata</span>
+                      </div>
+                    </a>
+
+                    <a
+                      href={`/api/media/export/csv${
+                        currentView.type === 'creator_detail'
+                          ? `?username=${encodeURIComponent(currentView.username)}`
+                          : currentView.type === 'album_detail'
+                          ? `?album_id=${currentView.albumId}`
+                          : selectedPlatforms.length === 1
+                          ? `?platform=${selectedPlatforms[0]}`
+                          : ''
+                      }`}
+                      download
+                      onClick={() => setIsExportMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                    >
+                      <IconFileText className="w-4 h-4 text-sky-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-bold">Metadata (CSV / Excel)</span>
+                        <span className="text-[10px] text-slate-400 font-mono">Lightweight tabular data</span>
+                      </div>
+                    </a>
+
+                    <a
+                      href={`/api/media/export/json${
+                        currentView.type === 'creator_detail'
+                          ? `?username=${encodeURIComponent(currentView.username)}`
+                          : currentView.type === 'album_detail'
+                          ? `?album_id=${currentView.albumId}`
+                          : selectedPlatforms.length === 1
+                          ? `?platform=${selectedPlatforms[0]}`
+                          : ''
+                      }`}
+                      download
+                      onClick={() => setIsExportMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                    >
+                      <IconSparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-bold">Metadata (JSON)</span>
+                        <span className="text-[10px] text-slate-400 font-mono">Full developer JSON export</span>
+                      </div>
+                    </a>
                   </div>
-
-                  <span className="min-w-[24px] h-6 px-2 rounded-[6px] text-xs font-mono font-bold bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                    {c.count}
-                  </span>
-                </div>
-              ))}
+                </>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* If View is Creators List Hub */}
+        {currentView.type === 'creators_list' ? (
+          <CreatorsHub
+            creators={creatorsList}
+            loading={loadingCreators}
+            onSelectCreator={(username) => {
+              setCurrentView({ type: 'creator_detail', username });
+            }}
+          />
         ) : currentView.type === 'albums_list' ? (
           /* If View is Albums List Hub */
           <div className="flex flex-col gap-5">
@@ -533,15 +692,6 @@ export default function VaultPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm cursor-pointer"
-                >
-                  <IconLayers className="w-4 h-4 text-indigo-600" />
-                  <span>Filters</span>
-                </button>
-
                 <button
                   type="button"
                   onClick={() => {
@@ -601,6 +751,7 @@ export default function VaultPage() {
             onOpenLightbox={(item) => setLightboxItem(item)}
             onDeleteItem={handleDeleteMedia}
             onToggleFavorite={handleToggleFavorite}
+            onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
             onToggleSidebar={() => setIsSidebarOpen(true)}
@@ -676,6 +827,7 @@ export default function VaultPage() {
         }}
         onToggleFavoriteBatch={handleBatchToggleFavorite}
         onDownloadZipBatch={handleBatchDownloadZip}
+        onDownloadCsvBatch={handleBatchDownloadCsv}
         onDeleteBatch={handleBatchDelete}
         isProcessing={isBatchProcessing}
       />
@@ -696,6 +848,7 @@ export default function VaultPage() {
         item={lightboxItem}
         onClose={() => setLightboxItem(null)}
         onDelete={handleDeleteMedia}
+        onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
       />
 
       {/* Adapter Health Drawer */}

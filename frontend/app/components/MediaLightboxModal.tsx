@@ -37,9 +37,10 @@ interface MediaLightboxModalProps {
   item: MediaItem | null;
   onClose: () => void;
   onDelete?: (id: number) => Promise<void>;
+  onSelectCreator?: (username: string, platform?: string) => void;
 }
 
-export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxModalProps) {
+export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }: MediaLightboxModalProps) {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -88,6 +89,13 @@ export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxMod
       } finally {
         setDeleting(false);
       }
+    }
+  };
+
+  const handleCreatorClick = () => {
+    if (item.username && onSelectCreator) {
+      onSelectCreator(item.username, item.platform);
+      onClose();
     }
   };
 
@@ -189,9 +197,21 @@ export function MediaLightboxModal({ item, onClose, onDelete }: MediaLightboxMod
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono shrink-0">
                   {item.platform}
                 </span>
-                <span className="font-extrabold text-sm text-slate-900 truncate">
-                  {item.username ? `@${item.username}` : 'Archived Media'}
-                </span>
+                {item.username ? (
+                  <button
+                    type="button"
+                    onClick={handleCreatorClick}
+                    className="font-extrabold text-sm text-slate-900 hover:text-indigo-600 truncate transition-colors text-left cursor-pointer group flex items-center gap-1"
+                    title={`Filter vault by @${item.username}`}
+                  >
+                    <span>@{item.username}</span>
+                    <span className="text-[10px] text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                  </button>
+                ) : (
+                  <span className="font-extrabold text-sm text-slate-900 truncate">
+                    Archived Media
+                  </span>
+                )}
               </div>
 
               {/* Date */}

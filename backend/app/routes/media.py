@@ -3,12 +3,13 @@ from __future__ import annotations
 import io
 import os
 import zipfile
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from ..config import ROOT, get_settings
 from ..db import AlbumMediaItem, MediaFile, MediaItem, get_session_factory
@@ -200,38 +201,295 @@ def batch_delete_media(payload: BatchMediaPayload):
         return {"deleted_count": deleted_count}
 
 
+@router.get("/creators")
+def list_creators():
+    """Aggregate media items by (username, platform) with counts and statistics."""
+    factory = get_session_factory()
+    with factory() as session:
+        items = session.scalars(
+            select(MediaItem).order_by(MediaItem.created_at.desc())
+        ).all()
+
+        creators_map: dict[tuple[str, str], dict] = {}
+
+        for item in items:
+            username = item.username or "unknown"
+            platform = item.platform or "unknown"
+            key = (username, platform)
+
+            if key not in creators_map:
+                creators_map[key] = {
+                    "username": username,
+                    "platform": platform,
+                    "media_count": 0,
+                    "video_count": 0,
+                    "image_count": 0,
+                    "first_posted_at": None,
+                    "last_posted_at": None,
+                    "sample_thumbnails": [],
+                }
+
+            creator = creators_map[key]
+            creator["media_count"] += 1
+
+            # Check posted dates
+            if item.posted_at:
+                iso_posted = item.posted_at.isoformat()
+                if not creator["first_posted_at"] or iso_posted < creator["first_posted_at"]:
+                    creator["first_posted_at"] = iso_posted
+                if not creator["last_posted_at"] or iso_posted > creator["last_posted_at"]:
+                    creator["last_posted_at"] = iso_posted
+
+            # Fetch media files for this item
+            files = session.scalars(
+                select(MediaFile).where(MediaFile.media_item_id == item.id)
+            ).all()
+
+            for f in files:
+                if f.kind == "video":
+                    creator["video_count"] += 1
+                else:
+                    creator["image_count"] += 1
+
+                if len(creator["sample_thumbnails"]) < 4:
+                    creator["sample_thumbnails"].append(f.id)
+
+        # Sort creators by media_count descending
+        results = sorted(creators_map.values(), key=lambda c: c["media_count"], reverse=True)
+        return results
+
+
+def _get_filtered_media_items(
+    session,
+    ids: str | None = None,
+    album_id: int | None = None,
+    username: str | None = None,
+    platform: str | None = None,
+    limit: int = 500,
+) -> list[MediaItem]:
+    query = select(MediaItem)
+
+    if ids:
+        try:
+            id_list = [int(i.strip()) for i in ids.split(",") if i.strip()]
+            if id_list:
+                query = query.where(MediaItem.id.in_(id_list))
+        except ValueError:
+            pass
+
+    if album_id:
+        query = query.join(AlbumMediaItem, AlbumMediaItem.media_item_id == MediaItem.id).where(
+            AlbumMediaItem.album_id == album_id
+        )
+
+    if username and username != "all":
+        query = query.where(MediaItem.username == username)
+
+    if platform and platform != "all":
+        query = query.where(MediaItem.platform == platform)
+
+    return session.scalars(query.order_by(MediaItem.created_at.desc()).limit(limit)).all()
+
+
+@router.get("/export/csv")
+def export_metadata_csv(
+    ids: str | None = None,
+    album_id: int | None = None,
+    username: str | None = None,
+    platform: str | None = None,
+    limit: int = 500,
+):
+    """Export metadata as a downloadable CSV file."""
+    import csv
+
+    factory = get_session_factory()
+    with factory() as session:
+        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "ID",
+            "Platform",
+            "Username",
+            "Source URL",
+            "Caption",
+            "Hashtags",
+            "Posted At",
+            "Archived At",
+            "Files Count",
+            "SHA256",
+        ])
+
+        for item in items:
+            files_count = session.scalar(
+                select(func.count(MediaFile.id)).where(MediaFile.media_item_id == item.id)
+            ) or 0
+
+            writer.writerow([
+                item.id,
+                item.platform,
+                item.username or "",
+                item.source_url,
+                (item.caption or "").replace("\n", " "),
+                item.hashtags or "",
+                item.posted_at.isoformat() if item.posted_at else "",
+                item.created_at.isoformat() if item.created_at else "",
+                files_count,
+                item.sha256 or "",
+            ])
+
+        output.seek(0)
+        filename = f"mediavault_metadata_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode("utf-8-sig")),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+
+@router.get("/export/json")
+def export_metadata_json(
+    ids: str | None = None,
+    album_id: int | None = None,
+    username: str | None = None,
+    platform: str | None = None,
+    limit: int = 500,
+):
+    """Export full metadata as a downloadable JSON file."""
+    import json
+
+    factory = get_session_factory()
+    with factory() as session:
+        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
+
+        data = []
+        for item in items:
+            files = session.scalars(
+                select(MediaFile).where(MediaFile.media_item_id == item.id)
+            ).all()
+
+            data.append({
+                "id": item.id,
+                "platform": item.platform,
+                "username": item.username,
+                "source_url": item.source_url,
+                "caption": item.caption,
+                "hashtags": item.hashtags.split(",") if item.hashtags else [],
+                "posted_at": item.posted_at.isoformat() if item.posted_at else None,
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+                "sha256": item.sha256,
+                "files": [
+                    {
+                        "id": f.id,
+                        "kind": f.kind,
+                        "name": Path(f.path).name,
+                        "sha256": f.sha256,
+                    }
+                    for f in files
+                ],
+            })
+
+        json_str = json.dumps(data, ensure_ascii=False, indent=2)
+        filename = f"mediavault_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        return StreamingResponse(
+            io.BytesIO(json_str.encode("utf-8")),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+
+@router.get("/export/zip")
+def export_media_zip(
+    ids: str | None = None,
+    album_id: int | None = None,
+    username: str | None = None,
+    platform: str | None = None,
+    limit: int = 500,
+):
+    """Export structured ZIP package containing organized media files and metadata."""
+    import json
+    import csv
+
+    factory = get_session_factory()
+    with factory() as session:
+        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
+
+        if not items:
+            raise HTTPException(status_code=404, detail="No media items found for export")
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            metadata_items = []
+            csv_rows = [
+                ["ID", "Platform", "Username", "Source URL", "Caption", "Hashtags", "Posted At", "Archived At", "Files"]
+            ]
+
+            for item in items:
+                u_dir = item.username or "unknown"
+                p_dir = item.platform or "general"
+                folder_path = f"{p_dir}/{u_dir}"
+
+                files = session.scalars(
+                    select(MediaFile).where(MediaFile.media_item_id == item.id)
+                ).all()
+
+                item_files = []
+                for f in files:
+                    p = Path(f.path)
+                    if p.is_file():
+                        arcname = f"{folder_path}/{p.name}"
+                        zf.write(p, arcname=arcname)
+                        item_files.append(p.name)
+
+                meta_entry = {
+                    "id": item.id,
+                    "platform": item.platform,
+                    "username": item.username,
+                    "source_url": item.source_url,
+                    "caption": item.caption,
+                    "posted_at": item.posted_at.isoformat() if item.posted_at else None,
+                    "created_at": item.created_at.isoformat() if item.created_at else None,
+                    "files": item_files,
+                }
+                metadata_items.append(meta_entry)
+
+                csv_rows.append([
+                    item.id,
+                    item.platform,
+                    item.username or "",
+                    item.source_url,
+                    (item.caption or "").replace("\n", " "),
+                    item.hashtags or "",
+                    item.posted_at.isoformat() if item.posted_at else "",
+                    item.created_at.isoformat() if item.created_at else "",
+                    ", ".join(item_files),
+                ])
+
+            # Write metadata.json at root of ZIP
+            zf.writestr("metadata.json", json.dumps(metadata_items, ensure_ascii=False, indent=2))
+
+            # Write metadata.csv at root of ZIP
+            csv_buf = io.StringIO()
+            writer = csv.writer(csv_buf)
+            writer.writerows(csv_rows)
+            zf.writestr("metadata.csv", csv_buf.getvalue().encode("utf-8-sig"))
+
+        zip_buffer.seek(0)
+        prefix = f"mediavault_{username}" if username else "mediavault_vault"
+        filename = f"{prefix}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+
 @router.post("/batch-zip")
 def batch_zip_media(payload: BatchMediaPayload):
     if not payload.media_ids:
         raise HTTPException(status_code=400, detail="No media IDs specified")
 
-    factory = get_session_factory()
-    with factory() as session:
-        files = session.scalars(
-            select(MediaFile).where(MediaFile.media_item_id.in_(payload.media_ids))
-        ).all()
+    ids_str = ",".join(str(i) for i in payload.media_ids)
+    return export_media_zip(ids=ids_str)
 
-        if not files:
-            raise HTTPException(status_code=404, detail="No files found for specified items")
-
-        # Create in-memory zip file
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-            seen_names: dict[str, int] = {}
-            for f in files:
-                p = Path(f.path)
-                if p.is_file():
-                    arcname = p.name
-                    if arcname in seen_names:
-                        seen_names[arcname] += 1
-                        arcname = f"{p.stem}_{seen_names[arcname]}{p.suffix}"
-                    else:
-                        seen_names[arcname] = 0
-                    zf.write(p, arcname=arcname)
-
-        zip_buffer.seek(0)
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=mediavault_export.zip"},
-        )
