@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   IconLayers,
   IconStar,
@@ -20,6 +20,8 @@ import {
   IconVideoCamera,
   IconChevronLeft,
   IconChevronRight,
+  IconDownload,
+  IconLink,
 } from './Icons';
 import { MediaItem } from './MediaLightboxModal';
 
@@ -39,7 +41,7 @@ interface MediaGalleryProps {
   error?: string;
 }
 
-const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 function getPlatformIcon(platform: string) {
   switch (platform.toLowerCase()) {
@@ -112,6 +114,8 @@ export function MediaGallery({
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'favorites'>('newest');
   const [pageSize, setPageSize] = useState<number>(20);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'masonry'>('grid');
+  const [copiedItemId, setCopiedItemId] = useState<number | null>(null);
 
   // Filter & Sort media
   const filteredMedia = useMemo(() => {
@@ -165,11 +169,18 @@ export function MediaGallery({
     }
   };
 
+  const handleCopyLink = (item: MediaItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(item.source_url);
+    setCopiedItemId(item.id);
+    setTimeout(() => setCopiedItemId(null), 2000);
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
       
       {/* Dynamic Header & Search Bar Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/95 backdrop-blur-xl p-4 sm:p-5 rounded-[24px] border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[24px] border border-slate-200/90 shadow-[0_4px_24px_rgba(15,23,42,0.04)]">
         
         {/* Left: Title, Back Button, and Sidebar Trigger */}
         <div className="flex items-center gap-3 min-w-0">
@@ -198,204 +209,132 @@ export function MediaGallery({
             <button
               type="button"
               onClick={onBackToTimeline}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all shrink-0 cursor-pointer border border-slate-200/80 shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer shrink-0"
             >
               <span>← Back</span>
             </button>
           )}
 
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 truncate tracking-tight leading-tight">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 truncate tracking-tight">
                 {viewTitle || 'Media Vault'}
-              </h1>
-              {/* Symmetrical Squircle Count Badge */}
-              <span className="min-w-[26px] h-6 px-2 rounded-[6px] bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-black flex items-center justify-center shrink-0 shadow-xs">
-                {totalItems}
+              </h2>
+              <span className="px-2 py-0.5 rounded-[6px] text-xs font-mono font-bold bg-indigo-50 border border-indigo-200 text-indigo-700">
+                {filteredMedia.length}
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
-              {viewSubtitle || 'Your private archived gallery and collections'}
-            </p>
+            {viewSubtitle && (
+              <span className="text-xs text-slate-400 font-medium truncate mt-0.5">
+                {viewSubtitle}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Right: Search Input & Segmented Sort Slider */}
+        {/* Right: Search Input, Layout Toggle & Sort Dropdown */}
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          {/* Search Box */}
-          <div className="relative flex-1 sm:w-60 min-w-[200px]">
-            <div className="w-full flex items-center rounded-[14px] bg-slate-50/90 border border-slate-200/90 px-3.5 py-2 focus-within:bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all shadow-inner">
-              <IconSearch className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search caption, creator..."
-                className="w-full bg-transparent text-xs text-slate-900 placeholder-slate-400 font-semibold focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="text-xs text-slate-400 hover:text-slate-700 px-1 font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-64">
+            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search captions, @users..."
+              className="w-full pl-9 pr-8 py-2 rounded-[12px] bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          {/* Premium Segmented Sort Control */}
-          <div className="relative flex items-center p-1 rounded-[14px] bg-slate-100/90 border border-slate-200/80 shrink-0">
-            {(
-              [
-                { id: 'newest', label: 'Newest' },
-                { id: 'oldest', label: 'Oldest' },
-                { id: 'favorites', label: '⭐ Favs' },
-              ] as const
-            ).map((opt) => {
-              const isActive = sortBy === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSortBy(opt.id)}
-                  className={`relative px-3 py-1.5 rounded-[10px] text-xs font-bold transition-colors z-10 cursor-pointer ${
-                    isActive
-                      ? 'text-indigo-950 font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="gallery-sort-indicator"
-                      className="absolute inset-0 bg-white rounded-[10px] shadow-sm -z-10"
-                      transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-                    />
-                  )}
-                  <span>{opt.label}</span>
-                </button>
-              );
-            })}
+          {/* Layout Mode Switcher (Grid vs Masonry) */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-[12px] border border-slate-200/80 shrink-0">
+            <button
+              type="button"
+              onClick={() => setLayoutMode('grid')}
+              className={`px-2.5 py-1 rounded-[8px] text-xs font-bold transition-all cursor-pointer ${
+                layoutMode === 'grid'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Uniform 4:5 Portrait Grid"
+            >
+              Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutMode('masonry')}
+              className={`px-2.5 py-1 rounded-[8px] text-xs font-bold transition-all cursor-pointer ${
+                layoutMode === 'masonry'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Native Aspect Ratio Grid"
+            >
+              Masonry
+            </button>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-[12px] px-3 py-1.5 shrink-0">
+            <span className="text-xs font-bold text-slate-500">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="favorites">⭐ Favorites</option>
+            </select>
           </div>
         </div>
 
       </div>
 
-      {/* Error Notice */}
+      {/* Media Content Stream */}
       {error && (
-        <div className="p-3.5 rounded-[14px] bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-center gap-2">
-          <span>⚠️ {error}</span>
+        <div className="p-4 rounded-[16px] bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
+          ⚠️ {error}
         </div>
       )}
 
-      {/* Empty State */}
-      {filteredMedia.length === 0 ? (
-        <div className="w-full p-12 sm:p-16 rounded-[24px] bg-white border border-slate-200 flex flex-col items-center justify-center text-center gap-3 shadow-sm">
-          <div className="w-14 h-14 rounded-[14px] bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-1">
-            <IconPhoto className="w-7 h-7 text-indigo-500" />
+      {totalItems === 0 ? (
+        <div className="flex flex-col items-center justify-center p-16 rounded-[24px] bg-white border border-slate-200/90 text-center">
+          <div className="w-14 h-14 rounded-[18px] bg-indigo-50 text-indigo-500 border border-indigo-100 flex items-center justify-center mb-3.5 shadow-2xs">
+            <IconPhoto className="w-7 h-7" />
           </div>
-          <h3 className="text-base font-extrabold text-slate-800">
-            No media found
-          </h3>
-          <p className="text-xs text-slate-500 max-w-sm font-medium">
+          <h3 className="text-base font-extrabold text-slate-900">No media found</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm font-medium">
             {searchQuery
-              ? `No results matching "${searchQuery}". Try a different keyword.`
-              : 'Paste links in the Studio to start archiving high-resolution photos and videos.'}
+              ? `No media matching "${searchQuery}". Try a different keyword.`
+              : 'Your vault is currently empty. Start downloading or import your legacy archives!'}
           </p>
         </div>
       ) : (
-        /* Timeline Date Grouped Stream with 5-Column Grid */
         <div className="flex flex-col gap-8">
-          {dateGroups.map((group, groupIdx) => (
+          {dateGroups.map((group) => (
             <div key={group.label} className="flex flex-col gap-3.5">
               
-              {/* Sticky Header with Integrated Pagination Controls on Top */}
-              <div className="sticky top-16 z-20 pt-1 pb-1">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xl p-2 sm:px-4 sm:py-2.5 rounded-[16px] border border-slate-200/90 shadow-sm">
-                  
-                  {/* Left: Date Group Indicator */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-[8px] bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                      <IconCalendar className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-black text-slate-900 font-mono tracking-tight">{group.label}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                    <span className="text-[11px] text-slate-500 font-mono font-bold">
-                      {group.items.length} items
-                    </span>
-                  </div>
-
-                  {/* Right: Integrated Pagination Bar (Rendered on top group) */}
-                  {groupIdx === 0 && totalItems > 0 && (
-                    <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
-                      {/* Per Page Choice */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider font-mono hidden md:inline">
-                          Show:
-                        </span>
-                        <div className="relative flex items-center p-0.5 rounded-[10px] bg-slate-100/90 border border-slate-200/80">
-                          {PAGE_SIZE_OPTIONS.map((size) => {
-                            const isSizeActive = pageSize === size;
-                            return (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => {
-                                  setPageSize(size);
-                                  setCurrentPage(1);
-                                }}
-                                className={`relative px-2 py-0.5 rounded-[6px] text-[11px] font-mono font-bold transition-colors cursor-pointer ${
-                                  isSizeActive ? 'text-indigo-950 font-black' : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                              >
-                                {isSizeActive && (
-                                  <motion.div
-                                    layoutId="pagesize-indicator"
-                                    className="absolute inset-0 bg-white rounded-[6px] shadow-xs -z-10"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-                                  />
-                                )}
-                                <span>{size}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Compact Page Navigation */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handlePageChange(safeCurrentPage - 1)}
-                          disabled={safeCurrentPage <= 1}
-                          className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
-                          title="Previous Page"
-                        >
-                          <IconChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-
-                        <span className="px-2.5 py-0.5 rounded-[6px] bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-black shadow-xs">
-                          {safeCurrentPage} / {totalPages}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => handlePageChange(safeCurrentPage + 1)}
-                          disabled={safeCurrentPage >= totalPages}
-                          className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
-                          title="Next Page"
-                        >
-                          <IconChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
+              {/* Date Header Pill */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-white border border-slate-200/90 text-slate-700 text-xs font-bold font-mono shadow-2xs">
+                  <IconCalendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{group.label}</span>
+                  <span className="text-slate-400 text-[10px]">({group.items.length})</span>
                 </div>
+                <div className="flex-1 h-px bg-slate-200/80" />
               </div>
 
-              {/* 5-Column Ultra-Modern Portrait Gallery Grid */}
+              {/* Responsive 5-Column Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
                 {group.items.map((item) => {
                   const firstFile = item.files?.[0];
@@ -403,32 +342,40 @@ export function MediaGallery({
                   const isVideo =
                     firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
                   const isSelected = selectedIds.includes(item.id);
+                  const isCopied = copiedItemId === item.id;
 
                   return (
-                    <motion.div
+                    <div
                       key={item.id}
-                      whileHover={{ y: -4, transition: { type: 'spring', stiffness: 350, damping: 22 } }}
-                      className={`group relative flex flex-col rounded-[20px] bg-white border transition-all overflow-hidden cursor-pointer shadow-sm hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] ${
+                      style={{ willChange: 'box-shadow, border-color' }}
+                      className={`group relative flex flex-col rounded-[20px] bg-white border overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 ease-out ${
                         isSelected
                           ? 'border-indigo-600 ring-2 ring-indigo-500/25 shadow-md'
                           : 'border-slate-200/90 hover:border-indigo-300/80'
                       }`}
                       onClick={() => onOpenLightbox(item)}
                     >
-                      {/* Media Thumbnail Canvas - Portrait 4:5 */}
-                      <div className="relative aspect-[4/5] w-full bg-slate-950 overflow-hidden flex items-center justify-center border-b border-slate-100">
+                      {/* Media Thumbnail Canvas */}
+                      <div
+                        className={`relative w-full bg-slate-950 overflow-hidden flex items-center justify-center border-b border-slate-100 ${
+                          layoutMode === 'grid' ? 'aspect-[4/5]' : 'aspect-square'
+                        }`}
+                      >
                         {previewUrl ? (
                           isVideo ? (
+                            // Static thumbnail — no hover autoplay to prevent re-render flicker
                             <video
                               src={previewUrl}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+                              muted
+                              playsInline
                               preload="metadata"
+                              className="w-full h-full object-cover"
                             />
                           ) : (
                             <img
                               src={previewUrl}
                               alt={item.caption || 'Media item'}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+                              className="w-full h-full object-cover"
                               loading="lazy"
                             />
                           )
@@ -439,7 +386,7 @@ export function MediaGallery({
                         )}
 
                         {/* Subtle Ambient Vignette on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/15 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" />
 
                         {/* Top Left: Multi-Select Checkbox Squircle */}
                         {onToggleSelect && (
@@ -449,10 +396,10 @@ export function MediaGallery({
                               e.stopPropagation();
                               onToggleSelect(item.id);
                             }}
-                            className={`absolute top-2.5 left-2.5 z-10 w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                            className={`absolute top-2.5 left-2.5 z-20 w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
                               isSelected
                                 ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                : 'bg-white/90 backdrop-blur-md border-slate-300/90 text-transparent hover:border-indigo-500 hover:bg-white'
+                                : 'bg-white border-slate-300/90 text-transparent hover:border-indigo-500'
                             }`}
                             title="Select item"
                           >
@@ -460,45 +407,75 @@ export function MediaGallery({
                           </button>
                         )}
 
-                        {/* Top Right: Favorite Star ⭐ Squircle */}
-                        {onToggleFavorite && (
+                        {/* Top Right: Micro-Action Overlay Strip (Favorite, Download, Copy Link) */}
+                        <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Copy URL */}
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onToggleFavorite(item.id);
-                            }}
-                            className={`absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
-                              item.is_favorite
-                                ? 'bg-amber-500 border-amber-400 text-white shadow-sm'
-                                : 'bg-white/90 backdrop-blur-md border-slate-200/90 text-slate-400 hover:text-amber-500 hover:bg-white'
-                            }`}
-                            title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                            onClick={(e) => handleCopyLink(item, e)}
+                            className="w-6 h-6 rounded-[7px] bg-white text-slate-700 flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                            title={isCopied ? 'Link Copied!' : 'Copy source link'}
                           >
-                            {item.is_favorite ? (
-                              <IconStarFilled className="w-3.5 h-3.5 text-white" />
+                            {isCopied ? (
+                              <IconCheck className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <IconStar className="w-3.5 h-3.5" />
+                              <IconLink className="w-3.5 h-3.5 text-slate-600" />
                             )}
                           </button>
-                        )}
+
+                          {/* Instant Download */}
+                          {firstFile && (
+                            <a
+                              href={`/api/media/files/${firstFile.id}`}
+                              download
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-6 h-6 rounded-[7px] bg-white text-slate-700 flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                              title="Download media file"
+                            >
+                              <IconDownload className="w-3.5 h-3.5 text-slate-600" />
+                            </a>
+                          )}
+
+                          {/* Favorite Star */}
+                          {onToggleFavorite && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite(item.id);
+                              }}
+                              className={`w-6 h-6 rounded-[7px] border flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                                item.is_favorite
+                                  ? 'bg-amber-500 border-amber-400 text-white shadow-sm'
+                                  : 'bg-white border-slate-200/90 text-slate-400 hover:text-amber-500'
+                              }`}
+                              title={item.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              {item.is_favorite ? (
+                                <IconStarFilled className="w-3.5 h-3.5 text-white" />
+                              ) : (
+                                <IconStar className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
 
                         {/* Bottom Left: Platform Squircle Tag */}
-                        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-slate-200/90 text-slate-800 text-[10px] font-mono font-extrabold shadow-sm">
+                        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-[7px] bg-white border border-slate-200/90 text-slate-800 text-[10px] font-mono font-extrabold shadow-sm">
                           {getPlatformIcon(item.platform)}
                           <span className="capitalize">{item.platform}</span>
                         </div>
 
                         {/* Bottom Right: Media Type Indicators */}
-                        <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-1">
+                        <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1">
                           {isVideo && (
-                            <div className="flex items-center px-1.5 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-emerald-200 text-emerald-700 text-[10px] font-mono font-extrabold shadow-sm">
+                            <div className="flex items-center px-1.5 py-0.5 rounded-[7px] bg-white border border-emerald-200 text-emerald-700 text-[10px] font-mono font-extrabold shadow-sm">
                               <IconVideoCamera className="w-3.5 h-3.5 text-emerald-600" />
                             </div>
                           )}
 
                           {item.files && item.files.length > 1 && (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-[7px] bg-white/95 backdrop-blur-md border border-indigo-200 text-indigo-700 text-[10px] font-mono font-extrabold shadow-sm">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-[7px] bg-white border border-indigo-200 text-indigo-700 text-[10px] font-mono font-extrabold shadow-sm">
                               <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
                               <span>{item.files.length}</span>
                             </div>
@@ -530,13 +507,59 @@ export function MediaGallery({
                         </span>
                       </div>
 
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
 
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Footer Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200/80">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-mono">Items per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="px-2.5 py-1 rounded-[8px] bg-white border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage <= 1}
+              className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
+              title="Previous Page"
+            >
+              <IconChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            <span className="px-2.5 py-0.5 rounded-[6px] bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-black shadow-xs">
+              {safeCurrentPage} / {totalPages}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage >= totalPages}
+              className="w-7 h-7 rounded-[7px] text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 aspect-square"
+              title="Next Page"
+            >
+              <IconChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 

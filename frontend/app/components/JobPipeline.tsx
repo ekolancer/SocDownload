@@ -306,7 +306,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-extrabold text-slate-900 leading-tight">
-                Ingestion Activity & History
+                Batch Import & Queue Pipeline
               </h2>
               <p className="text-[11px] font-mono text-slate-500">
                 {totalCount} total tasks ({completedCount} done, {queuedCount} queued{failedCount > 0 ? `, ${failedCount} failed` : ''})
@@ -319,7 +319,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
               type="button"
               onClick={onClearJobs}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] text-xs font-semibold text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-200 transition-all cursor-pointer shadow-xs active:scale-95"
-              title="Clear all job history"
+              title="Clear finished jobs from history"
             >
               <IconTrash className="w-3.5 h-3.5" />
               <span>Clear History</span>
@@ -331,8 +331,9 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           {[
             { id: 'all', label: 'All Tasks', count: jobs.length },
-            { id: 'done', label: 'Done', count: completedCount, color: 'text-emerald-700' },
+            { id: 'active', label: 'Active', count: runningCount, color: 'text-indigo-700', badge: runningCount > 0 },
             { id: 'queued', label: 'Queued', count: queuedCount, color: 'text-amber-700' },
+            { id: 'done', label: 'Done', count: completedCount, color: 'text-emerald-700' },
             { id: 'failed', label: 'Failed', count: failedCount, color: 'text-rose-700', badge: failedCount > 0 },
           ].map((tab) => {
             const isActive = statusFilter === tab.id;
@@ -353,7 +354,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                     isActive
                       ? 'bg-white/20 text-white'
                       : tab.badge
-                      ? 'bg-rose-100 text-rose-800'
+                      ? tab.id === 'failed' ? 'bg-rose-100 text-rose-800' : 'bg-indigo-100 text-indigo-800'
                       : 'bg-slate-100 text-slate-600'
                   }`}
                 >

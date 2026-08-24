@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   IconDownload,
   IconArchive,
@@ -39,7 +38,7 @@ export function Navbar({
   const isVaultPage = pathname === '/vault';
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/90 shadow-sm">
+    <header className="sticky top-0 z-30 w-full bg-white border-b border-slate-200/90 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Brand & Logo */}
@@ -57,24 +56,17 @@ export function Navbar({
           </Link>
         </div>
 
-        {/* Center: Segmented Navigation Bar with Smooth Active Pill Transition */}
+        {/* Center: Segmented Navigation Bar */}
         <nav className="relative flex items-center p-1 rounded-[14px] bg-slate-100/90 border border-slate-200">
           {/* Studio Tab */}
           <Link
             href="/"
             className={`relative flex items-center gap-2 px-4 sm:px-5 py-1.5 rounded-[10px] text-xs font-bold transition-colors z-10 ${
               !isVaultPage
-                ? 'text-indigo-950 font-extrabold'
+                ? 'bg-white text-indigo-950 font-extrabold shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {!isVaultPage && (
-              <motion.div
-                layoutId="nav-active-pill"
-                className="absolute inset-0 bg-white rounded-[10px] shadow-sm -z-10"
-                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-              />
-            )}
             <IconDownload className="w-3.5 h-3.5" />
             <span>Studio</span>
             {activeJobsCount > 0 && (
@@ -87,17 +79,10 @@ export function Navbar({
             href="/vault"
             className={`relative flex items-center gap-2 px-4 sm:px-5 py-1.5 rounded-[10px] text-xs font-bold transition-colors z-10 ${
               isVaultPage
-                ? 'text-indigo-950 font-extrabold'
+                ? 'bg-white text-indigo-950 font-extrabold shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            {isVaultPage && (
-              <motion.div
-                layoutId="nav-active-pill"
-                className="absolute inset-0 bg-white rounded-[10px] shadow-sm -z-10"
-                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-              />
-            )}
             <IconFolder className="w-3.5 h-3.5" />
             <span>Vault</span>
           </Link>

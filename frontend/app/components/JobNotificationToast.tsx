@@ -97,7 +97,7 @@ export function JobNotificationToast({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="fixed bottom-6 right-6 z-50 max-w-xs sm:max-w-sm w-full p-3.5 rounded-[18px] bg-white/95 backdrop-blur-xl border border-indigo-100 shadow-[0_16px_36px_rgba(15,23,42,0.12),0_4px_12px_rgba(79,70,229,0.08)] flex flex-col gap-2.5 overflow-hidden select-none"
+          className="fixed bottom-6 right-6 z-50 max-w-xs sm:max-w-sm w-full p-3.5 rounded-[18px] bg-white border border-indigo-100 shadow-[0_16px_36px_rgba(15,23,42,0.12),0_4px_12px_rgba(79,70,229,0.08)] flex flex-col gap-2.5 overflow-hidden select-none"
         >
           {/* Main Compact Row */}
           <div className="flex items-center justify-between gap-3">

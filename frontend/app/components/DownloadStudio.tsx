@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconDownload,
   IconSparkles,
@@ -14,12 +14,14 @@ import {
   IconReddit,
   IconPinterest,
   IconThreads,
+  IconCheckCircle,
+  IconClose,
 } from './Icons';
 import { DownloadProgressBar } from './DownloadProgressBar';
 import { JobRow } from './JobPipeline';
 
 interface DownloadStudioProps {
-  onQueueDownload: (url: string, platform?: string) => Promise<boolean>;
+  onQueueDownload: (url: string, platform?: string) => Promise<{ success: boolean; jobId?: number }>;
   isSubmitting?: boolean;
   activeJob?: JobRow | null;
 }
@@ -35,6 +37,19 @@ const PLATFORMS = [
   { id: 'pinterest', label: 'Pinterest', icon: IconPinterest, color: 'text-red-700' },
 ];
 
+function detectPlatform(rawUrl: string): string | null {
+  const u = rawUrl.toLowerCase().trim();
+  if (!u) return null;
+  if (u.includes('instagram.com') || u.includes('instagr.am')) return 'instagram';
+  if (u.includes('tiktok.com')) return 'tiktok';
+  if (u.includes('threads.net') || u.includes('threads.com')) return 'threads';
+  if (u.includes('twitter.com') || u.includes('x.com')) return 'x';
+  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
+  if (u.includes('reddit.com') || u.includes('redd.it')) return 'reddit';
+  if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest';
+  return null;
+}
+
 export function DownloadStudio({
   onQueueDownload,
   isSubmitting = false,
@@ -44,7 +59,12 @@ export function DownloadStudio({
   const [selectedPlatform, setSelectedPlatform] = useState('all');
   const [errorMsg, setErrorMsg] = useState('');
   const [submittedUrl, setSubmittedUrl] = useState('');
+  const [singleJobId, setSingleJobId] = useState<number | null>(null);
   const [dismissedJobId, setDismissedJobId] = useState<number | null>(null);
+
+  // Live Auto-Detected Platform
+  const detectedPlatform = detectPlatform(url);
+  const effectivePlatform = selectedPlatform !== 'all' ? selectedPlatform : detectedPlatform;
 
   const handlePaste = async () => {
     try {
@@ -69,28 +89,33 @@ export function DownloadStudio({
     setErrorMsg('');
     setSubmittedUrl(cleanUrl);
     setDismissedJobId(null);
-    const success = await onQueueDownload(
+
+    const result = await onQueueDownload(
       cleanUrl,
       selectedPlatform === 'all' ? undefined : selectedPlatform
     );
-    if (success) {
+
+    if (result.success && result.jobId) {
+      setSingleJobId(result.jobId);
       setUrl('');
     }
   };
 
+  // Only show single progress for jobs initiated by THIS single download studio
+  const isThisSingleJob = activeJob && singleJobId && activeJob.id === singleJobId;
   const isCurrentJobDismissed = activeJob && activeJob.id === dismissedJobId;
-  const isJobActiveOrRecent = activeJob && !isCurrentJobDismissed;
+  const isJobActiveOrRecent = isThisSingleJob && !isCurrentJobDismissed;
   const isJobDone = activeJob?.status === 'done' || activeJob?.status === 'dup';
   const isJobFailed = activeJob?.status === 'failed';
-  const showActiveProgress = isSubmitting || isJobActiveOrRecent;
+  const showActiveProgress = (isSubmitting && !activeJob) || isJobActiveOrRecent;
 
-  const progressUrl = activeJob?.url || submittedUrl || url;
-  const progressPlatform = activeJob?.platform || (selectedPlatform === 'all' ? undefined : selectedPlatform);
+  const progressUrl = (isThisSingleJob ? activeJob?.url : null) || submittedUrl || url;
+  const progressPlatform = (isThisSingleJob ? activeJob?.platform : null) || effectivePlatform || undefined;
 
   return (
     <div className="w-full flex flex-col items-center gap-7 py-2">
       
-      {/* Studio Header (Wider container to prevent title wrapping) */}
+      {/* Studio Header */}
       <div className="flex flex-col items-center text-center gap-3 max-w-4xl px-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-[8px] text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
           <IconSparkles className="w-3.5 h-3.5 text-indigo-600" />
@@ -100,6 +125,9 @@ export function DownloadStudio({
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-extrabold text-slate-900 tracking-tight leading-tight sm:whitespace-nowrap">
           Download Media from Any Platform
         </h1>
+        <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl">
+          Paste any single post URL below, or use the Import button in header for bulk archives
+        </p>
       </div>
 
       {/* Main Ingestion Card: Search & Submit */}
@@ -109,7 +137,7 @@ export function DownloadStudio({
           className="relative flex flex-col sm:flex-row items-stretch sm:items-center rounded-[24px] bg-white border border-slate-200/90 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2 sm:p-2.5 gap-2"
         >
           {/* Input Field with leading icon */}
-          <div className="flex-1 flex items-center gap-3 px-3 py-1.5 min-w-0">
+          <div className="flex-1 flex items-center gap-2.5 px-3 py-1.5 min-w-0">
             <IconLink className="w-5 h-5 text-slate-400 shrink-0" />
             
             <input
@@ -120,20 +148,43 @@ export function DownloadStudio({
                 setUrl(e.target.value);
                 if (errorMsg) setErrorMsg('');
               }}
-              placeholder="Input url here..."
+              placeholder="Paste social media URL here..."
               className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
             />
 
-            {/* Paste Button Chip */}
-            <button
-              type="button"
-              onClick={handlePaste}
-              className="px-3 py-1.5 rounded-[8px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
-              title="Paste from clipboard"
-            >
-              <IconPaste className="w-3.5 h-3.5 text-slate-500" />
-              <span>Paste</span>
-            </button>
+            {/* Live Auto-Detected Platform Pill */}
+            {detectedPlatform && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-bold shrink-0 capitalize"
+              >
+                <span>{detectedPlatform}</span>
+              </motion.div>
+            )}
+
+            {/* Clear Button if URL typed */}
+            {url ? (
+              <button
+                type="button"
+                onClick={() => setUrl('')}
+                className="w-6 h-6 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+                title="Clear input"
+              >
+                <IconClose className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              /* One-Click Paste Button Chip */
+              <button
+                type="button"
+                onClick={handlePaste}
+                className="px-3 py-1.5 rounded-[8px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                title="Paste from clipboard"
+              >
+                <IconPaste className="w-3.5 h-3.5 text-slate-500" />
+                <span>Paste</span>
+              </button>
+            )}
           </div>
 
           {/* Primary Filled Button */}
@@ -145,7 +196,7 @@ export function DownloadStudio({
             {isSubmitting ? (
               <>
                 <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                <span>Queuing...</span>
+                <span>Downloading...</span>
               </>
             ) : (
               <>
@@ -156,7 +207,7 @@ export function DownloadStudio({
           </button>
         </form>
 
-        {/* Dynamic High-End Progress Bar with Smooth Auto-Close Animation */}
+        {/* Dedicated Single URL Download Progress Card (Only shows for THIS single download) */}
         <AnimatePresence>
           {showActiveProgress && (
             <DownloadProgressBar
@@ -167,6 +218,7 @@ export function DownloadStudio({
               error={isJobFailed ? activeJob?.error || 'Download failed' : null}
               onAutoClose={() => {
                 if (activeJob) setDismissedJobId(activeJob.id);
+                setSingleJobId(null);
               }}
             />
           )}
@@ -180,19 +232,13 @@ export function DownloadStudio({
         )}
       </div>
 
-      {/* Supported Platforms Infinite Marquee Badge */}
+      {/* Supported Platforms Filter Chips */}
       <div className="flex flex-col items-center gap-2 w-full max-w-3xl px-4">
-        
-        {/* Outer Pill Container with Gradient Edge Fades */}
         <div className="relative w-full overflow-hidden rounded-full bg-white border border-slate-200/90 shadow-sm p-1.5 flex items-center">
-          
-          {/* Left & Right Edge Fades */}
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white via-white/80 to-transparent z-10" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/80 to-transparent z-10" />
 
-          {/* Continuous Left-Scrolling Marquee Track */}
           <div className="animate-marquee-left flex items-center gap-2">
-            {/* First sequence */}
             {PLATFORMS.map((p) => {
               const Icon = p.icon;
               const isSelected = selectedPlatform === p.id;
@@ -213,7 +259,6 @@ export function DownloadStudio({
               );
             })}
 
-            {/* Duplicate sequence for seamless infinite loop */}
             {PLATFORMS.map((p) => {
               const Icon = p.icon;
               const isSelected = selectedPlatform === p.id;
@@ -234,7 +279,6 @@ export function DownloadStudio({
               );
             })}
           </div>
-
         </div>
       </div>
 

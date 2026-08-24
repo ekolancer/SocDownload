@@ -15,7 +15,6 @@ if [ ! -f "$ROOT/.env" ]; then
     echo "Creating .env from .env.example..."
     cp "$ROOT/.env.example" "$ROOT/.env"
     GENERATED_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))" 2>/dev/null || echo "default-mediavault-secret-key-32chars")
-    # Replace default key
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s/change-me-generate-via-keygen/$GENERATED_KEY/" "$ROOT/.env"
     else
@@ -32,11 +31,12 @@ fi
 
 PYTHON="$VENV/bin/python"
 
-# 3. Install backend dependencies if needed
-if [ "$1" != "--skip-install" ]; then
-    echo "Installing/updating backend dependencies..."
-    "$PYTHON" -m pip install --upgrade pip -q
-    "$PYTHON" -m pip install -e ".[engines]" -q
+# 3. Check and install backend dependencies if missing or requested
+if ! "$PYTHON" -c "import uvicorn, fastapi, sqlalchemy" >/dev/null 2>&1 || [ "$1" == "--install" ]; then
+    echo "Installing backend dependencies..."
+    if ! "$PYTHON" -m pip install -e ".[engines]" -q 2>/dev/null; then
+        echo "⚠️ Warning: Could not connect to PyPI to update packages. Continuing with local environment..."
+    fi
 fi
 
 # 4. Initialize Database
@@ -64,10 +64,13 @@ FRONTEND_PID=$!
 cleanup() {
     echo ""
     echo "Stopping MediaVault services..."
-    kill -9 $BACKEND_PID 2>/dev/null || true
-    kill -9 $FRONTEND_PID 2>/dev/null || true
+    if [ -n "$BACKEND_PID" ]; then
+        kill -9 "$BACKEND_PID" 2>/dev/null || true
+    fi
+    if [ -n "$FRONTEND_PID" ]; then
+        kill -9 "$FRONTEND_PID" 2>/dev/null || true
+    fi
     echo "MediaVault stopped."
-    exit 0
 }
 
 trap cleanup SIGINT SIGTERM EXIT
@@ -103,4 +106,4 @@ if [[ "$OSTYPE" == "darwin"* ]] && [ "$1" != "--no-browser" ]; then
 fi
 
 # Keep script running
-wait $BACKEND_PID $FRONTEND_PID
+wait "$BACKEND_PID" 2>/dev/null || wait

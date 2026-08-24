@@ -22,6 +22,9 @@ import Link from 'next/link';
 import {
   IconFolder,
   IconFolderPlus,
+  IconFolderMinus,
+  IconPencil,
+  IconTrash,
   IconUser,
   IconUsers,
   IconLayers,
@@ -60,7 +63,8 @@ export default function VaultPage() {
   // Modals & Notifications state
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
-  const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album'>('create_only');
+  const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album' | 'edit'>('create_only');
+  const [editingAlbum, setEditingAlbum] = useState<{ id: number; name: string; description?: string } | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
   const [completedNotice, setCompletedNotice] = useState<CompletedJobNotice | null>(null);
@@ -68,6 +72,12 @@ export default function VaultPage() {
 
   const prevJobsRef = useRef<JobRow[]>([]);
   const isFetchingRef = useRef(false);
+  // Dedup caches to skip re-render when polling returns identical data
+  const lastMediaHashRef = useRef<string>('');
+  const lastAlbumsHashRef = useRef<string>('');
+  const lastCreatorsHashRef = useRef<string>('');
+  const lastJobStatsHashRef = useRef<string>('');
+  const lastJobsHashRef = useRef<string>('');
 
   // Refresh Data
   const refreshData = useCallback(async (showIndicator = false) => {
@@ -88,7 +98,12 @@ export default function VaultPage() {
       const mediaRes = await fetch(`${API}/media?limit=1000`).catch(() => null);
       if (mediaRes && mediaRes.ok) {
         const mediaData = await mediaRes.json();
-        setMedia(mediaData);
+        // Deduplicate: only update state if data actually changed
+        const mediaHash = JSON.stringify(mediaData.map((m: MediaItem) => `${m.id}:${m.is_favorite}:${m.created_at}`));
+        if (mediaHash !== lastMediaHashRef.current) {
+          lastMediaHashRef.current = mediaHash;
+          setMedia(mediaData);
+        }
         setMediaError('');
       } else {
         setMediaError('Could not sync media library');
@@ -98,21 +113,33 @@ export default function VaultPage() {
       const albumsRes = await fetch(`${API}/albums`).catch(() => null);
       if (albumsRes && albumsRes.ok) {
         const albumsData = await albumsRes.json();
-        setAlbums(albumsData);
+        const albumsHash = JSON.stringify(albumsData.map((a: AlbumSummary) => `${a.id}:${a.name}:${a.items_count}`));
+        if (albumsHash !== lastAlbumsHashRef.current) {
+          lastAlbumsHashRef.current = albumsHash;
+          setAlbums(albumsData);
+        }
       }
 
       // 4. Fetch Creators Aggregation
       const creatorsRes = await fetch(`${API}/media/creators`).catch(() => null);
       if (creatorsRes && creatorsRes.ok) {
         const creatorsData = await creatorsRes.json();
-        setCreatorsList(creatorsData);
+        const creatorsHash = JSON.stringify(creatorsData);
+        if (creatorsHash !== lastCreatorsHashRef.current) {
+          lastCreatorsHashRef.current = creatorsHash;
+          setCreatorsList(creatorsData);
+        }
       }
 
       // 5. Fetch Job Stats
       const statsRes = await fetch(`${API}/jobs/stats`).catch(() => null);
       if (statsRes && statsRes.ok) {
         const statsData: JobStats = await statsRes.json();
-        setJobStats(statsData);
+        const statsHash = JSON.stringify(statsData);
+        if (statsHash !== lastJobStatsHashRef.current) {
+          lastJobStatsHashRef.current = statsHash;
+          setJobStats(statsData);
+        }
       }
 
       // 5. Fetch Jobs & trigger completion toast
@@ -134,7 +161,12 @@ export default function VaultPage() {
         }
 
         prevJobsRef.current = jobsData;
-        setJobs(jobsData);
+        // Deduplicate: only update jobs state if data actually changed
+        const jobsHash = JSON.stringify(jobsData.map((j: JobRow) => `${j.id}:${j.status}:${j.finished_at}`));
+        if (jobsHash !== lastJobsHashRef.current) {
+          lastJobsHashRef.current = jobsHash;
+          setJobs(jobsData);
+        }
       }
     } catch (err) {
       console.error('Fetch error in Vault:', err);
@@ -148,7 +180,7 @@ export default function VaultPage() {
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(() => refreshData(false), 3000);
+    const interval = setInterval(() => refreshData(false), 4000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -421,6 +453,72 @@ export default function VaultPage() {
     return null;
   };
 
+  const handleUpdateAlbum = async (albumId: number, name: string, description?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API}/albums/${albumId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+      });
+      if (res.ok) {
+        await refreshData(true);
+        if (currentView.type === 'album_detail' && currentView.albumId === albumId) {
+          setCurrentView({ type: 'album_detail', albumId, albumName: name });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('Update album error:', err);
+    }
+    return false;
+  };
+
+  const handleDeleteAlbum = async (albumId: number, albumName: string) => {
+    if (!window.confirm(`Are you sure you want to delete the album "${albumName}"?\n(Your downloaded media files will remain safely in the vault)`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/albums/${albumId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await refreshData(true);
+        if (currentView.type === 'album_detail' && currentView.albumId === albumId) {
+          setCurrentView({ type: 'albums_list' });
+        }
+      }
+    } catch (err) {
+      console.error('Delete album error:', err);
+    }
+  };
+
+  const handleRemoveFromAlbumBatch = async () => {
+    if (currentView.type !== 'album_detail' || selectedIds.length === 0) return;
+    if (!window.confirm(`Remove ${selectedIds.length} item(s) from "${currentView.albumName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/albums/${currentView.albumId}/items`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_ids: selectedIds }),
+      });
+      if (res.ok) {
+        setSelectedIds([]);
+        await refreshData(true);
+        // Refresh album items
+        fetch(`${API}/albums/${currentView.albumId}`)
+          .then((r) => r.json())
+          .then((data) => {
+            if (data?.items) setAlbumDetailItems(data.items);
+          })
+          .catch(() => {});
+      }
+    } catch (err) {
+      console.error('Remove items from album error:', err);
+    }
+  };
+
   const handleAddItemsToAlbum = async (albumId: number, mediaIds: number[]): Promise<boolean> => {
     try {
       const res = await fetch(`${API}/albums/${albumId}/items`, {
@@ -441,6 +539,11 @@ export default function VaultPage() {
 
   const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
+  // Find active album detail record if in album_detail view
+  const currentAlbumRecord = currentView.type === 'album_detail'
+    ? albums.find((a) => a.id === currentView.albumId)
+    : null;
+
   return (
     <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
@@ -448,7 +551,7 @@ export default function VaultPage() {
       <Navbar
         backendStatus={backendStatus}
         mediaCount={media.length}
-        activeJobsCount={jobStats ? jobStats.active_total : activeJobsCount}
+        activeJobsCount={activeJobsCount}
         queueStats={jobStats}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
@@ -456,58 +559,26 @@ export default function VaultPage() {
         isRefreshing={isRefreshing}
       />
 
-      {/* Main Spacious Workspace Layout */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+      {/* Main Container */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-6">
         
-        {/* Live Queue Active Notice on Vault Page */}
-        {jobStats && jobStats.active_total > 0 && (
-          <div className="w-full rounded-[20px] bg-white/95 backdrop-blur-xl border border-indigo-200/90 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-[10px] bg-indigo-600 text-white shrink-0 shadow-xs">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-[10px] bg-indigo-400 opacity-60"></span>
-                <IconDownload className="w-4 h-4 text-white relative z-10" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black text-slate-900">
-                    Background Ingestion Running:
-                  </span>
-                  <span className="text-xs font-mono font-bold text-indigo-600">
-                    {jobStats.running} active • {jobStats.queued} remaining ({jobStats.progress_percent}%)
-                  </span>
-                </div>
-                <div className="h-1.5 w-48 sm:w-64 bg-slate-100 rounded-full overflow-hidden mt-1.5 border border-slate-200">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.max(5, jobStats.progress_percent)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer shrink-0 border border-indigo-200/80"
-            >
-              <span>Open Queue →</span>
-            </Link>
-          </div>
-        )}
-
-        {/* Top Vault Sub-Nav Bar & Export Menu */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
-          {/* Sub Navigation Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        {/* Vault Navigation Bar & Global Export Tools */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+          
+          {/* Sub-Navigation Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-[14px] border border-slate-200/80 overflow-x-auto scrollbar-none">
+            
+            {/* All Media Tab */}
             <button
               type="button"
               onClick={() => {
                 setCurrentView({ type: 'timeline' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'timeline'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <IconLayers className="w-3.5 h-3.5" />
@@ -515,16 +586,17 @@ export default function VaultPage() {
               <span className="opacity-70">({media.length})</span>
             </button>
 
+            {/* Creators Hub Tab */}
             <button
               type="button"
               onClick={() => {
                 setCurrentView({ type: 'creators_list' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'creators_list' || currentView.type === 'creator_detail'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <IconUsers className="w-3.5 h-3.5" />
@@ -532,16 +604,17 @@ export default function VaultPage() {
               <span className="opacity-70">({creatorsList.length || creators.length})</span>
             </button>
 
+            {/* Albums Tab */}
             <button
               type="button"
               onClick={() => {
                 setCurrentView({ type: 'albums_list' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'albums_list' || currentView.type === 'album_detail'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <IconFolder className="w-3.5 h-3.5" />
@@ -549,139 +622,106 @@ export default function VaultPage() {
               <span className="opacity-70">({albums.length})</span>
             </button>
 
+            {/* Favorites Tab */}
             <button
               type="button"
               onClick={() => {
                 setCurrentView({ type: 'favorites' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-extrabold font-mono transition-all cursor-pointer shadow-2xs shrink-0 ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'favorites'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  ? 'bg-white text-amber-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <IconStar className="w-3.5 h-3.5 text-amber-500" />
               <span>Favorites</span>
               <span className="opacity-70">({favoritesCount})</span>
             </button>
+
           </div>
 
-          {/* Right Action: Filters Drawer + Export Vault Dropdown */}
-          <div className="flex items-center gap-2 self-end sm:self-auto relative">
+          {/* Export Vault Dropdown Menu */}
+          <div className="relative flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[12px] text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs cursor-pointer"
-              title="Open Filter Drawer"
+              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-[12px] bg-white border border-slate-200/90 text-slate-800 hover:text-indigo-600 text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer"
             >
-              <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Filters</span>
-              {selectedPlatforms.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-indigo-600" />
-              )}
+              <IconDownload className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Export Vault</span>
+              <span className="text-[10px]">▼</span>
             </button>
 
-            {/* Export Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 shadow-2xs transition-all cursor-pointer"
-                title="Export entire vault or filtered view"
-              >
-                <IconDownload className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Export Vault</span>
-                <span className="text-[10px]">▼</span>
-              </button>
-
-              {isExportMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
+            {isExportMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setIsExportMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-60 rounded-[18px] bg-white border border-slate-200/90 shadow-xl p-1.5 z-30 flex flex-col gap-1">
+                  
+                  {/* Export Full ZIP */}
+                  <a
+                    href={`${API}/media/export/zip`}
+                    download
                     onClick={() => setIsExportMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-1.5 w-60 rounded-[16px] bg-white border border-slate-200 shadow-xl p-1.5 z-30 flex flex-col gap-1">
-                    <a
-                      href={`/api/media/export/zip${
-                        currentView.type === 'creator_detail'
-                          ? `?username=${encodeURIComponent(currentView.username)}`
-                          : currentView.type === 'album_detail'
-                          ? `?album_id=${currentView.albumId}`
-                          : selectedPlatforms.length === 1
-                          ? `?platform=${selectedPlatforms[0]}`
-                          : ''
-                      }`}
-                      download
-                      onClick={() => setIsExportMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                    >
-                      <IconFolderZip className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-bold">Full Package (ZIP)</span>
-                        <span className="text-[10px] text-slate-400 font-mono">Media files + metadata</span>
-                      </div>
-                    </a>
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                  >
+                    <IconFolderZip className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Full Backup (ZIP)</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Media files + metadata</span>
+                    </div>
+                  </a>
 
-                    <a
-                      href={`/api/media/export/csv${
-                        currentView.type === 'creator_detail'
-                          ? `?username=${encodeURIComponent(currentView.username)}`
-                          : currentView.type === 'album_detail'
-                          ? `?album_id=${currentView.albumId}`
-                          : selectedPlatforms.length === 1
-                          ? `?platform=${selectedPlatforms[0]}`
-                          : ''
-                      }`}
-                      download
-                      onClick={() => setIsExportMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition-colors"
-                    >
-                      <IconFileText className="w-4 h-4 text-sky-600 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-bold">Metadata (CSV / Excel)</span>
-                        <span className="text-[10px] text-slate-400 font-mono">Lightweight tabular data</span>
-                      </div>
-                    </a>
+                  {/* Export Metadata CSV */}
+                  <a
+                    href={`${API}/media/export/csv`}
+                    download
+                    onClick={() => setIsExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                  >
+                    <IconFileText className="w-4 h-4 text-sky-600 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Metadata CSV</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Excel compatible</span>
+                    </div>
+                  </a>
 
-                    <a
-                      href={`/api/media/export/json${
-                        currentView.type === 'creator_detail'
-                          ? `?username=${encodeURIComponent(currentView.username)}`
-                          : currentView.type === 'album_detail'
-                          ? `?album_id=${currentView.albumId}`
-                          : selectedPlatforms.length === 1
-                          ? `?platform=${selectedPlatforms[0]}`
-                          : ''
-                      }`}
-                      download
-                      onClick={() => setIsExportMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
-                    >
-                      <IconSparkles className="w-4 h-4 text-purple-600 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="font-bold">Metadata (JSON)</span>
-                        <span className="text-[10px] text-slate-400 font-mono">Full developer JSON export</span>
-                      </div>
-                    </a>
-                  </div>
-                </>
-              )}
-            </div>
+                  {/* Export Metadata JSON */}
+                  <a
+                    href={`${API}/media/export/json`}
+                    download
+                    onClick={() => setIsExportMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  >
+                    <IconSparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Metadata JSON</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Full raw records</span>
+                    </div>
+                  </a>
+
+                </div>
+              </>
+            )}
           </div>
+
         </div>
 
-        {/* If View is Creators List Hub */}
+        {/* View Router */}
         {currentView.type === 'creators_list' ? (
+          /* Creators Hub Grid */
           <CreatorsHub
             creators={creatorsList}
-            loading={loadingCreators}
             onSelectCreator={(username) => {
               setCurrentView({ type: 'creator_detail', username });
             }}
           />
         ) : currentView.type === 'albums_list' ? (
-          /* If View is Albums List Hub */
+          /* Albums List Hub */
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
@@ -695,6 +735,7 @@ export default function VaultPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setEditingAlbum(null);
                     setAlbumModalMode('create_only');
                     setIsAlbumModalOpen(true);
                   }}
@@ -706,89 +747,202 @@ export default function VaultPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {albums.map((a) => (
-                <div
-                  key={a.id}
-                  onClick={() =>
-                    setCurrentView({
-                      type: 'album_detail',
-                      albumId: a.id,
-                      albumName: a.name,
-                    })
-                  }
-                  className="group rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+            {albums.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-14 rounded-[24px] bg-white border border-slate-200/90 text-center">
+                <div className="w-12 h-12 rounded-[14px] bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                  <IconFolder className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900">No albums created yet</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                  Organize your media into albums to quickly categorize your downloads.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAlbum(null);
+                    setAlbumModalMode('create_only');
+                    setIsAlbumModalOpen(true);
+                  }}
+                  className="mt-4 flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all cursor-pointer"
                 >
-                  <div className="relative aspect-video w-full rounded-[12px] bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
-                    {a.cover_file_url ? (
-                      <img
-                        src={a.cover_file_url}
-                        alt={a.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <IconFolder className="w-10 h-10 text-slate-400" />
-                    )}
-                    <span className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
-                      {a.items_count} items
-                    </span>
-                  </div>
+                  <IconFolderPlus className="w-4 h-4" />
+                  <span>Create First Album</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {albums.map((a) => (
+                  <div
+                    key={a.id}
+                    onClick={() =>
+                      setCurrentView({
+                        type: 'album_detail',
+                        albumId: a.id,
+                        albumName: a.name,
+                      })
+                    }
+                    className="group relative rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+                  >
+                    {/* Cover Thumbnail */}
+                    <div className="relative aspect-video w-full rounded-[12px] bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
+                      {a.cover_file_url ? (
+                        <img
+                          src={a.cover_file_url}
+                          alt={a.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <IconFolder className="w-10 h-10 text-slate-400" />
+                      )}
+                      
+                      <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
+                        {a.items_count} items
+                      </span>
 
-                  <div className="flex flex-col px-0.5">
-                    <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
-                    {a.description && (
-                      <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
+                      {/* Top Right Action Overlay (Edit & Delete) */}
+                      <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingAlbum({ id: a.id, name: a.name, description: a.description || undefined });
+                            setAlbumModalMode('edit');
+                            setIsAlbumModalOpen(true);
+                          }}
+                          className="w-7 h-7 rounded-[8px] bg-white/90 hover:bg-white text-slate-700 hover:text-indigo-600 flex items-center justify-center shadow-xs backdrop-blur-md transition-all cursor-pointer hover:scale-105"
+                          title="Edit Album"
+                        >
+                          <IconPencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAlbum(a.id, a.name);
+                          }}
+                          className="w-7 h-7 rounded-[8px] bg-white/90 hover:bg-white text-slate-700 hover:text-rose-600 flex items-center justify-center shadow-xs backdrop-blur-md transition-all cursor-pointer hover:scale-105"
+                          title="Delete Album"
+                        >
+                          <IconTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Album Info */}
+                    <div className="flex flex-col px-0.5">
+                      <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
+                      {a.description && (
+                        <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Gallery View with Album Header if in Album Detail */
+          <div className="flex flex-col gap-5">
+            
+            {/* Album Detail Header Banner with Edit & Delete Controls */}
+            {currentView.type === 'album_detail' && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[20px] border border-slate-200/90 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-[12px] bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                    <IconFolder className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-lg font-black text-slate-900 truncate">
+                        {currentView.albumName}
+                      </h1>
+                      <span className="px-2 py-0.5 rounded-[6px] text-xs font-mono font-bold bg-indigo-50 border border-indigo-200 text-indigo-700">
+                        {albumDetailItems.length} items
+                      </span>
+                    </div>
+                    {currentAlbumRecord?.description && (
+                      <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                        {currentAlbumRecord.description}
+                      </p>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Album Management Action Buttons */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAlbum({
+                        id: currentView.albumId,
+                        name: currentView.albumName,
+                        description: currentAlbumRecord?.description || undefined,
+                      });
+                      setAlbumModalMode('edit');
+                      setIsAlbumModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-slate-700 hover:text-indigo-700 bg-slate-50 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <IconPencil className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Edit Album</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAlbum(currentView.albumId, currentView.albumName)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200/80 hover:border-rose-600 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <IconTrash className="w-3.5 h-3.5" />
+                    <span>Delete Album</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <MediaGallery
+              media={displayMedia}
+              onOpenLightbox={(item) => setLightboxItem(item)}
+              onDeleteItem={handleDeleteMedia}
+              onToggleFavorite={handleToggleFavorite}
+              onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSidebar={() => setIsSidebarOpen(true)}
+              activePlatformsCount={selectedPlatforms.length}
+              viewTitle={
+                currentView.type === 'album_detail'
+                  ? `📁 ${currentView.albumName}`
+                  : currentView.type === 'creator_detail'
+                  ? `👤 @${currentView.username}'s Archive`
+                  : currentView.type === 'favorites'
+                  ? '⭐ Starred Favorites'
+                  : currentView.type === 'type_filter'
+                  ? `🎬 ${currentView.kind.toUpperCase()} Archive`
+                  : selectedPlatforms.length > 0
+                  ? `Filtered (${selectedPlatforms.join(', ')})`
+                  : 'Media Vault'
+              }
+              viewSubtitle={
+                selectedPlatforms.length > 0
+                  ? `Showing media from ${selectedPlatforms.join(', ')}`
+                  : currentView.type === 'album_detail'
+                  ? 'Custom Album Collection'
+                  : currentView.type === 'creator_detail'
+                  ? 'Media downloaded from this author'
+                  : undefined
+              }
+              onBackToTimeline={
+                currentView.type === 'creator_detail'
+                  ? () => setCurrentView({ type: 'creators_list' })
+                  : currentView.type === 'album_detail'
+                  ? () => setCurrentView({ type: 'albums_list' })
+                  : currentView.type !== 'timeline'
+                  ? () => setCurrentView({ type: 'timeline' })
+                  : undefined
+              }
+              error={mediaError}
+            />
           </div>
-        ) : (
-          /* Default Gallery View with Slideover Toggle */
-          <MediaGallery
-            media={displayMedia}
-            onOpenLightbox={(item) => setLightboxItem(item)}
-            onDeleteItem={handleDeleteMedia}
-            onToggleFavorite={handleToggleFavorite}
-            onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onToggleSidebar={() => setIsSidebarOpen(true)}
-            activePlatformsCount={selectedPlatforms.length}
-            viewTitle={
-              currentView.type === 'album_detail'
-                ? `📁 ${currentView.albumName}`
-                : currentView.type === 'creator_detail'
-                ? `👤 @${currentView.username}'s Archive`
-                : currentView.type === 'favorites'
-                ? '⭐ Starred Favorites'
-                : currentView.type === 'type_filter'
-                ? `🎬 ${currentView.kind.toUpperCase()} Archive`
-                : selectedPlatforms.length > 0
-                ? `Filtered (${selectedPlatforms.join(', ')})`
-                : 'Media Vault'
-            }
-            viewSubtitle={
-              selectedPlatforms.length > 0
-                ? `Showing media from ${selectedPlatforms.join(', ')}`
-                : currentView.type === 'album_detail'
-                ? 'Custom Album Collection'
-                : currentView.type === 'creator_detail'
-                ? 'Media downloaded from this author'
-                : undefined
-            }
-            onBackToTimeline={
-              currentView.type === 'creator_detail'
-                ? () => setCurrentView({ type: 'creators_list' })
-                : currentView.type === 'album_detail'
-                ? () => setCurrentView({ type: 'albums_list' })
-                : currentView.type !== 'timeline'
-                ? () => setCurrentView({ type: 'timeline' })
-                : undefined
-            }
-            error={mediaError}
-          />
         )}
 
       </div>
@@ -812,6 +966,7 @@ export default function VaultPage() {
         onSelectAllPlatforms={handleSelectAllPlatforms}
         onClearPlatforms={handleClearPlatforms}
         onOpenCreateAlbum={() => {
+          setEditingAlbum(null);
           setAlbumModalMode('create_only');
           setIsAlbumModalOpen(true);
         }}
@@ -825,6 +980,7 @@ export default function VaultPage() {
           setAlbumModalMode('add_to_album');
           setIsAlbumModalOpen(true);
         }}
+        onRemoveFromAlbum={currentView.type === 'album_detail' ? handleRemoveFromAlbumBatch : undefined}
         onToggleFavoriteBatch={handleBatchToggleFavorite}
         onDownloadZipBatch={handleBatchDownloadZip}
         onDownloadCsvBatch={handleBatchDownloadCsv}
@@ -832,14 +988,19 @@ export default function VaultPage() {
         isProcessing={isBatchProcessing}
       />
 
-      {/* Create / Add to Album Modal */}
+      {/* Create / Edit / Add to Album Modal */}
       <AlbumModal
         isOpen={isAlbumModalOpen}
-        onClose={() => setIsAlbumModalOpen(false)}
+        onClose={() => {
+          setIsAlbumModalOpen(false);
+          setEditingAlbum(null);
+        }}
         mode={albumModalMode}
         albums={albums}
         selectedMediaIds={selectedIds}
+        initialData={editingAlbum}
         onCreateAlbum={handleCreateAlbum}
+        onUpdateAlbum={handleUpdateAlbum}
         onAddItemsToAlbum={handleAddItemsToAlbum}
       />
 

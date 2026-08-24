@@ -6,6 +6,7 @@ import {
   IconClose,
   IconStar,
   IconFolderPlus,
+  IconFolderMinus,
   IconDownload,
   IconFileText,
   IconTrash,
@@ -15,6 +16,7 @@ interface BatchActionBarProps {
   selectedIds: number[];
   onDeselectAll: () => void;
   onAddToAlbum: () => void;
+  onRemoveFromAlbum?: () => void;
   onToggleFavoriteBatch: () => void;
   onDownloadZipBatch: () => void;
   onDownloadCsvBatch?: () => void;
@@ -26,6 +28,7 @@ export function BatchActionBar({
   selectedIds,
   onDeselectAll,
   onAddToAlbum,
+  onRemoveFromAlbum,
   onToggleFavoriteBatch,
   onDownloadZipBatch,
   onDownloadCsvBatch,
@@ -42,7 +45,7 @@ export function BatchActionBar({
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 40, opacity: 0, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[94vw] sm:w-auto p-2 sm:p-2.5 rounded-[20px] bg-white/95 backdrop-blur-xl text-slate-900 border border-indigo-100 shadow-[0_20px_50px_rgba(15,23,42,0.14),0_6px_16px_rgba(79,70,229,0.08)] flex items-center justify-between sm:justify-center gap-2 sm:gap-3 select-none"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[94vw] sm:w-auto p-2 sm:p-2.5 rounded-[20px] bg-white text-slate-900 border border-indigo-100 shadow-[0_20px_50px_rgba(15,23,42,0.14),0_6px_16px_rgba(79,70,229,0.08)] flex items-center justify-between sm:justify-center gap-2 sm:gap-3 select-none"
         >
           {/* Selected Count & Dismiss Pill */}
           <div className="flex items-center gap-2 px-1.5 shrink-0">
@@ -78,6 +81,20 @@ export function BatchActionBar({
               <IconFolderPlus className="w-3.5 h-3.5 text-indigo-600" />
               <span className="hidden sm:inline">Album</span>
             </button>
+
+            {/* Remove from Album (Shown when viewing an album) */}
+            {onRemoveFromAlbum && (
+              <button
+                type="button"
+                onClick={onRemoveFromAlbum}
+                disabled={isProcessing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
+                title="Remove selected items from this album"
+              >
+                <IconFolderMinus className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">Remove</span>
+              </button>
+            )}
 
             {/* Favorite Batch */}
             <button
