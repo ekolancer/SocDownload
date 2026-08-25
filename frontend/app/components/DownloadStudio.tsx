@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconSparkles,
@@ -10,14 +10,17 @@ import {
   IconYouTube,
   IconThreads,
   IconClose,
+  IconCheckCircle,
+  IconAlertCircle,
+  IconBookmark,
 } from './Icons';
-import { DownloadProgressBar } from './DownloadProgressBar';
 import { JobRow } from './JobPipeline';
 
 interface DownloadStudioProps {
   onQueueDownload: (url: string, platform?: string) => Promise<{ success: boolean; jobId?: number }>;
   isSubmitting?: boolean;
   activeJob?: JobRow | null;
+  jobs?: JobRow[];
 }
 
 const PLATFORM_CHIPS = [
@@ -46,17 +49,117 @@ export function DownloadStudio({
   onQueueDownload,
   isSubmitting = false,
   activeJob = null,
+  jobs = [],
 }: DownloadStudioProps) {
   const [url, setUrl] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('all');
   const [errorMsg, setErrorMsg] = useState('');
-  const [submittedUrl, setSubmittedUrl] = useState('');
   const [singleJobId, setSingleJobId] = useState<number | null>(null);
-  const [dismissedJobId, setDismissedJobId] = useState<number | null>(null);
+
+  // Smooth kinetic progress state (0 to 1)
+  const [progressFraction, setProgressFraction] = useState<number>(0);
+  const [displayPercent, setDisplayPercent] = useState<number>(0);
+  const [progressState, setProgressState] = useState<'idle' | 'queued' | 'running' | 'done' | 'dup' | 'failed'>('idle');
+
+  // Animation frame ref for ultra-smooth 60fps number interpolation
+  const animationFrameRef = useRef<number | null>(null);
+  const targetPercentRef = useRef<number>(0);
 
   // Live Auto-Detected Platform
   const detectedPlatform = detectPlatform(url);
-  const effectivePlatform = selectedPlatform !== 'all' ? selectedPlatform : detectedPlatform;
+
+  // Find currently tracked job initiated from this studio
+  const currentJob = singleJobId
+    ? jobs.find((j) => j.id === singleJobId) || (activeJob?.id === singleJobId ? activeJob : null)
+    : null;
+
+  // Smooth continuous numeric counter interpolation
+  useEffect(() => {
+    targetPercentRef.current = Math.round(progressFraction * 100);
+
+    const updateDisplay = () => {
+      setDisplayPercent((current) => {
+        const target = targetPercentRef.current;
+        if (current === target) return current;
+        const diff = target - current;
+        // Smooth lerp step with minimum delta
+        const step = diff > 0 ? Math.max(1, Math.ceil(diff * 0.15)) : Math.min(-1, Math.floor(diff * 0.15));
+        return Math.min(Math.max(current + step, 0), 100);
+      });
+      animationFrameRef.current = requestAnimationFrame(updateDisplay);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(updateDisplay);
+
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [progressFraction]);
+
+  // Synchronize progressFraction and progressState with job lifecycle
+  useEffect(() => {
+    if (!singleJobId) {
+      if (!isSubmitting) {
+        setProgressState('idle');
+        setProgressFraction(0);
+      }
+      return;
+    }
+
+    if (currentJob) {
+      if (currentJob.status === 'queued') {
+        setProgressState('queued');
+        setProgressFraction((prev) => Math.max(prev, 0.18));
+      } else if (currentJob.status === 'running') {
+        setProgressState('running');
+        setProgressFraction((prev) => Math.max(prev, 0.42));
+      } else if (currentJob.status === 'done') {
+        setProgressState('done');
+        setProgressFraction(1);
+        const timer = setTimeout(() => {
+          setSingleJobId(null);
+          setProgressState('idle');
+          setProgressFraction(0);
+        }, 2600);
+        return () => clearTimeout(timer);
+      } else if (currentJob.status === 'dup') {
+        setProgressState('dup');
+        setProgressFraction(1);
+        const timer = setTimeout(() => {
+          setSingleJobId(null);
+          setProgressState('idle');
+          setProgressFraction(0);
+        }, 2600);
+        return () => clearTimeout(timer);
+      } else if (currentJob.status === 'failed') {
+        setProgressState('failed');
+        setProgressFraction(1);
+        const timer = setTimeout(() => {
+          setSingleJobId(null);
+          setProgressState('idle');
+          setProgressFraction(0);
+        }, 3200);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [currentJob, singleJobId, isSubmitting]);
+
+  // Organic asymptotic progress advancement while downloading
+  useEffect(() => {
+    if (progressState === 'running') {
+      const interval = setInterval(() => {
+        setProgressFraction((prev) => {
+          if (prev < 0.88) {
+            // Asymptotic deceleration curve: faster at first, slowing down near 88%
+            const remaining = 0.90 - prev;
+            return prev + remaining * 0.08;
+          }
+          return prev;
+        });
+      }, 250);
+      return () => clearInterval(interval);
+    }
+  }, [progressState]);
 
   const handlePaste = async () => {
     try {
@@ -79,8 +182,8 @@ export function DownloadStudio({
     }
 
     setErrorMsg('');
-    setSubmittedUrl(cleanUrl);
-    setDismissedJobId(null);
+    setProgressState('queued');
+    setProgressFraction(0.12);
 
     const result = await onQueueDownload(
       cleanUrl,
@@ -90,63 +193,79 @@ export function DownloadStudio({
     if (result.success && result.jobId) {
       setSingleJobId(result.jobId);
       setUrl('');
+    } else {
+      setProgressState('failed');
+      setProgressFraction(1);
+      setTimeout(() => {
+        setProgressState('idle');
+        setProgressFraction(0);
+      }, 3000);
     }
   };
 
-  // Only show single progress for jobs initiated by THIS single download studio
-  const isThisSingleJob = activeJob && singleJobId && activeJob.id === singleJobId;
-  const isCurrentJobDismissed = activeJob && activeJob.id === dismissedJobId;
-  const isJobActiveOrRecent = isThisSingleJob && !isCurrentJobDismissed;
-  const isJobDone = activeJob?.status === 'done' || activeJob?.status === 'dup';
-  const isJobFailed = activeJob?.status === 'failed';
-  const showActiveProgress = (isSubmitting && !activeJob) || isJobActiveOrRecent;
-
-  const progressUrl = (isThisSingleJob ? activeJob?.url : null) || submittedUrl || url;
-  const progressPlatform = (isThisSingleJob ? activeJob?.platform : null) || effectivePlatform || undefined;
+  const isBusy = isSubmitting || progressState === 'queued' || progressState === 'running';
 
   return (
     <section className="w-full max-w-4xl flex flex-col items-center text-center gap-6 pt-2 pb-6 relative">
-      <div className="relative z-10 p-6 sm:p-10 rounded-2xl glass-panel w-full flex flex-col items-center transition-all hover:bg-white/50 duration-500">
+      <div className="relative z-10 p-6 sm:p-10 rounded-3xl glass-panel w-full flex flex-col items-center transition-all hover:bg-white/50 duration-500 shadow-sm border border-white/40">
         
-        {/* Headline & Subtitle with Text Glow */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl text-slate-900 mb-4 text-glow font-bold leading-tight tracking-tight">
-          Download Media<br />from Any Platform
-        </h1>
-        <p className="text-sm text-slate-700 max-w-xl mx-auto mb-8 sm:mb-10 font-medium">
-          Download the content of social media and make URL social media Downloader for continuous discovery.
-        </p>
+        {/* Ambient Luminescence Backdrop Orb */}
+        <div className="relative flex flex-col items-center">
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-72 sm:w-96 h-28 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl pointer-events-none -z-10 rounded-full" />
+
+          {/* Micro Eyebrow Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 text-[10px] sm:text-[11px] font-mono font-extrabold tracking-widest uppercase mb-3 shadow-2xs backdrop-blur-sm">
+            <IconSparkles className="w-3 h-3 text-indigo-600 animate-pulse" />
+            <span>Universal Instant Ingestion</span>
+          </div>
+
+          {/* Premium High-End Slogan */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none mb-3 selection:bg-indigo-500/20">
+            <span className="text-slate-900 drop-shadow-xs">Paste </span>
+            <span className="relative inline-block bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent drop-shadow-sm font-black">
+              it !
+              <span className="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full opacity-70 blur-[0.5px]" />
+            </span>
+          </h1>
+
+          <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto mb-7 sm:mb-8 font-medium leading-relaxed">
+            Download high-resolution posts, reels, stories, and audio albums instantly with automated platform discovery.
+          </p>
+        </div>
+
 
         {/* Ingestion URL Form Container */}
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-3xl flex flex-col md:flex-row gap-3 glass-panel p-2 rounded-xl relative transition-all focus-within:ring-2 focus-within:ring-indigo-400 focus-within:shadow-lg focus-within:bg-white/60"
+          className="w-full max-w-3xl flex flex-col md:flex-row gap-2.5 glass-panel p-2 rounded-2xl relative transition-all focus-within:ring-2 focus-within:ring-indigo-400/40 focus-within:shadow-xl focus-within:bg-white/70 border border-white/60"
         >
-          <div className="flex-1 flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2 focus-within:bg-white/80 transition-colors">
+          <div className="flex-1 flex items-center gap-2 bg-white/50 rounded-xl px-4 py-2.5 focus-within:bg-white/80 transition-colors">
             <input
               type="url"
               required
+              disabled={isBusy}
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value);
                 if (errorMsg) setErrorMsg('');
               }}
               placeholder="Paste social media URL here..."
-              className="flex-grow bg-transparent border-none text-slate-900 focus:ring-0 focus:outline-none text-sm placeholder-slate-500 font-medium"
+              className="flex-grow bg-transparent border-none text-slate-900 focus:ring-0 focus:outline-none text-sm placeholder-slate-500 font-medium disabled:opacity-60"
             />
 
             {/* Live Auto-Detected Platform Pill */}
             {detectedPlatform && (
-              <span className="flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-mono font-bold shrink-0 capitalize">
+              <span className="flex items-center px-2.5 py-0.5 rounded-full bg-indigo-100/90 text-indigo-700 text-[10px] font-mono font-bold shrink-0 capitalize border border-indigo-200 shadow-2xs">
                 {detectedPlatform}
               </span>
             )}
 
             {/* Clear Input Button */}
-            {url && (
+            {url && !isBusy && (
               <button
                 type="button"
                 onClick={() => setUrl('')}
-                className="w-5 h-5 rounded-full text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 transition-colors"
+                className="w-5 h-5 rounded-full text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                 title="Clear input"
               >
                 <IconClose className="w-3.5 h-3.5" />
@@ -155,61 +274,125 @@ export function DownloadStudio({
           </div>
 
           <div className="flex gap-2 shrink-0">
-            {!url && (
+            {!url && !isBusy && (
               <button
                 type="button"
                 onClick={handlePaste}
-                className="px-5 sm:px-6 py-2.5 rounded-lg text-indigo-700 hover:bg-white/80 hover:shadow-sm font-semibold transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
+                className="px-4 sm:px-5 py-2.5 rounded-xl text-indigo-700 hover:bg-white/80 hover:shadow-2xs font-semibold transition-all active:scale-[0.98] text-xs sm:text-sm cursor-pointer border border-transparent hover:border-white/60"
               >
                 Paste
               </button>
             )}
 
+            {/* High-End Real-Time Dynamic Progress Button */}
             <button
               type="submit"
-              disabled={isSubmitting || !url.trim()}
-              className="px-6 sm:px-8 py-2.5 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-bold transition-all shadow-lg shadow-indigo-500/40 transform hover:-translate-y-0.5 active:scale-95 hover:shadow-indigo-500/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm cursor-pointer"
+              disabled={isBusy || (!url.trim() && progressState === 'idle')}
+              className={`group relative overflow-hidden min-w-[145px] sm:min-w-[165px] px-6 sm:px-8 py-2.5 rounded-xl font-bold transition-all duration-500 text-xs sm:text-sm select-none shadow-md cursor-pointer disabled:cursor-not-allowed ${
+                progressState === 'done'
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/30 ring-2 ring-emerald-400/40'
+                  : progressState === 'dup'
+                  ? 'bg-amber-600 text-white shadow-amber-500/30 ring-2 ring-amber-400/40'
+                  : progressState === 'failed'
+                  ? 'bg-rose-600 text-white shadow-rose-500/30 ring-2 ring-rose-400/40'
+                  : isBusy
+                  ? 'bg-slate-950 text-white shadow-indigo-500/30 border border-white/10'
+                  : 'bg-gradient-to-r from-indigo-500 via-indigo-600 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-indigo-500/30 hover:shadow-indigo-500/50 transform hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:transform-none'
+              }`}
             >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                  <span>Downloading...</span>
-                </span>
-              ) : (
-                <span>Download</span>
-              )}
+              {/* GPU-Accelerated Hardware Scale-X Fill Track (Silky Smooth 60fps) */}
+              <AnimatePresence>
+                {progressFraction > 0 && (
+                  <motion.div
+                    key="progress-fill"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: progressFraction }}
+                    transition={{
+                      ease: [0.16, 1, 0.3, 1], // Ultra-premium fluid ease-out curve
+                      duration: progressState === 'done' || progressState === 'dup' ? 0.35 : 0.6,
+                    }}
+                    style={{ transformOrigin: 'left center', willChange: 'transform' }}
+                    className={`absolute inset-0 transition-colors duration-500 ${
+                      progressState === 'done'
+                        ? 'bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 shadow-[0_0_24px_rgba(16,185,129,0.7)]'
+                        : progressState === 'dup'
+                        ? 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 shadow-[0_0_24px_rgba(245,158,11,0.7)]'
+                        : progressState === 'failed'
+                        ? 'bg-gradient-to-r from-rose-500 to-pink-600'
+                        : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 shadow-[0_0_20px_rgba(99,102,241,0.6)]'
+                    }`}
+                  >
+                    {/* Continuous Shimmer Light Wave Overlay */}
+                    {isBusy && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-beam pointer-events-none" />
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Foreground Label & Fluid Dynamic Counter */}
+              <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm font-semibold">
+                {progressState === 'done' ? (
+                  <motion.span
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                    className="flex items-center gap-1.5 text-white font-bold tracking-tight"
+                  >
+                    <IconCheckCircle className="w-4 h-4 text-white drop-shadow-xs" />
+                    <span>✓ Downloaded</span>
+                  </motion.span>
+                ) : progressState === 'dup' ? (
+                  <motion.span
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                    className="flex items-center gap-1.5 text-white font-bold tracking-tight"
+                  >
+                    <IconBookmark className="w-4 h-4 text-white drop-shadow-xs" />
+                    <span>✓ In Vault</span>
+                  </motion.span>
+                ) : progressState === 'failed' ? (
+                  <motion.span
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                    className="flex items-center gap-1.5 text-white font-bold tracking-tight"
+                  >
+                    <IconAlertCircle className="w-4 h-4 text-white drop-shadow-xs" />
+                    <span>✕ Failed</span>
+                  </motion.span>
+                ) : isBusy ? (
+                  <span className="flex items-center gap-2 font-mono">
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin shrink-0 shadow-xs" />
+                    <span className="font-bold tracking-tight">
+                      {progressState === 'queued'
+                        ? 'Connecting...'
+                        : `Downloading ${displayPercent}%`}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span>Download</span>
+                    <div className="w-4.5 h-4.5 rounded-full bg-white/20 flex items-center justify-center text-[10px] group-hover:translate-x-0.5 transition-transform duration-200">
+                      ↓
+                    </div>
+                  </span>
+                )}
+              </span>
             </button>
           </div>
         </form>
 
-        {/* Dedicated Single Progress Bar */}
-        <div className="w-full max-w-3xl mt-3">
-          <AnimatePresence>
-            {showActiveProgress && (
-              <DownloadProgressBar
-                url={progressUrl}
-                platform={progressPlatform}
-                isQueued={activeJob?.status === 'queued'}
-                isDone={isJobDone}
-                error={isJobFailed ? activeJob?.error || 'Download failed' : null}
-                onAutoClose={() => {
-                  if (activeJob) setDismissedJobId(activeJob.id);
-                  setSingleJobId(null);
-                }}
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="px-4 py-2 rounded-xl bg-rose-50/90 border border-rose-200 text-xs font-semibold text-rose-700 text-left mt-2">
-              ⚠️ {errorMsg}
-            </div>
-          )}
-        </div>
+        {/* Optional Error Alert */}
+        {errorMsg && (
+          <div className="w-full max-w-3xl px-4 py-2 rounded-xl bg-rose-50/90 border border-rose-200 text-xs font-semibold text-rose-700 text-left mt-2 animate-fade-in shadow-2xs">
+            ⚠️ {errorMsg}
+          </div>
+        )}
 
         {/* Quick Filter Buttons Row */}
-        <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 mt-6 sm:mt-8">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5 mt-6 sm:mt-7">
           {PLATFORM_CHIPS.map((p) => {
             const Icon = p.icon;
             const isSelected = selectedPlatform === p.id;
@@ -220,13 +403,13 @@ export function DownloadStudio({
                 key={p.id}
                 type="button"
                 onClick={() => setSelectedPlatform(p.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs transition-all active:scale-95 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full glass-panel text-xs transition-all active:scale-[0.98] cursor-pointer ${
                   isSelected || (isAutoDetect && selectedPlatform === 'all')
-                    ? 'text-indigo-700 font-semibold border-indigo-200 bg-indigo-50/60 shadow-md scale-105'
-                    : 'text-slate-700 font-medium hover:text-slate-900 hover:bg-white/80 hover:scale-105 hover:shadow-md'
+                    ? 'text-indigo-700 font-bold border-indigo-200/80 bg-indigo-50/70 shadow-sm scale-105'
+                    : 'text-slate-700 font-medium hover:text-slate-900 hover:bg-white/80 hover:shadow-2xs'
                 }`}
               >
-                <Icon className="w-4 h-4 text-inherit" />
+                <Icon className="w-3.5 h-3.5 text-inherit" />
                 <span>{p.label}</span>
               </button>
             );

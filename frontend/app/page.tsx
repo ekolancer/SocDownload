@@ -98,10 +98,11 @@ export default function StudioPage() {
             jobsData.forEach((newJob) => {
               const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
               const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
+              const isFinished = newJob.status === 'done' || newJob.status === 'dup' || newJob.status === 'failed';
               
               if (
                 (wasInProgress || !notifiedJobIdsRef.current.has(newJob.id)) &&
-                newJob.status === 'done' &&
+                isFinished &&
                 !notifiedJobIdsRef.current.has(newJob.id)
               ) {
                 notifiedJobIdsRef.current.add(newJob.id);
@@ -109,14 +110,19 @@ export default function StudioPage() {
                   id: newJob.id,
                   platform: newJob.platform,
                   url: newJob.url,
+                  status: newJob.status as 'done' | 'dup' | 'failed',
+                  error: newJob.error,
                 });
               }
             });
           } else {
             jobsData.forEach((j) => {
-              if (j.status === 'done') notifiedJobIdsRef.current.add(j.id);
+              if (j.status === 'done' || j.status === 'dup' || j.status === 'failed') {
+                notifiedJobIdsRef.current.add(j.id);
+              }
             });
           }
+
 
           prevJobsRef.current = jobsData;
           // Deduplicate: only update jobs state if data actually changed
@@ -229,26 +235,32 @@ export default function StudioPage() {
         
         {/* Status & Import Header Row */}
         <div className="w-full flex justify-between items-center max-w-4xl">
-          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default">
-            <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                backendStatus === 'ok'
-                  ? 'bg-emerald-500 animate-pulse'
-                  : backendStatus === 'loading'
-                  ? 'bg-amber-400 animate-ping'
-                  : 'bg-rose-500'
-              }`}
-            />
-            <span className="text-xs text-slate-700 font-medium">System Online</span>
+          {/* Live System Heartbeat Pill */}
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default select-none shadow-2xs">
+            <span className="relative flex h-2.5 w-2.5">
+              {backendStatus === 'ok' ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </>
+              ) : backendStatus === 'loading' ? (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400 animate-pulse" />
+              ) : (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+              )}
+            </span>
+            <span className="text-xs text-slate-700 font-bold font-mono">
+              {backendStatus === 'ok' ? 'System Online' : backendStatus === 'loading' ? 'Connecting...' : 'System Offline'}
+            </span>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg glass-panel text-indigo-600 hover:bg-white/80 hover:shadow-md transition-all active:scale-95 text-xs font-semibold cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-indigo-700 hover:bg-white/80 hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
             >
-              <IconUpload className="w-4 h-4 text-indigo-600" />
+              <IconUpload className="w-3.5 h-3.5 text-indigo-600" />
               <span>Import</span>
             </button>
 
@@ -256,10 +268,10 @@ export default function StudioPage() {
               type="button"
               onClick={() => refreshData(true)}
               disabled={isRefreshing}
-              className="w-10 h-10 rounded-lg glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-md hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
+              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
               title="Sync library"
             >
-              <IconRefresh className={`w-4 h-4 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+              <IconRefresh className={`w-3.5 h-3.5 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
             </button>
           </div>
         </div>
@@ -269,7 +281,10 @@ export default function StudioPage() {
           onQueueDownload={handleQueueDownload}
           isSubmitting={isSubmitting}
           activeJob={jobs.find((j) => j.status === 'running' || j.status === 'queued') || null}
+          jobs={jobs}
         />
+
+
 
         {/* Instagram Auto-Sync Automation Card */}
         <div className="w-full max-w-4xl">

@@ -145,18 +145,24 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
                 config.last_sync_status = "ok"
                 config.last_error = None
                 config.last_sync_at = now_wib()
+                config.last_discovered_count = 0
+                config.last_enqueued_count = 0
+                config.last_skipped_count = 0
+                config.last_failed_count = 0
                 session.commit()
                 return {
                     "status": "ok",
                     "platform": platform,
                     "fetched_total": 0,
                     "enqueued_count": 0,
+                    "skipped_dup_count": 0,
+                    "failed_count": 0,
                 }
 
             # Enqueue with deduplication against existing Job & MediaItem tables
             enqueue_result = bulk_enqueue(unique_urls, limit=500)
             enqueued_count = len(enqueue_result["enqueued"])
-            skipped_dup_count = len(enqueue_result["skipped_dup"])
+            skipped_dup_count = len(enqueue_result["skipped_dup"]) + len(enqueue_result.get("skipped_limit", []))
 
             logger.info(
                 "[AutoSync] %s: fetched %d URLs | %d new enqueued | %d skipped duplicates",
@@ -170,6 +176,10 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
             config.last_error = None
             config.last_sync_at = now_wib()
             config.items_synced_total = (config.items_synced_total or 0) + enqueued_count
+            config.last_discovered_count = len(unique_urls)
+            config.last_enqueued_count = enqueued_count
+            config.last_skipped_count = skipped_dup_count
+            config.last_failed_count = 0
             session.commit()
 
             return {
@@ -178,9 +188,9 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
                 "fetched_total": len(unique_urls),
                 "enqueued_count": enqueued_count,
                 "skipped_dup_count": skipped_dup_count,
+                "failed_count": 0,
                 "job_ids": enqueue_result["job_ids"],
             }
-
 
         except Exception as exc:
             err_msg = str(exc)
@@ -193,8 +203,7 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
                 config.last_error = err_msg
 
             config.last_sync_at = now_wib()
-
-
+            config.last_failed_count = (config.last_failed_count or 0) + 1
             session.commit()
 
             return {
@@ -202,4 +211,7 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
                 "platform": platform,
                 "error": config.last_error,
                 "enqueued_count": 0,
+                "skipped_dup_count": 0,
+                "failed_count": 1,
             }
+

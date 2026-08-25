@@ -149,6 +149,11 @@ class AutoSyncConfig(Base):
     last_sync_status: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "ok" | "error" | "session_expired"
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     items_synced_total: Mapped[int] = mapped_column(Integer, default=0)
+    last_discovered_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_enqueued_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_skipped_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_failed_count: Mapped[int] = mapped_column(Integer, default=0)
+
 
 
 _engine = None
@@ -189,4 +194,12 @@ def init_db() -> None:
         except Exception:
             # Column already exists
             pass
+
+        for col in ["last_discovered_count", "last_enqueued_count", "last_skipped_count", "last_failed_count"]:
+            try:
+                conn.execute(text(f"ALTER TABLE auto_sync_config ADD COLUMN {col} INTEGER DEFAULT 0"))
+                conn.commit()
+            except Exception:
+                pass
+
 

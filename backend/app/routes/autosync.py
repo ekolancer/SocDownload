@@ -26,18 +26,32 @@ class AutoSyncTriggerRequest(BaseModel):
 
 
 def _format_config_response(config: Any) -> dict[str, Any]:
+    last_sync_iso = None
+    if config.last_sync_at:
+        dt = config.last_sync_at
+        if getattr(dt, "tzinfo", None) is None:
+            from ..db import WIB
+            dt = dt.replace(tzinfo=WIB)
+        last_sync_iso = dt.isoformat()
+
     return {
         "platform": config.platform,
         "enabled": config.enabled,
         "sync_saved": config.sync_saved,
         "sync_liked": config.sync_liked,
         "interval_minutes": config.interval_minutes,
-        "last_sync_at": config.last_sync_at.isoformat() if config.last_sync_at else None,
+        "last_sync_at": last_sync_iso,
         "last_sync_status": config.last_sync_status,
         "last_error": config.last_error,
-        "items_synced_total": config.items_synced_total,
+        "items_synced_total": config.items_synced_total or 0,
+        "last_discovered_count": getattr(config, "last_discovered_count", 0) or 0,
+        "last_enqueued_count": getattr(config, "last_enqueued_count", 0) or 0,
+        "last_skipped_count": getattr(config, "last_skipped_count", 0) or 0,
+        "last_failed_count": getattr(config, "last_failed_count", 0) or 0,
         "session_expired": config.last_sync_status == "session_expired",
     }
+
+
 
 
 @router.get("/config")

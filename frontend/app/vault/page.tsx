@@ -150,15 +150,20 @@ export default function VaultPage() {
         if (prevJobsRef.current.length > 0) {
           jobsData.forEach((newJob) => {
             const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
-            if (oldJob && (oldJob.status === 'running' || oldJob.status === 'queued') && newJob.status === 'done') {
+            const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
+            const isFinished = newJob.status === 'done' || newJob.status === 'dup' || newJob.status === 'failed';
+            if (wasInProgress && isFinished) {
               setCompletedNotice({
                 id: newJob.id,
                 platform: newJob.platform,
                 url: newJob.url,
+                status: newJob.status as 'done' | 'dup' | 'failed',
+                error: newJob.error,
               });
             }
           });
         }
+
 
         prevJobsRef.current = jobsData;
         // Deduplicate: only update jobs state if data actually changed
