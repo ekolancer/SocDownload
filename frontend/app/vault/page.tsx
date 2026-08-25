@@ -545,7 +545,7 @@ export default function VaultPage() {
     : null;
 
   return (
-    <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
       {/* Top App Bar */}
       <Navbar
@@ -560,13 +560,13 @@ export default function VaultPage() {
       />
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-6">
+      <main className="flex-grow max-w-[1440px] w-full mx-auto px-4 sm:px-6 md:px-8 py-8 flex flex-col gap-8">
         
         {/* Vault Navigation Bar & Global Export Tools */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 glass-panel rounded-2xl shadow-sm">
           
           {/* Sub-Navigation Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-[14px] border border-slate-200/80 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             
             {/* All Media Tab */}
             <button
@@ -575,15 +575,17 @@ export default function VaultPage() {
                 setCurrentView({ type: 'timeline' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'timeline'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <IconLayers className="w-3.5 h-3.5" />
+              <IconLayers className="w-4 h-4" />
               <span>All Media</span>
-              <span className="opacity-70">({media.length})</span>
+              <span className={`text-[10px] font-mono ${currentView.type === 'timeline' ? 'opacity-80' : 'text-slate-500'}`}>
+                ({media.length})
+              </span>
             </button>
 
             {/* Creators Hub Tab */}
@@ -593,15 +595,17 @@ export default function VaultPage() {
                 setCurrentView({ type: 'creators_list' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'creators_list' || currentView.type === 'creator_detail'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <IconUsers className="w-3.5 h-3.5" />
+              <IconUsers className="w-4 h-4" />
               <span>Creators Hub</span>
-              <span className="opacity-70">({creatorsList.length || creators.length})</span>
+              <span className={`text-[10px] font-mono ${currentView.type === 'creators_list' ? 'opacity-80' : 'text-slate-500'}`}>
+                ({creatorsList.length || creators.length})
+              </span>
             </button>
 
             {/* Albums Tab */}
@@ -611,15 +615,17 @@ export default function VaultPage() {
                 setCurrentView({ type: 'albums_list' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'albums_list' || currentView.type === 'album_detail'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <IconFolder className="w-3.5 h-3.5" />
+              <IconFolder className="w-4 h-4" />
               <span>Albums</span>
-              <span className="opacity-70">({albums.length})</span>
+              <span className={`text-[10px] font-mono ${currentView.type === 'albums_list' ? 'opacity-80' : 'text-slate-500'}`}>
+                ({albums.length})
+              </span>
             </button>
 
             {/* Favorites Tab */}
@@ -629,15 +635,17 @@ export default function VaultPage() {
                 setCurrentView({ type: 'favorites' });
                 setSelectedIds([]);
               }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-[10px] text-xs font-bold transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                 currentView.type === 'favorites'
-                  ? 'bg-white text-amber-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
-              <IconStar className="w-3.5 h-3.5 text-amber-500" />
+              <IconStar className="w-4 h-4 text-amber-500" />
               <span>Favorites</span>
-              <span className="opacity-70">({favoritesCount})</span>
+              <span className={`text-[10px] font-mono ${currentView.type === 'favorites' ? 'opacity-80' : 'text-slate-500'}`}>
+                ({favoritesCount})
+              </span>
             </button>
 
           </div>
@@ -647,9 +655,9 @@ export default function VaultPage() {
             <button
               type="button"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-[12px] bg-white border border-slate-200/90 text-slate-800 hover:text-indigo-600 text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl glass-panel text-slate-800 hover:text-indigo-600 text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
             >
-              <IconDownload className="w-3.5 h-3.5 text-indigo-600" />
+              <IconDownload className="w-4 h-4 text-indigo-600" />
               <span>Export Vault</span>
               <span className="text-[10px]">▼</span>
             </button>
@@ -660,14 +668,14 @@ export default function VaultPage() {
                   className="fixed inset-0 z-20"
                   onClick={() => setIsExportMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-60 rounded-[18px] bg-white border border-slate-200/90 shadow-xl p-1.5 z-30 flex flex-col gap-1">
+                <div className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl glass-panel bg-white/95 shadow-xl p-1.5 z-30 flex flex-col gap-1">
                   
                   {/* Export Full ZIP */}
                   <a
                     href={`${API}/media/export/zip`}
                     download
                     onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
                   >
                     <IconFolderZip className="w-4 h-4 text-indigo-600 shrink-0" />
                     <div className="flex flex-col">
@@ -681,7 +689,7 @@ export default function VaultPage() {
                     href={`${API}/media/export/csv`}
                     download
                     onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
                   >
                     <IconFileText className="w-4 h-4 text-sky-600 shrink-0" />
                     <div className="flex flex-col">
@@ -695,7 +703,7 @@ export default function VaultPage() {
                     href={`${API}/media/export/json`}
                     download
                     onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-bold text-slate-800 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
                   >
                     <IconSparkles className="w-4 h-4 text-amber-500 shrink-0" />
                     <div className="flex flex-col">
@@ -725,7 +733,7 @@ export default function VaultPage() {
           <div className="flex flex-col gap-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Albums</h1>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Albums</h1>
                 <p className="text-xs text-slate-500 font-normal">
                   Custom collections and categorized media
                 </p>
@@ -739,7 +747,7 @@ export default function VaultPage() {
                     setAlbumModalMode('create_only');
                     setIsAlbumModalOpen(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm transition-all cursor-pointer"
                 >
                   <IconFolderPlus className="w-4 h-4" />
                   <span>New Album</span>
@@ -748,11 +756,11 @@ export default function VaultPage() {
             </div>
 
             {albums.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-14 rounded-[24px] bg-white border border-slate-200/90 text-center">
-                <div className="w-12 h-12 rounded-[14px] bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+              <div className="flex flex-col items-center justify-center p-14 rounded-2xl glass-panel text-center">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
                   <IconFolder className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-extrabold text-slate-900">No albums created yet</h3>
+                <h3 className="text-base font-bold text-slate-900">No albums created yet</h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
                   Organize your media into albums to quickly categorize your downloads.
                 </p>
@@ -763,7 +771,7 @@ export default function VaultPage() {
                     setAlbumModalMode('create_only');
                     setIsAlbumModalOpen(true);
                   }}
-                  className="mt-4 flex items-center gap-2 px-4 py-2 rounded-[10px] text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all cursor-pointer"
+                  className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all cursor-pointer"
                 >
                   <IconFolderPlus className="w-4 h-4" />
                   <span>Create First Album</span>
@@ -781,10 +789,10 @@ export default function VaultPage() {
                         albumName: a.name,
                       })
                     }
-                    className="group relative rounded-[18px] bg-white border border-slate-200/90 hover:border-indigo-300 shadow-sm hover:shadow-md p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+                    className="group relative rounded-2xl glass-panel hover:bg-white/80 hover:shadow-xl hover:-translate-y-1 p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all"
                   >
                     {/* Cover Thumbnail */}
-                    <div className="relative aspect-video w-full rounded-[12px] bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
+                    <div className="relative aspect-video w-full rounded-xl bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
                       {a.cover_file_url ? (
                         <img
                           src={a.cover_file_url}
@@ -795,7 +803,7 @@ export default function VaultPage() {
                         <IconFolder className="w-10 h-10 text-slate-400" />
                       )}
                       
-                      <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-slate-900/80 text-white backdrop-blur-md border border-white/10">
+                      <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900/80 text-white border border-white/10">
                         {a.items_count} items
                       </span>
 
@@ -809,7 +817,7 @@ export default function VaultPage() {
                             setAlbumModalMode('edit');
                             setIsAlbumModalOpen(true);
                           }}
-                          className="w-7 h-7 rounded-[8px] bg-white/90 hover:bg-white text-slate-700 hover:text-indigo-600 flex items-center justify-center shadow-xs backdrop-blur-md transition-all cursor-pointer hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-white/95 text-slate-700 hover:text-indigo-600 flex items-center justify-center shadow-xs transition-all cursor-pointer hover:scale-105"
                           title="Edit Album"
                         >
                           <IconPencil className="w-3.5 h-3.5" />
@@ -820,7 +828,7 @@ export default function VaultPage() {
                             e.stopPropagation();
                             handleDeleteAlbum(a.id, a.name);
                           }}
-                          className="w-7 h-7 rounded-[8px] bg-white/90 hover:bg-white text-slate-700 hover:text-rose-600 flex items-center justify-center shadow-xs backdrop-blur-md transition-all cursor-pointer hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-white/95 text-slate-700 hover:text-rose-600 flex items-center justify-center shadow-xs transition-all cursor-pointer hover:scale-105"
                           title="Delete Album"
                         >
                           <IconTrash className="w-3.5 h-3.5" />
@@ -830,7 +838,7 @@ export default function VaultPage() {
 
                     {/* Album Info */}
                     <div className="flex flex-col px-0.5">
-                      <span className="text-sm font-extrabold text-slate-900">{a.name}</span>
+                      <span className="text-sm font-bold text-slate-900">{a.name}</span>
                       {a.description && (
                         <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
                       )}
@@ -846,17 +854,17 @@ export default function VaultPage() {
             
             {/* Album Detail Header Banner with Edit & Delete Controls */}
             {currentView.type === 'album_detail' && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[20px] border border-slate-200/90 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-4 sm:p-5 rounded-2xl shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[12px] bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
                     <IconFolder className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h1 className="text-lg font-black text-slate-900 truncate">
+                      <h1 className="text-lg font-bold text-slate-900 truncate">
                         {currentView.albumName}
                       </h1>
-                      <span className="px-2 py-0.5 rounded-[6px] text-xs font-mono font-bold bg-indigo-50 border border-indigo-200 text-indigo-700">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-indigo-100/80 text-indigo-700">
                         {albumDetailItems.length} items
                       </span>
                     </div>
@@ -881,7 +889,7 @@ export default function VaultPage() {
                       setAlbumModalMode('edit');
                       setIsAlbumModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-slate-700 hover:text-indigo-700 bg-slate-50 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 glass-panel hover:bg-white/80 transition-all cursor-pointer shadow-2xs"
                   >
                     <IconPencil className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Edit Album</span>
@@ -890,7 +898,7 @@ export default function VaultPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteAlbum(currentView.albumId, currentView.albumName)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200/80 hover:border-rose-600 transition-all cursor-pointer shadow-2xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-all cursor-pointer shadow-2xs"
                   >
                     <IconTrash className="w-3.5 h-3.5" />
                     <span>Delete Album</span>
@@ -945,7 +953,22 @@ export default function VaultPage() {
           </div>
         )}
 
-      </div>
+      </main>
+
+      {/* Footer (Shared Component) */}
+      <footer className="glass-panel w-full py-6 mt-auto border-t-0 shadow-[0_-8px_32px_0_rgba(31,38,135,0.07)]">
+        <div className="flex flex-col md:flex-row justify-between items-center px-6 max-w-[1440px] mx-auto gap-4">
+          <div className="font-medium text-xs tracking-wider text-slate-600 uppercase">
+            © 2024 MediaVault Studio. All rights reserved.
+          </div>
+          <nav className="flex gap-6">
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">API Docs</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Help Center</a>
+          </nav>
+        </div>
+      </footer>
 
       {/* Slide-Over Drawer Panel */}
       <VaultSidebar

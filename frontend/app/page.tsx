@@ -10,44 +10,15 @@ import { JobNotificationToast, CompletedJobNotice } from './components/JobNotifi
 import { MediaLightboxModal, MediaItem } from './components/MediaLightboxModal';
 import Link from 'next/link';
 import {
-  IconFolder,
   IconVideoCamera,
   IconLayers,
-  IconSparkles,
-  IconInstagram,
-  IconTikTok,
-  IconThreads,
-  IconYouTube,
-  IconX,
-  IconReddit,
-  IconPinterest,
+  IconRefresh,
+  IconUpload,
 } from './components/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 
 const API = '/api';
-
-function getPlatformIcon(platform: string) {
-  switch (platform.toLowerCase()) {
-    case 'instagram':
-      return <IconInstagram className="w-3 h-3 text-pink-600" />;
-    case 'tiktok':
-      return <IconTikTok className="w-3 h-3 text-slate-900" />;
-    case 'threads':
-      return <IconThreads className="w-3 h-3 text-slate-900" />;
-    case 'youtube':
-      return <IconYouTube className="w-3 h-3 text-red-600" />;
-    case 'x':
-    case 'twitter':
-      return <IconX className="w-3 h-3 text-slate-900" />;
-    case 'reddit':
-      return <IconReddit className="w-3 h-3 text-orange-600" />;
-    case 'pinterest':
-      return <IconPinterest className="w-3 h-3 text-red-600" />;
-    default:
-      return <IconSparkles className="w-3 h-3 text-indigo-600" />;
-  }
-}
 
 export default function StudioPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
@@ -238,9 +209,9 @@ export default function StudioPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
-      {/* Top App Bar */}
+      {/* Top App Header (Stitch Comp) */}
       <Navbar
         backendStatus={backendStatus}
         mediaCount={mediaCount}
@@ -253,39 +224,71 @@ export default function StudioPage() {
       />
 
       {/* Main Studio Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-10">
-        {/* Single URL Download Hero Studio */}
+      <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-10">
+        
+        {/* Status & Import Header Row */}
+        <div className="w-full flex justify-between items-center max-w-4xl">
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default">
+            <div
+              className={`w-2.5 h-2.5 rounded-full ${
+                backendStatus === 'ok'
+                  ? 'bg-emerald-500 animate-pulse'
+                  : backendStatus === 'loading'
+                  ? 'bg-amber-400 animate-ping'
+                  : 'bg-rose-500'
+              }`}
+            />
+            <span className="text-xs text-slate-700 font-medium">System Online</span>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg glass-panel text-indigo-600 hover:bg-white/80 hover:shadow-md transition-all active:scale-95 text-xs font-semibold cursor-pointer"
+            >
+              <IconUpload className="w-4 h-4 text-indigo-600" />
+              <span>Import</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => refreshData(true)}
+              disabled={isRefreshing}
+              className="w-10 h-10 rounded-lg glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-md hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
+              title="Sync library"
+            >
+              <IconRefresh className={`w-4 h-4 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Hero Section */}
         <DownloadStudio
           onQueueDownload={handleQueueDownload}
           isSubmitting={isSubmitting}
           activeJob={jobs.find((j) => j.status === 'running' || j.status === 'queued') || null}
         />
 
-        {/* Recent Downloads Carousel Strip */}
+        {/* Recent Downloads Section */}
         {recentMedia.length > 0 && (
-          <div className="w-full max-w-4xl mx-auto px-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-900 uppercase tracking-wider font-mono">
-                  Recent Downloads
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-mono font-bold">
-                  {recentMedia.length} latest
-                </span>
+          <section className="w-full max-w-4xl flex flex-col gap-6">
+            <div className="flex justify-between items-end mb-2">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Recent Downloads</h2>
+                <span className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 font-bold tracking-wider">8 LATEST</span>
               </div>
-
               <Link
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
                 href="/vault"
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1"
               >
-                <span>View Full Vault</span>
-                <span>→</span>
+                View Full Vault
               </Link>
             </div>
 
-            {/* Horizontal Scroll Strip */}
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none">
-              {recentMedia.map((item) => {
+            {/* 4 Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recentMedia.slice(0, 4).map((item) => {
                 const firstFile = item.files?.[0];
                 const previewUrl = firstFile ? `/api/media/files/${firstFile.id}` : '';
                 const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
@@ -294,46 +297,51 @@ export default function StudioPage() {
                   <div
                     key={item.id}
                     onClick={() => setLightboxItem(item)}
-                    className="group relative flex flex-col w-36 sm:w-40 rounded-[16px] bg-white border border-slate-200/90 hover:border-indigo-300 p-1.5 shadow-sm hover:shadow-md cursor-pointer transition-all hover:-translate-y-1 shrink-0 select-none"
+                    className="rounded-xl overflow-hidden glass-panel hover:bg-white/70 transition-all duration-300 flex flex-col group p-2 shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-white/60 cursor-pointer"
                   >
-                    {/* Thumbnail Canvas */}
-                    <div className="relative aspect-[4/5] w-full rounded-[12px] bg-slate-950 overflow-hidden flex items-center justify-center">
+                    <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-white/50 w-full shadow-inner">
                       {previewUrl ? (
                         <img
                           src={previewUrl}
                           alt={item.caption || 'Recent Media'}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           loading="lazy"
                         />
                       ) : (
-                        <span className="text-[10px] text-slate-400 font-mono">No preview</span>
+                        <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 font-mono">
+                          No preview
+                        </div>
                       )}
 
                       {/* Video indicator */}
                       {isVideo && (
-                        <div className="absolute top-2 right-2 p-1 rounded-[6px] bg-slate-900/80 text-emerald-400 backdrop-blur-sm">
-                          <IconVideoCamera className="w-3 h-3" />
+                        <div className="absolute top-2 right-2 p-1 rounded-md bg-slate-900/80 text-emerald-400">
+                          <IconVideoCamera className="w-3.5 h-3.5" />
                         </div>
                       )}
 
                       {/* Multi-slide indicator */}
                       {item.files && item.files.length > 1 && (
-                        <div className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-[6px] bg-slate-900/80 text-white text-[9px] font-mono font-bold backdrop-blur-sm">
+                        <div className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[9px] font-mono font-bold">
                           <IconLayers className="w-2.5 h-2.5" />
                           <span>{item.files.length}</span>
                         </div>
                       )}
 
-                      {/* Platform Tag */}
-                      <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] bg-white/95 text-slate-800 text-[9px] font-bold shadow-xs">
-                        {getPlatformIcon(item.platform)}
-                        <span className="capitalize">{item.platform}</span>
+                      {/* Hover Arrow Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center pointer-events-none">
+                        <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-md text-2xl font-bold">
+                          ↗
+                        </span>
                       </div>
                     </div>
 
-                    {/* Bottom Author Tag */}
-                    <div className="px-1 py-1 flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-800 truncate">
+                    {/* Author Bottom Bar */}
+                    <div className="p-3 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-slate-700 shrink-0">
+                        {item.username ? item.username.charAt(0).toUpperCase() : 'M'}
+                      </div>
+                      <span className="text-xs text-slate-800 font-medium truncate group-hover:text-indigo-600 transition-colors">
                         {item.username ? `@${item.username}` : 'Archived'}
                       </span>
                     </div>
@@ -341,10 +349,17 @@ export default function StudioPage() {
                 );
               })}
             </div>
-          </div>
+
+            {/* Carousel Dots */}
+            <div className="flex justify-center mt-4 gap-2">
+              <div className="w-6 h-1.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50 hover:bg-indigo-600 transition-colors cursor-pointer"></div>
+              <div className="w-2 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors cursor-pointer"></div>
+              <div className="w-2 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors cursor-pointer"></div>
+            </div>
+          </section>
         )}
 
-        {/* Batch Import & Background Queue Pipeline */}
+        {/* Batch Import & Queue Pipeline */}
         <JobPipeline
           jobs={jobs}
           stats={jobStats}
@@ -352,15 +367,21 @@ export default function StudioPage() {
           onClearJobs={handleClearJobs}
           onDeleteJob={handleDeleteJob}
         />
+
       </main>
 
-      {/* Footer */}
-      <footer className="w-full border-t border-slate-200/80 py-8 mt-12 bg-white text-center text-xs text-slate-500 font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span>MediaVault • High Fidelity Social Archiver</span>
-          <span className="text-slate-400">
-            Instagram • TikTok • Threads • YouTube • X • Reddit • Pinterest
-          </span>
+      {/* Footer (Shared Component) */}
+      <footer className="glass-panel w-full py-6 mt-auto border-t-0 shadow-[0_-8px_32px_0_rgba(31,38,135,0.07)]">
+        <div className="flex flex-col md:flex-row justify-between items-center px-6 max-w-[1440px] mx-auto gap-4">
+          <div className="font-medium text-xs tracking-wider text-slate-600 uppercase">
+            © 2024 MediaVault Studio. All rights reserved.
+          </div>
+          <nav className="flex gap-6">
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">API Docs</a>
+            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Help Center</a>
+          </nav>
         </div>
       </footer>
 

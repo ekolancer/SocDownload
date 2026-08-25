@@ -1,20 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  IconDownload,
   IconSparkles,
-  IconPaste,
-  IconLink,
   IconInstagram,
   IconTikTok,
   IconX,
   IconYouTube,
-  IconReddit,
-  IconPinterest,
   IconThreads,
-  IconCheckCircle,
   IconClose,
 } from './Icons';
 import { DownloadProgressBar } from './DownloadProgressBar';
@@ -26,15 +20,13 @@ interface DownloadStudioProps {
   activeJob?: JobRow | null;
 }
 
-const PLATFORMS = [
-  { id: 'all', label: 'Auto Detect', icon: IconSparkles, color: 'text-indigo-600' },
-  { id: 'instagram', label: 'Instagram', icon: IconInstagram, color: 'text-pink-600' },
-  { id: 'tiktok', label: 'TikTok', icon: IconTikTok, color: 'text-slate-900' },
-  { id: 'threads', label: 'Threads', icon: IconThreads, color: 'text-slate-900' },
-  { id: 'x', label: 'X (Twitter)', icon: IconX, color: 'text-slate-900' },
-  { id: 'youtube', label: 'YouTube', icon: IconYouTube, color: 'text-red-600' },
-  { id: 'reddit', label: 'Reddit', icon: IconReddit, color: 'text-orange-600' },
-  { id: 'pinterest', label: 'Pinterest', icon: IconPinterest, color: 'text-red-700' },
+const PLATFORM_CHIPS = [
+  { id: 'all', label: 'Auto Detect', icon: IconSparkles, isSpecial: true },
+  { id: 'instagram', label: 'Instagram', icon: IconInstagram },
+  { id: 'tiktok', label: 'TikTok', icon: IconTikTok },
+  { id: 'threads', label: 'Threads', icon: IconThreads },
+  { id: 'x', label: 'X (Twitter)', icon: IconX },
+  { id: 'youtube', label: 'YouTube', icon: IconYouTube },
 ];
 
 function detectPlatform(rawUrl: string): string | null {
@@ -113,33 +105,23 @@ export function DownloadStudio({
   const progressPlatform = (isThisSingleJob ? activeJob?.platform : null) || effectivePlatform || undefined;
 
   return (
-    <div className="w-full flex flex-col items-center gap-7 py-2">
-      
-      {/* Studio Header */}
-      <div className="flex flex-col items-center text-center gap-3 max-w-4xl px-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-[8px] text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
-          <IconSparkles className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Social Media Downloader</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[50px] font-extrabold text-slate-900 tracking-tight leading-tight sm:whitespace-nowrap">
-          Download Media from Any Platform
+    <section className="w-full max-w-4xl flex flex-col items-center text-center gap-6 pt-2 pb-6 relative">
+      <div className="relative z-10 p-6 sm:p-10 rounded-2xl glass-panel w-full flex flex-col items-center transition-all hover:bg-white/50 duration-500">
+        
+        {/* Headline & Subtitle with Text Glow */}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl text-slate-900 mb-4 text-glow font-bold leading-tight tracking-tight">
+          Download Media<br />from Any Platform
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-xl">
-          Paste any single post URL below, or use the Import button in header for bulk archives
+        <p className="text-sm text-slate-700 max-w-xl mx-auto mb-8 sm:mb-10 font-medium">
+          Download the content of social media and make URL social media Downloader for continuous discovery.
         </p>
-      </div>
 
-      {/* Main Ingestion Card: Search & Submit */}
-      <div className="w-full max-w-3xl px-4 flex flex-col gap-4">
+        {/* Ingestion URL Form Container */}
         <form
           onSubmit={handleSubmit}
-          className="relative flex flex-col sm:flex-row items-stretch sm:items-center rounded-[24px] bg-white border border-slate-200/90 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2 sm:p-2.5 gap-2"
+          className="w-full max-w-3xl flex flex-col md:flex-row gap-3 glass-panel p-2 rounded-xl relative transition-all focus-within:ring-2 focus-within:ring-indigo-400 focus-within:shadow-lg focus-within:bg-white/60"
         >
-          {/* Input Field with leading icon */}
-          <div className="flex-1 flex items-center gap-2.5 px-3 py-1.5 min-w-0">
-            <IconLink className="w-5 h-5 text-slate-400 shrink-0" />
-            
+          <div className="flex-1 flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2 focus-within:bg-white/80 transition-colors">
             <input
               type="url"
               required
@@ -149,139 +131,109 @@ export function DownloadStudio({
                 if (errorMsg) setErrorMsg('');
               }}
               placeholder="Paste social media URL here..."
-              className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 font-medium focus:outline-none"
+              className="flex-grow bg-transparent border-none text-slate-900 focus:ring-0 focus:outline-none text-sm placeholder-slate-500 font-medium"
             />
 
             {/* Live Auto-Detected Platform Pill */}
             {detectedPlatform && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-mono font-bold shrink-0 capitalize"
-              >
-                <span>{detectedPlatform}</span>
-              </motion.div>
+              <span className="flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-mono font-bold shrink-0 capitalize">
+                {detectedPlatform}
+              </span>
             )}
 
-            {/* Clear Button if URL typed */}
-            {url ? (
+            {/* Clear Input Button */}
+            {url && (
               <button
                 type="button"
                 onClick={() => setUrl('')}
-                className="w-6 h-6 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+                className="w-5 h-5 rounded-full text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 transition-colors"
                 title="Clear input"
               >
                 <IconClose className="w-3.5 h-3.5" />
               </button>
-            ) : (
-              /* One-Click Paste Button Chip */
+            )}
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            {!url && (
               <button
                 type="button"
                 onClick={handlePaste}
-                className="px-3 py-1.5 rounded-[8px] text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-                title="Paste from clipboard"
+                className="px-5 sm:px-6 py-2.5 rounded-lg text-indigo-700 hover:bg-white/80 hover:shadow-sm font-semibold transition-all active:scale-95 text-xs sm:text-sm cursor-pointer"
               >
-                <IconPaste className="w-3.5 h-3.5 text-slate-500" />
-                <span>Paste</span>
+                Paste
               </button>
             )}
-          </div>
 
-          {/* Primary Filled Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting || !url.trim()}
-            className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-[14px] text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200 transition-all cursor-pointer shrink-0"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                <span>Downloading...</span>
-              </>
-            ) : (
-              <>
-                <IconDownload className="w-4 h-4 text-white" />
+            <button
+              type="submit"
+              disabled={isSubmitting || !url.trim()}
+              className="px-6 sm:px-8 py-2.5 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-bold transition-all shadow-lg shadow-indigo-500/40 transform hover:-translate-y-0.5 active:scale-95 hover:shadow-indigo-500/60 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm cursor-pointer"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  <span>Downloading...</span>
+                </span>
+              ) : (
                 <span>Download</span>
-              </>
-            )}
-          </button>
+              )}
+            </button>
+          </div>
         </form>
 
-        {/* Dedicated Single URL Download Progress Card (Only shows for THIS single download) */}
-        <AnimatePresence>
-          {showActiveProgress && (
-            <DownloadProgressBar
-              url={progressUrl}
-              platform={progressPlatform}
-              isQueued={activeJob?.status === 'queued'}
-              isDone={isJobDone}
-              error={isJobFailed ? activeJob?.error || 'Download failed' : null}
-              onAutoClose={() => {
-                if (activeJob) setDismissedJobId(activeJob.id);
-                setSingleJobId(null);
-              }}
-            />
+        {/* Dedicated Single Progress Bar */}
+        <div className="w-full max-w-3xl mt-3">
+          <AnimatePresence>
+            {showActiveProgress && (
+              <DownloadProgressBar
+                url={progressUrl}
+                platform={progressPlatform}
+                isQueued={activeJob?.status === 'queued'}
+                isDone={isJobDone}
+                error={isJobFailed ? activeJob?.error || 'Download failed' : null}
+                onAutoClose={() => {
+                  if (activeJob) setDismissedJobId(activeJob.id);
+                  setSingleJobId(null);
+                }}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="px-4 py-2 rounded-xl bg-rose-50/90 border border-rose-200 text-xs font-semibold text-rose-700 text-left mt-2">
+              ⚠️ {errorMsg}
+            </div>
           )}
-        </AnimatePresence>
-
-        {/* Error Feedback */}
-        {errorMsg && (
-          <div className="px-4 py-2.5 rounded-[12px] bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-center gap-2">
-            <span>⚠️ {errorMsg}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Supported Platforms Filter Chips */}
-      <div className="flex flex-col items-center gap-2 w-full max-w-3xl px-4">
-        <div className="relative w-full overflow-hidden rounded-full bg-white border border-slate-200/90 shadow-sm p-1.5 flex items-center">
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white via-white/80 to-transparent z-10" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white via-white/80 to-transparent z-10" />
-
-          <div className="animate-marquee-left flex items-center gap-2">
-            {PLATFORMS.map((p) => {
-              const Icon = p.icon;
-              const isSelected = selectedPlatform === p.id;
-              return (
-                <button
-                  key={`seq1-${p.id}`}
-                  type="button"
-                  onClick={() => setSelectedPlatform(p.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : p.color}`} />
-                  <span className="whitespace-nowrap">{p.label}</span>
-                </button>
-              );
-            })}
-
-            {PLATFORMS.map((p) => {
-              const Icon = p.icon;
-              const isSelected = selectedPlatform === p.id;
-              return (
-                <button
-                  key={`seq2-${p.id}`}
-                  type="button"
-                  onClick={() => setSelectedPlatform(p.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : p.color}`} />
-                  <span className="whitespace-nowrap">{p.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </div>
-      </div>
 
-    </div>
+        {/* Quick Filter Buttons Row */}
+        <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 mt-6 sm:mt-8">
+          {PLATFORM_CHIPS.map((p) => {
+            const Icon = p.icon;
+            const isSelected = selectedPlatform === p.id;
+            const isAutoDetect = p.id === 'all';
+
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedPlatform(p.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs transition-all active:scale-95 cursor-pointer ${
+                  isSelected || (isAutoDetect && selectedPlatform === 'all')
+                    ? 'text-indigo-700 font-semibold border-indigo-200 bg-indigo-50/60 shadow-md scale-105'
+                    : 'text-slate-700 font-medium hover:text-slate-900 hover:bg-white/80 hover:scale-105 hover:shadow-md'
+                }`}
+              >
+                <Icon className="w-4 h-4 text-inherit" />
+                <span>{p.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+      </div>
+    </section>
   );
 }
