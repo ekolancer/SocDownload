@@ -17,7 +17,7 @@ from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
 from .db import init_db, Job, JobStatus, MediaItem, get_session_factory, utcnow
 from sqlalchemy import update
-from .routes import adapters, albums, health, importer, jobs, media
+from .routes import adapters, albums, autosync, health, importer, jobs, media
 from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue
 from .worker import Worker
@@ -84,7 +84,9 @@ def create_app() -> FastAPI:
     app.include_router(media.router)
     app.include_router(albums.router)
     app.include_router(adapters.router)
+    app.include_router(autosync.router)
     return app
+
 
 
 app = create_app()

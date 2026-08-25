@@ -1,7 +1,18 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
+
+WIB = timezone(timedelta(hours=7), name="WIB")
+
+
+def now_wib() -> datetime:
+    """Return current timestamp in GMT+7 (Asia/Jakarta / WIB)."""
+    return datetime.now(WIB)
+
+
+# Keep utcnow as alias to now_wib so existing defaults produce GMT+7
+utcnow = now_wib
 
 from sqlalchemy import (
     Boolean,
@@ -125,6 +136,21 @@ class PlatformAdapter(Base):
     health_ok: Mapped[bool | None] = mapped_column(nullable=True)
 
 
+class AutoSyncConfig(Base):
+    __tablename__ = "auto_sync_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    platform: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    sync_saved: Mapped[bool] = mapped_column(Boolean, default=True)
+    sync_liked: Mapped[bool] = mapped_column(Boolean, default=False)
+    interval_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_sync_status: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "ok" | "error" | "session_expired"
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    items_synced_total: Mapped[int] = mapped_column(Integer, default=0)
+
+
 _engine = None
 _session_factory = None
 
@@ -163,3 +189,4 @@ def init_db() -> None:
         except Exception:
             # Column already exists
             pass
+

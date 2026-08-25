@@ -81,12 +81,14 @@ function groupMediaByDate(items: MediaItem[]) {
       } else if (date.toDateString() === yesterday.toDateString()) {
         dateKey = 'Yesterday';
       } else {
-        dateKey = date.toLocaleDateString(undefined, {
+        dateKey = date.toLocaleDateString('id-ID', {
+          timeZone: 'Asia/Jakarta',
           month: 'long',
           day: 'numeric',
           year: 'numeric',
         });
       }
+
     }
 
     if (!groups[dateKey]) {
@@ -529,8 +531,9 @@ export function MediaGallery({
                           </span>
                         )}
                         <span className="text-[10px] font-mono font-semibold text-slate-400 shrink-0">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) : ''}
                         </span>
+
                       </div>
 
                     </div>

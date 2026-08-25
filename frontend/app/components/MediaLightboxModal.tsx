@@ -216,8 +216,9 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
 
               {/* Date */}
               <div className="text-[11px] font-mono text-slate-400">
-                Archived on {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
+                Archived on {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
               </div>
+
 
               {/* Caption */}
               {item.caption && (

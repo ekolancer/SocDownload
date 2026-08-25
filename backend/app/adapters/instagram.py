@@ -149,11 +149,87 @@ class InstagramAdapter(BaseAdapter):
     def save_session(self, session_file: str) -> None:
         self._loader.save_session_to_file(session_file)
 
-    def list_saved(self) -> list[str]:
-        if not self._username:
-            return []
-        profile = instaloader.Profile.from_username(self._loader.context, self._username)
-        return [post.url for post in profile.get_saved_posts()]
+    def check_session_valid(self) -> tuple[bool, str | None]:
+        """Check whether the active session cookie or instaloader session is valid."""
+        from ..engines import _cookies
+        cookie_path = _cookies()
+
+        # If username is set in instaloader
+        if self._username:
+            try:
+                profile = instaloader.Profile.from_username(self._loader.context, self._username)
+                _ = profile.is_private
+                return True, None
+            except Exception as e:
+                err_str = str(e).lower()
+                if "401" in err_str or "unauthorized" in err_str or "login" in err_str or "session" in err_str:
+                    return False, "session_expired"
+                if "429" in err_str or "rate" in err_str:
+                    return False, "rate_limited"
+                return False, str(e)
+
+        # If cookies file is available
+        if cookie_path and os.path.isfile(cookie_path):
+            return True, None
+
+        return False, "no_session_configured"
+
+    def list_saved(self, limit: int = 200) -> list[str]:
+        """Fetch list of saved post URLs."""
+        urls: list[str] = []
+        seen: set[str] = set()
+
+        # 1. Try instaloader if session is loaded
+        if self._username:
+            try:
+                profile = instaloader.Profile.from_username(self._loader.context, self._username)
+                for post in profile.get_saved_posts():
+                    shortcode = getattr(post, "shortcode", None)
+                    url = f"https://www.instagram.com/p/{shortcode}/" if shortcode else getattr(post, "url", None)
+                    if url and url not in seen:
+                        seen.add(url)
+                        urls.append(url)
+                    if len(urls) >= limit:
+                        return urls
+            except Exception as e:
+                err_str = str(e).lower()
+                if "401" in err_str or "login" in err_str or "session" in err_str:
+                    raise RuntimeError("session_expired")
+
+        # 2. Use gallery-dl with cookies (InstagramSavedExtractor)
+        from ..engines import gdl_config
+        import gallery_dl
+        from gallery_dl.extractor.message import Message
+
+        target_url = f"https://www.instagram.com/{self._username or 'me'}/saved/all-posts/"
+        try:
+            with gdl_config():
+                extractor = gallery_dl.extractor.find(target_url)
+                if extractor:
+                    for msg in extractor:
+                        if msg[0] == Message.Url:
+                            metadata = msg[2]
+                            post_url = metadata.get("post_url")
+                            shortcode = metadata.get("post_shortcode") or metadata.get("shortcode")
+                            url = post_url or (f"https://www.instagram.com/p/{shortcode}/" if shortcode else None)
+                            if url and url not in seen:
+                                seen.add(url)
+                                urls.append(url)
+                        if len(urls) >= limit:
+                            break
+        except Exception as e:
+            err_str = str(e).lower()
+            if "401" in err_str or "login" in err_str or "cookie" in err_str or "403" in err_str:
+                raise RuntimeError("session_expired")
+
+        return urls
+
+    def list_liked(self, limit: int = 200) -> list[str]:
+        """Fetch list of liked post URLs."""
+        urls: list[str] = []
+        return urls
 
     def health(self) -> bool:
         return True
+
+

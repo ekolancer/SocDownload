@@ -8,7 +8,8 @@ import time
 from datetime import datetime
 
 from .config import get_settings
-from .db import MediaFile, MediaItem, get_session_factory
+from .db import MediaFile, MediaItem, get_session_factory, now_wib
+
 
 
 def sha256_file(path: str) -> str:
@@ -48,7 +49,7 @@ def _safe_username(username: str | None) -> str:
 def _safe_date(posted_at: str | None) -> str:
     if posted_at:
         return posted_at[:10].replace(":", "-")
-    return datetime.utcnow().strftime("%Y-%m-%d")
+    return now_wib().strftime("%Y-%m-%d")
 
 
 def organize(

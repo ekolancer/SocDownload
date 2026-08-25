@@ -273,9 +273,10 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
                     </span>
                     {creator.last_posted_at && (
                       <span className="text-slate-400 text-[10px]">
-                        Last: {new Date(creator.last_posted_at).toLocaleDateString()}
+                        Last: {new Date(creator.last_posted_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}
                       </span>
                     )}
+
                   </div>
                 </div>
 

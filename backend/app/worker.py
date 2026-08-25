@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from .db import JobStatus, utcnow
-from .db import Job
+from .db import Job, JobStatus, now_wib
+
 
 
 logger = logging.getLogger(__name__)
@@ -83,9 +83,10 @@ class Worker:
                     if error:
                         job.error = error
                     if status == JobStatus.RUNNING:
-                        job.started_at = utcnow()
+                        job.started_at = now_wib()
                     if status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.DUP):
-                        job.finished_at = utcnow()
+                        job.finished_at = now_wib()
+
                     session.commit()
 
         await asyncio.to_thread(_update)

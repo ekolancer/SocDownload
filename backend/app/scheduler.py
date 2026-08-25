@@ -5,7 +5,7 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .adapters.registry import registry
-from .db import PlatformAdapter, get_session_factory
+from .db import PlatformAdapter, get_session_factory, now_wib
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -30,11 +30,22 @@ def check_adapters_health() -> None:
                 )
                 session.add(row)
             row.health_ok = is_ok
-            row.last_health_at = datetime.utcnow()
+            row.last_health_at = now_wib()
             session.commit()
+
+
+
+def run_periodic_autosync() -> None:
+    from .autosync import run_autosync
+    try:
+        run_autosync(platform="instagram", force=False)
+    except Exception as e:
+        logger.error("Periodic autosync error: %s", e)
 
 
 def start_scheduler() -> None:
     if not scheduler.running:
         scheduler.add_job(check_adapters_health, "interval", minutes=30, id="adapter_health")
+        scheduler.add_job(run_periodic_autosync, "interval", minutes=1, id="autosync_tick")
         scheduler.start()
+

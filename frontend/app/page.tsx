@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { DownloadStudio } from './components/DownloadStudio';
+import { AutoSyncCard } from './components/AutoSyncCard';
 import { JobPipeline, JobRow, JobStats } from './components/JobPipeline';
 import { AdapterHealthDrawer } from './components/AdapterHealthDrawer';
 import { ArchiveImportModal } from './components/ArchiveImportModal';
@@ -269,6 +270,15 @@ export default function StudioPage() {
           isSubmitting={isSubmitting}
           activeJob={jobs.find((j) => j.status === 'running' || j.status === 'queued') || null}
         />
+
+        {/* Instagram Auto-Sync Automation Card */}
+        <div className="w-full max-w-4xl">
+          <AutoSyncCard
+            onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
+            onSyncComplete={() => refreshData(true)}
+          />
+        </div>
+
 
         {/* Recent Downloads Section */}
         {recentMedia.length > 0 && (

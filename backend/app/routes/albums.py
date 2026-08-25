@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import delete, func, select
 
-from ..db import Album, AlbumMediaItem, MediaFile, MediaItem, get_session_factory
+from ..db import Album, AlbumMediaItem, MediaFile, MediaItem, get_session_factory, now_wib
 
 router = APIRouter(prefix="/api/albums", tags=["albums"])
 
@@ -172,8 +172,9 @@ def update_album(album_id: int, payload: UpdateAlbumPayload):
         if payload.cover_media_id is not None:
             album.cover_media_id = payload.cover_media_id
 
-        album.updated_at = datetime.utcnow()
+        album.updated_at = now_wib()
         session.commit()
+
 
         return {"updated": True, "id": album.id, "name": album.name}
 
@@ -225,8 +226,9 @@ def add_items_to_album(album_id: int, payload: BatchAlbumItemsPayload):
                 added_count += 1
 
         if added_count > 0:
-            album.updated_at = datetime.utcnow()
+            album.updated_at = now_wib()
             session.commit()
+
 
         return {"added_count": added_count, "album_id": album_id}
 

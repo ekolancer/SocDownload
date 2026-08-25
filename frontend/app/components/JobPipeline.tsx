@@ -86,14 +86,36 @@ function getPlatformIcon(platform: string) {
   }
 }
 
-function formatJobTime(dateString: string) {
+function formatJobTime(dateString?: string | null) {
+  if (!dateString) return '--:--';
   try {
-    const d = new Date(dateString);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let str = dateString;
+    // If naive ISO string from older UTC records (e.g. without 'Z' or '+07:00'), attach 'Z'
+    if (!str.includes('Z') && !str.includes('+') && !/\d{2}-\d{2}$/.test(str)) {
+      str = str + 'Z';
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) {
+      const fallback = new Date(dateString);
+      return fallback.toLocaleTimeString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).replace('.', ':');
+    }
+    return d.toLocaleTimeString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).replace('.', ':');
   } catch {
-    return '09:43';
+    return '--:--';
   }
 }
+
+
 
 // Smart Ellipsis Pagination Algorithm (Never displays 40+ buttons)
 function getVisiblePages(currentPage: number, totalPages: number): (number | string)[] {
@@ -197,7 +219,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             Batch Import &amp; Queue Pipeline
           </h2>
           <p className="text-slate-600 text-sm font-medium">
-            Discover platform and untoted social media media icon forms creator, and score.
+            Discover platform and social media media icon forms creator, and score.
           </p>
         </div>
 

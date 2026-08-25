@@ -12,7 +12,13 @@ from pydantic import BaseModel
 from sqlalchemy import delete, func, select
 
 from ..config import ROOT, get_settings
-from ..db import AlbumMediaItem, MediaFile, MediaItem, get_session_factory
+from ..db import (
+    AlbumMediaItem,
+    MediaFile,
+    MediaItem,
+    get_session_factory,
+    now_wib,
+)
 
 router = APIRouter(prefix="/api/media", tags=["media"])
 
@@ -340,8 +346,9 @@ def export_metadata_csv(
             ])
 
         output.seek(0)
-        filename = f"mediavault_metadata_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"mediavault_metadata_{now_wib().strftime('%Y%m%d_%H%M%S')}.csv"
         return StreamingResponse(
+
             io.BytesIO(output.getvalue().encode("utf-8-sig")),
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename={filename}"},
@@ -391,7 +398,7 @@ def export_metadata_json(
             })
 
         json_str = json.dumps(data, ensure_ascii=False, indent=2)
-        filename = f"mediavault_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"mediavault_export_{now_wib().strftime('%Y%m%d_%H%M%S')}.json"
         return StreamingResponse(
             io.BytesIO(json_str.encode("utf-8")),
             media_type="application/json",
@@ -477,7 +484,8 @@ def export_media_zip(
 
         zip_buffer.seek(0)
         prefix = f"mediavault_{username}" if username else "mediavault_vault"
-        filename = f"{prefix}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
+        filename = f"{prefix}_{now_wib().strftime('%Y%m%d_%H%M%S')}.zip"
+
         return StreamingResponse(
             zip_buffer,
             media_type="application/zip",

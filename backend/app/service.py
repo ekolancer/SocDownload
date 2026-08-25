@@ -10,7 +10,8 @@ from sqlalchemy import select
 
 from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
-from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory
+from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
+
 from .downloader import (
     compute_hashes,
     existing_by_sha256,
@@ -159,7 +160,7 @@ def _sync_process_job(job_id: int) -> None:
         if not adapter:
             job.status = JobStatus.FAILED.value
             job.error = f"unsupported URL: {job.url}"
-            job.finished_at = datetime.utcnow()
+            job.finished_at = now_wib()
             session.commit()
             return
 
@@ -167,7 +168,7 @@ def _sync_process_job(job_id: int) -> None:
         existing = existing_by_url(job.url)
         if existing:
             job.status = JobStatus.DUP.value
-            job.finished_at = datetime.utcnow()
+            job.finished_at = now_wib()
             session.commit()
             return
 
@@ -181,7 +182,7 @@ def _sync_process_job(job_id: int) -> None:
             if not downloaded:
                 job.status = JobStatus.FAILED.value
                 job.error = "no_files_downloaded"
-                job.finished_at = datetime.utcnow()
+                job.finished_at = now_wib()
                 session.commit()
                 return
 
@@ -191,7 +192,7 @@ def _sync_process_job(job_id: int) -> None:
             # 3. Hash-based dedup
             if first_hash and existing_by_sha256(first_hash):
                 job.status = JobStatus.DUP.value
-                job.finished_at = datetime.utcnow()
+                job.finished_at = now_wib()
                 session.commit()
                 return
 
@@ -244,15 +245,16 @@ def _sync_process_job(job_id: int) -> None:
                 session.add(mf)
 
             job.status = JobStatus.DONE.value
-            job.finished_at = datetime.utcnow()
+            job.finished_at = now_wib()
             session.commit()
 
         except Exception as exc:
             job.status = JobStatus.FAILED.value
             job.error = str(exc)
-            job.finished_at = datetime.utcnow()
+            job.finished_at = now_wib()
             session.commit()
             raise
+
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

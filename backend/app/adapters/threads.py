@@ -10,7 +10,8 @@ import urllib.request
 from datetime import datetime
 
 from .base import BaseAdapter, ResolvedMedia
-from ..engines import _cookies
+from ..db import now_wib
+from ..engines import _cookies, gdl_download, gdl_first_item
 
 
 class ThreadsAdapter(BaseAdapter):
@@ -275,7 +276,7 @@ class ThreadsAdapter(BaseAdapter):
                 source_url=url,
                 username=username,
                 caption=meta.get("caption") or "",
-                posted_at=datetime.utcnow().isoformat(),
+                posted_at=now_wib().isoformat(),
                 hashtags=[],
             )
         except Exception:
@@ -286,9 +287,10 @@ class ThreadsAdapter(BaseAdapter):
                 source_url=url,
                 username=username,
                 caption=f"Threads post {url}",
-                posted_at=datetime.utcnow().isoformat(),
+                posted_at=now_wib().isoformat(),
                 hashtags=[],
             )
+
 
     def download(self, url: str, dest_dir: str) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)

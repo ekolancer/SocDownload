@@ -75,6 +75,17 @@ def get_jobs_stats(request: Request):
         }
 
 
+def _format_dt(dt):
+    if dt is None:
+        return None
+    if isinstance(dt, str):
+        return dt
+    if getattr(dt, "tzinfo", None) is None:
+        from ..db import WIB
+        dt = dt.replace(tzinfo=WIB)
+    return dt.isoformat()
+
+
 @router.get("/jobs")
 def list_jobs(limit: int = 1000, status: str | None = None):
     factory = get_session_factory()
@@ -105,12 +116,13 @@ def list_jobs(limit: int = 1000, status: str | None = None):
                 "url": j.url,
                 "status": j.status,
                 "error": j.error,
-                "created_at": j.created_at,
-                "started_at": j.started_at,
-                "finished_at": j.finished_at,
+                "created_at": _format_dt(j.created_at),
+                "started_at": _format_dt(j.started_at),
+                "finished_at": _format_dt(j.finished_at),
             }
             for j in jobs
         ]
+
 
 
 @router.post("/jobs/cancel-all")
