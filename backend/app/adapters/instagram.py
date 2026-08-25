@@ -225,11 +225,12 @@ class InstagramAdapter(BaseAdapter):
         return urls
 
     def list_liked(self, limit: int = 200) -> list[str]:
-        """Fetch list of liked post URLs."""
-        urls: list[str] = []
-        return urls
+        """Fetch list of liked post URLs (Use Archive Import to ingest liked posts safely)."""
+        return []
+
 
     def health(self) -> bool:
         return True
+
 
 

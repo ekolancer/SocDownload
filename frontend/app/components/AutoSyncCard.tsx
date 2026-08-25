@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IconInstagram,
   IconRefresh,
-  IconSparkles,
-  IconBookmark,
-  IconHeart,
   IconClock,
-  IconZap,
+  IconCheckCircle,
   IconAlertCircle,
+  IconSparkles,
 } from './Icons';
 
-export interface AutoSyncConfigData {
+
+interface AutoSyncConfig {
   platform: string;
   enabled: boolean;
   sync_saved: boolean;
@@ -26,7 +25,7 @@ export interface AutoSyncConfigData {
   last_enqueued_count?: number;
   last_skipped_count?: number;
   last_failed_count?: number;
-  session_expired: boolean;
+  session_expired?: boolean;
 }
 
 interface AutoSyncCardProps {
@@ -34,37 +33,36 @@ interface AutoSyncCardProps {
   onSyncComplete?: () => void;
 }
 
-const INTERVAL_OPTIONS = [5, 10, 15, 30, 60];
+const INTERVAL_OPTIONS = [5, 15, 30, 60];
 
 export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardProps) {
-  const [config, setConfig] = useState<AutoSyncConfigData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
-  const [isSyncingNow, setIsSyncingNow] = useState<boolean>(false);
+  const [config, setConfig] = useState<AutoSyncConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
-  const fetchConfig = useCallback(async () => {
+  // Fetch initial config
+  const fetchConfig = async () => {
     try {
       const res = await fetch('/api/autosync/config?platform=instagram');
       if (res.ok) {
-        const data: AutoSyncConfigData = await res.json();
+        const data = await res.json();
         setConfig(data);
       }
-    } catch (e) {
-      console.error('Failed to fetch autosync config', e);
+    } catch (err) {
+      console.error('Failed to load autosync config:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchConfig();
-    const interval = setInterval(fetchConfig, 10000);
-    return () => clearInterval(interval);
-  }, [fetchConfig]);
+  }, []);
 
-  const updateConfig = async (patch: Partial<AutoSyncConfigData>) => {
-    setIsUpdating(true);
+  // Update config
+  const updateConfig = async (patch: Partial<AutoSyncConfig>) => {
+    if (!config) return;
     try {
       const res = await fetch('/api/autosync/config', {
         method: 'PUT',
@@ -75,55 +73,59 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
         }),
       });
       if (res.ok) {
-        const data: AutoSyncConfigData = await res.json();
+        const data = await res.json();
         setConfig(data);
       }
-    } catch (e) {
-      console.error('Failed to update autosync config', e);
-    } finally {
-      setIsUpdating(false);
+    } catch (err) {
+      console.error('Failed to update autosync config:', err);
     }
   };
 
+  // Trigger manual sync now
   const handleTriggerSync = async () => {
-    setIsSyncingNow(true);
+    if (syncing) return;
+    setSyncing(true);
     setSyncFeedback(null);
+
     try {
       const res = await fetch('/api/autosync/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform: 'instagram' }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setConfig(data.config);
-        const result = data.sync_result;
-        if (result.status === 'ok') {
-          const discovered = result.fetched_total || 0;
-          const enqueued = result.enqueued_count || 0;
-          const skipped = result.skipped_dup_count || 0;
-          const failed = result.failed_count || 0;
+
+      const data = await res.json();
+
+      if (res.ok && data.sync_result) {
+        const r = data.sync_result;
+        if (r.status === 'ok') {
           setSyncFeedback(
-            `Sync selesai: ${discovered} terbaca (${enqueued} sukses download, ${skipped} di-skip, ${failed} gagal)`
+            `✓ Sync selesai: +${r.enqueued_count} terdownload, ${r.skipped_dup_count || 0} duplikat di-skip`
           );
-          if (onSyncComplete) onSyncComplete();
-        } else if (result.status === 'session_expired') {
-          setSyncFeedback('Session expired. Please update cookie.');
+        } else if (r.status === 'session_expired') {
+          setSyncFeedback('⚠️ Session expired. Silakan update cookie Instagram di panel adapters.');
         } else {
-          setSyncFeedback(result.error || 'Sync completed');
+          setSyncFeedback(`⚠️ Info: ${r.status}`);
         }
+        if (data.config) {
+          setConfig(data.config);
+        }
+        if (onSyncComplete) onSyncComplete();
+      } else {
+        setSyncFeedback('Gagal memulai sinkronisasi.');
       }
-    } catch (e) {
-      setSyncFeedback('Sync trigger failed');
+    } catch (err) {
+      console.error('Failed to trigger autosync:', err);
+      setSyncFeedback('Koneksi terputus saat memicu sinkronisasi.');
     } finally {
-      setIsSyncingNow(false);
+      setSyncing(false);
       setTimeout(() => setSyncFeedback(null), 5000);
     }
   };
 
-  if (loading && !config) {
+  if (loading) {
     return (
-      <div className="w-full glass-panel rounded-2xl p-4 sm:p-5 animate-pulse min-h-[120px] border border-white/40 shadow-sm" />
+      <div className="w-full glass-panel rounded-2xl p-4 sm:p-5 animate-pulse min-h-[110px] border border-white/40 shadow-sm" />
     );
   }
 
@@ -152,7 +154,6 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
     );
   })();
 
-
   return (
     <div className="w-full flex flex-col gap-2.5">
       {/* Session Expired Banner Warning */}
@@ -163,11 +164,11 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
               <IconAlertCircle className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs sm:text-sm font-bold text-rose-950 tracking-tight">
-                Session expired, please re-login and update cookie.
+              <span className="font-black text-xs sm:text-sm tracking-tight text-rose-900">
+                Session Expired, Please Re-login
               </span>
-              <span className="text-[11px] text-rose-700 font-medium">
-                Instagram authentication cookie has expired. Automatic polling is currently suspended.
+              <span className="text-[11px] text-rose-800 font-medium">
+                Sesi cookie Instagram telah kedaluwarsa. Perbarui cookie di panel Adapters untuk melanjutkan auto-sync.
               </span>
             </div>
           </div>
@@ -175,98 +176,76 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
             <button
               type="button"
               onClick={onOpenAdapters}
-              className="group relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all duration-200 shadow-xs hover:shadow-sm active:scale-[0.98] shrink-0 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs transition-all shadow-xs shrink-0 cursor-pointer"
             >
-              <span>Update Cookie</span>
-              <span className="text-[10px] group-hover:translate-x-0.5 transition-transform duration-200">↗</span>
+              Update Cookie →
             </button>
           )}
         </div>
       )}
 
-      {/* Main Auto-Sync Card (Compact Glass Panel) */}
-      <div className="w-full glass-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-sm border border-white/40 transition-all duration-300">
+      {/* Main Compact High-End Glassmorphic Card */}
+      <div className="w-full glass-panel rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all duration-300 shadow-sm border border-white/50 backdrop-blur-xl">
         
-        {/* Header: Brand, Title, Status & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/40">
+        {/* Header Row */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/40">
           
-          {/* Left: Brand & Status */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] p-0.5 flex items-center justify-center text-white shadow-xs shrink-0">
-              <div className="w-full h-full rounded-[0.55rem] bg-black/10 backdrop-blur-xs flex items-center justify-center">
-                <IconInstagram className="w-4.5 h-4.5 text-white" />
-              </div>
+          {/* Platform Identity & Status */}
+          <div className="flex items-center gap-2.5">
+            {/* Instagram Gradient Refraction Badge */}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white shadow-xs shrink-0 border border-white/30">
+              <IconInstagram className="w-4.5 h-4.5 text-white" />
             </div>
 
             <div className="flex flex-col">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  Instagram Auto-Sync
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-none">
+                  Instagram Saved Posts Sync
                 </h3>
-
-                {/* Compact Status Capsule */}
-                <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wider transition-all duration-300 ${
-                    isSessionExpired
-                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                      : isEnabled
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      : 'bg-white/60 text-slate-600 border border-white/50'
+                {/* Concentric Status Pill */}
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-mono font-bold border transition-colors ${
+                    isEnabled
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
+                      : 'bg-slate-500/10 border-slate-500/20 text-slate-600'
                   }`}
                 >
-                  <span className="relative flex h-1.5 w-1.5">
-                    {isEnabled && !isSessionExpired && (
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    )}
-                    <span
-                      className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                        isSessionExpired
-                          ? 'bg-rose-500'
-                          : isEnabled
-                          ? 'bg-emerald-500'
-                          : 'bg-slate-400'
-                      }`}
-                    />
-                  </span>
-                  <span>
-                    {isSessionExpired
-                      ? 'SESSION EXPIRED'
-                      : isEnabled
-                      ? 'ACTIVE POLLING'
-                      : 'STANDBY'}
-                  </span>
-                </div>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                    }`}
+                  />
+                  <span>{isEnabled ? 'Active' : 'Disabled'}</span>
+                </span>
               </div>
-
-              <p className="text-[11px] text-slate-500 font-medium">
-                Headless background daemon auto-downloads mobile saved & liked posts without browser.
-              </p>
+              <span className="text-[11px] text-slate-500 font-medium mt-0.5">
+                Otomatis mengunduh postingan tersimpan (Saved Posts) secara berkala
+              </span>
             </div>
           </div>
 
-          {/* Right: Sync Action & Switch */}
-          <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-            {/* Compact Sync Now Button */}
+          {/* Quick Actions & Master Switch */}
+          <div className="flex items-center gap-2">
+            {/* Sync Now Trigger */}
             <button
               type="button"
               onClick={handleTriggerSync}
-              disabled={isSyncingNow || isUpdating}
-              className="group inline-flex items-center gap-1.5 px-3 py-1 rounded-xl glass-panel hover:bg-white/80 text-slate-800 text-xs font-bold shadow-2xs hover:shadow-xs transition-all duration-200 active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-white/50"
-              title="Force immediate collection poll"
+              disabled={syncing || !isEnabled}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white border border-white/80 hover:border-white shadow-2xs hover:shadow-xs active:scale-95 text-indigo-700 font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              title="Jalankan sinkronisasi sekarang"
             >
-              <IconRefresh className={`w-3 h-3 text-indigo-600 ${isSyncingNow ? 'animate-spin' : ''}`} />
-              <span>{isSyncingNow ? 'Syncing...' : 'Sync Now'}</span>
+              <IconRefresh className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-600' : ''}`} />
+              <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Now'}</span>
             </button>
 
-            {/* Compact iOS Style Toggle Switch */}
+            {/* Master Toggle */}
             <button
               type="button"
               role="switch"
               aria-checked={isEnabled}
-              onClick={() => updateConfig({ enabled: !isEnabled })}
-              disabled={isUpdating}
-              className={`relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
-                isEnabled ? 'bg-slate-900 shadow-inner' : 'bg-slate-300'
+              onClick={() => updateConfig({ enabled: !isEnabled, sync_saved: true, sync_liked: false })}
+              className={`relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
+                isEnabled ? 'bg-indigo-600 shadow-xs' : 'bg-slate-300'
               }`}
             >
               <span
@@ -279,23 +258,23 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
 
         </div>
 
-        {/* Body: Compact Bento Grid */}
+        {/* Body: 2-Column Bento Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           
-          {/* 1. Interval Selector (lg:col-span-3) */}
-          <div className="lg:col-span-3 flex flex-col justify-between gap-1.5 p-3 rounded-xl bg-white/40 border border-white/50 backdrop-blur-md shadow-2xs">
+          {/* 1. Interval Selector (lg:col-span-5) */}
+          <div className="lg:col-span-5 flex flex-col justify-between gap-2 p-3 rounded-xl bg-white/40 border border-white/50 backdrop-blur-md shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
                 <IconClock className="w-3 h-3 text-indigo-600" />
-                <span>Interval</span>
+                <span>Interval Pengecekan</span>
               </span>
               <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50/80 px-1.5 py-0.2 rounded border border-indigo-100/50">
-                {config?.interval_minutes || 15}m
+                Setiap {config?.interval_minutes || 15} Menit
               </span>
             </div>
 
             {/* Interval Pills */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/50 border border-white/60">
+            <div className="flex items-center gap-1.5 p-1 rounded-lg bg-white/50 border border-white/60">
               {INTERVAL_OPTIONS.map((min) => {
                 const isSelected = config?.interval_minutes === min;
                 return (
@@ -303,7 +282,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                     key={min}
                     type="button"
                     onClick={() => updateConfig({ interval_minutes: min })}
-                    className={`flex-1 py-0.5 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    className={`flex-1 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-slate-900 text-white shadow-2xs'
                         : 'glass-panel hover:bg-white/80 text-slate-700'
@@ -316,62 +295,8 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
             </div>
           </div>
 
-          {/* 2. Collection Scope (lg:col-span-4) */}
-          <div className="lg:col-span-4 flex flex-col justify-between gap-1.5 p-3 rounded-xl bg-white/40 border border-white/50 backdrop-blur-md shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <IconZap className="w-3 h-3 text-pink-600" />
-                <span>Target Koleksi</span>
-              </span>
-              <span className="text-[9px] font-mono text-slate-400">
-                Pilih filter
-              </span>
-            </div>
-
-            {/* Compact Tactile Tiles */}
-            <div className="grid grid-cols-2 gap-1.5">
-              {/* Saved Posts */}
-              <button
-                type="button"
-                onClick={() => updateConfig({ sync_saved: !(config?.sync_saved ?? true) })}
-                className={`flex items-center justify-between p-1.5 px-2 rounded-lg border transition-all cursor-pointer text-left ${
-                  (config?.sync_saved ?? true)
-                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-950 font-bold shadow-2xs'
-                    : 'bg-white/30 hover:bg-white/60 border-white/50 text-slate-600 font-medium'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <IconBookmark className={`w-3 h-3 ${(config?.sync_saved ?? true) ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span className="text-xs">Saved</span>
-                </div>
-                {(config?.sync_saved ?? true) && (
-                  <span className="text-[9px] font-bold text-indigo-600">✓</span>
-                )}
-              </button>
-
-              {/* Liked Posts */}
-              <button
-                type="button"
-                onClick={() => updateConfig({ sync_liked: !config?.sync_liked })}
-                className={`flex items-center justify-between p-1.5 px-2 rounded-lg border transition-all cursor-pointer text-left ${
-                  config?.sync_liked
-                    ? 'bg-pink-500/10 border-pink-500/30 text-pink-950 font-bold shadow-2xs'
-                    : 'bg-white/30 hover:bg-white/60 border-white/50 text-slate-600 font-medium'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <IconHeart className={`w-3 h-3 ${config?.sync_liked ? 'text-pink-600' : 'text-slate-400'}`} />
-                  <span className="text-xs">Liked</span>
-                </div>
-                {config?.sync_liked && (
-                  <span className="text-[9px] font-bold text-pink-600">✓</span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* 3. Detailed Sync Outcome Breakdown (lg:col-span-5) */}
-          <div className="lg:col-span-5 flex flex-col justify-between gap-1.5 p-3 rounded-xl bg-white/40 border border-white/50 backdrop-blur-md shadow-2xs">
+          {/* 2. Detailed Sync Outcome Breakdown (lg:col-span-7) */}
+          <div className="lg:col-span-7 flex flex-col justify-between gap-1.5 p-3 rounded-xl bg-white/40 border border-white/50 backdrop-blur-md shadow-2xs">
             {/* Header: Last sync & timezone */}
             <div className="flex items-center justify-between text-[10px]">
               <div className="flex items-center gap-1.5">

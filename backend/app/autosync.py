@@ -124,22 +124,17 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
                     "enqueued_count": 0,
                 }
 
-        collected_urls: list[str] = []
-
         try:
-            # 1. Fetch Saved posts
-            if config.sync_saved and hasattr(adapter, "list_saved"):
+            collected_urls: list[str] = []
+            # Fetch Saved posts
+            if hasattr(adapter, "list_saved"):
                 saved_urls = adapter.list_saved(limit=100)
                 collected_urls.extend(saved_urls)
-
-            # 2. Fetch Liked posts
-            if config.sync_liked and hasattr(adapter, "list_liked"):
-                liked_urls = adapter.list_liked(limit=100)
-                collected_urls.extend(liked_urls)
 
 
             # Deduplicate within this fetch
             unique_urls = list(dict.fromkeys(collected_urls))
+
 
             if not unique_urls:
                 config.last_sync_status = "ok"

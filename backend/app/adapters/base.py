@@ -24,7 +24,10 @@ class BaseAdapter(Protocol):
     def download(self, url: str, dest_dir: str) -> list[str]:
         ...
 
-    def list_saved(self) -> list[str]:
+    def list_saved(self, limit: int = 200) -> list[str]:
+        return []
+
+    def list_liked(self, limit: int = 200) -> list[str]:
         return []
 
     def health(self) -> bool:
@@ -32,3 +35,4 @@ class BaseAdapter(Protocol):
 
     def detect(self, url: str) -> bool:
         return self.platform in url
+
