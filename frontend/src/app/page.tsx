@@ -302,18 +302,21 @@ export default function StudioPage() {
             <div className="flex justify-between items-end mb-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold text-white tracking-tight">Recent Downloads</h2>
-                <span className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 font-bold tracking-wider">8 LATEST</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
+                  8 LATEST
+                </span>
               </div>
               <Link
-                className="text-xs font-semibold text-slate-600 hover:text-indigo-800 hover:underline transition-colors"
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors flex items-center gap-1"
                 href="/vault"
               >
-                View Full Vault
+                <span>View Full Vault</span>
+                <span>→</span>
               </Link>
             </div>
 
             {/* 4 Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {recentMedia.slice(0, 4).map((item) => {
                 const firstFile = item.files?.[0];
                 const previewUrl = firstFile ? `/api/media/files/${firstFile.id}` : '';
@@ -323,14 +326,14 @@ export default function StudioPage() {
                   <div
                     key={item.id}
                     onClick={() => setLightboxItem(item)}
-                    className="rounded-xl overflow-hidden glass-panel hover:bg-white/70 transition-all duration-300 flex flex-col group p-2 shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-white/60 cursor-pointer"
+                    className="rounded-2xl overflow-hidden glass-panel hover:bg-slate-800/80 transition-all duration-300 flex flex-col group p-1.5 shadow-md hover:shadow-xl hover:-translate-y-1 border border-white/[0.08] hover:border-white/20 cursor-pointer"
                   >
-                    <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-white/50 w-full shadow-inner">
+                    <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-slate-950 w-full border border-white/[0.04]">
                       {previewUrl ? (
                         <img
                           src={previewUrl}
                           alt={item.caption || 'Recent Media'}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
                         />
                       ) : (
@@ -341,34 +344,31 @@ export default function StudioPage() {
 
                       {/* Video indicator */}
                       {isVideo && (
-                        <div className="absolute top-2 right-2 p-1 rounded-md bg-slate-900/80 text-emerald-400">
+                        <div className="absolute top-2 right-2 p-1 rounded-md bg-slate-950/80 border border-white/10 text-white backdrop-blur-xs">
                           <IconVideoCamera className="w-3.5 h-3.5" />
                         </div>
                       )}
 
                       {/* Multi-slide indicator */}
                       {item.files && item.files.length > 1 && (
-                        <div className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-900/80 text-white text-[9px] font-mono font-bold">
-                          <IconLayers className="w-2.5 h-2.5" />
-                          <span>{item.files.length}</span>
+                        <div className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-white/10 text-white text-[9px] font-mono font-bold backdrop-blur-xs">
+                          +{item.files.length}
                         </div>
                       )}
-
-                      {/* Hover Arrow Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center pointer-events-none">
-                        <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-md text-2xl font-bold">
-                          ↗
-                        </span>
-                      </div>
                     </div>
 
                     {/* Author Bottom Bar */}
-                    <div className="p-3 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center text-[10px] font-bold text-slate-700 shrink-0">
-                        {item.username ? item.username.charAt(0).toUpperCase() : 'M'}
+                    <div className="p-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-emerald-400 shrink-0">
+                          {item.username ? item.username.charAt(0).toUpperCase() : 'M'}
+                        </div>
+                        <span className="text-xs text-white font-bold truncate group-hover:text-emerald-400 transition-colors">
+                          {item.username ? `@${item.username}` : 'Archived'}
+                        </span>
                       </div>
-                      <span className="text-xs text-slate-800 font-medium truncate group-hover:text-indigo-600 transition-colors">
-                        {item.username ? `@${item.username}` : 'Archived'}
+                      <span className="text-[10px] uppercase font-bold text-slate-400 font-mono">
+                        {item.platform}
                       </span>
                     </div>
                   </div>
@@ -377,10 +377,10 @@ export default function StudioPage() {
             </div>
 
             {/* Carousel Dots */}
-            <div className="flex justify-center mt-4 gap-2">
-              <div className="w-6 h-1.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50 hover:bg-indigo-600 transition-colors cursor-pointer"></div>
-              <div className="w-2 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors cursor-pointer"></div>
-              <div className="w-2 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors cursor-pointer"></div>
+            <div className="flex justify-center mt-2 gap-1.5">
+              <div className="w-5 h-1 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50"></div>
+              <div className="w-1.5 h-1 rounded-full bg-slate-700"></div>
+              <div className="w-1.5 h-1 rounded-full bg-slate-700"></div>
             </div>
           </section>
         )}
