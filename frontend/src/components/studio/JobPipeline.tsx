@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
@@ -67,22 +67,22 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 function getPlatformIcon(platform: string) {
   switch (platform.toLowerCase()) {
     case 'instagram':
-      return <IconInstagram className="w-5 h-5 text-slate-700 group-hover:text-indigo-600 transition-colors" />;
+      return <IconInstagram className="w-5 h-5 text-slate-400 group-hover:text-pink-400 transition-colors" />;
     case 'tiktok':
-      return <IconTikTok className="w-5 h-5 text-slate-900 group-hover:text-indigo-600 transition-colors" />;
+      return <IconTikTok className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />;
     case 'threads':
-      return <IconThreads className="w-5 h-5 text-slate-900 group-hover:text-indigo-600 transition-colors" />;
+      return <IconThreads className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />;
     case 'youtube':
-      return <IconYouTube className="w-5 h-5 text-red-600 group-hover:text-indigo-600 transition-colors" />;
+      return <IconYouTube className="w-5 h-5 text-red-500 group-hover:text-red-400 transition-colors" />;
     case 'x':
     case 'twitter':
-      return <IconX className="w-5 h-5 text-slate-900 group-hover:text-indigo-600 transition-colors" />;
+      return <IconX className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />;
     case 'reddit':
-      return <IconReddit className="w-5 h-5 text-orange-600 group-hover:text-indigo-600 transition-colors" />;
+      return <IconReddit className="w-5 h-5 text-orange-500 group-hover:text-orange-400 transition-colors" />;
     case 'pinterest':
-      return <IconPinterest className="w-5 h-5 text-red-600 group-hover:text-indigo-600 transition-colors" />;
+      return <IconPinterest className="w-5 h-5 text-red-500 group-hover:text-red-400 transition-colors" />;
     default:
-      return <IconDownload className="w-5 h-5 text-slate-700 group-hover:text-indigo-600 transition-colors" />;
+      return <IconDownload className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />;
   }
 }
 
@@ -90,7 +90,6 @@ function formatJobTime(dateString?: string | null) {
   if (!dateString) return '--:--';
   try {
     let str = dateString;
-    // If naive ISO string from older UTC records (e.g. without 'Z' or '+07:00'), attach 'Z'
     if (!str.includes('Z') && !str.includes('+') && !/\d{2}-\d{2}$/.test(str)) {
       str = str + 'Z';
     }
@@ -115,9 +114,7 @@ function formatJobTime(dateString?: string | null) {
   }
 }
 
-
-
-// Smart Ellipsis Pagination Algorithm (Never displays 40+ buttons)
+// Smart Ellipsis Pagination Algorithm
 function getVisiblePages(currentPage: number, totalPages: number): (number | string)[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -215,11 +212,11 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
       {/* Section Header */}
       <div className="flex justify-between items-end mb-2">
         <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-2xl font-bold text-white tracking-tight">
             Batch Import &amp; Queue Pipeline
           </h2>
-          <p className="text-slate-600 text-sm font-medium">
-            Discover platform and social media media icon forms creator, and score.
+          <p className="text-slate-400 text-sm font-medium">
+            Monitor real-time download tasks, auto-sync queues, and ingest status.
           </p>
         </div>
 
@@ -227,7 +224,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <button
             type="button"
             onClick={onClearJobs}
-            className="px-4 py-2 rounded-lg glass-panel text-slate-700 hover:bg-white/80 hover:shadow-md transition-all active:scale-95 text-xs font-semibold cursor-pointer shrink-0"
+            className="px-4 py-2 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all active:scale-95 text-xs font-semibold cursor-pointer shrink-0"
           >
             Clear History
           </button>
@@ -236,11 +233,11 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
 
       {/* Active Queue Banner if Running */}
       {isQueueActive && (
-        <div className="rounded-xl glass-panel p-4 sm:p-5 shadow-sm flex flex-col gap-3">
+        <div className="rounded-xl bg-slate-900/60 backdrop-blur-xl border border-white/[0.08] p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.4)] flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping" />
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
                 Pipeline Ingesting ({stats ? stats.running : 1} Active)
               </span>
             </div>
@@ -249,15 +246,15 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                 type="button"
                 onClick={handleCancelClick}
                 disabled={isCancelling}
-                className="px-3 py-1 rounded-lg text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-lg text-xs font-bold text-rose-400 hover:text-white bg-rose-950/60 hover:bg-rose-600 border border-rose-500/30 transition-colors cursor-pointer"
               >
                 {isCancelling ? 'Stopping...' : 'Stop Queue'}
               </button>
             )}
           </div>
-          <div className="w-full h-2 rounded-full bg-slate-200/80 overflow-hidden">
+          <div className="w-full h-2 rounded-full bg-slate-950/80 border border-white/[0.05] overflow-hidden">
             <div
-              className="h-full bg-indigo-600 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
               style={{ width: `${stats ? stats.progress_percent : 50}%` }}
             />
           </div>
@@ -266,15 +263,15 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
 
       {/* Stats & Filters Row */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* All Tasks */}
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs font-semibold transition-all active:scale-95 hover:scale-105 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
               statusFilter === 'all'
-                ? 'bg-white/80 text-indigo-700 border-indigo-200 shadow-md'
-                : 'text-slate-600 font-medium hover:bg-white/80 hover:text-slate-900 hover:shadow-md'
+                ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
+                : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
             }`}
           >
             <span>All Tasks</span>
@@ -285,10 +282,10 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <button
             type="button"
             onClick={() => setStatusFilter('active')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs font-semibold transition-all active:scale-95 hover:scale-105 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
               statusFilter === 'active'
-                ? 'bg-white/80 text-indigo-700 border-indigo-200 shadow-md'
-                : 'text-slate-600 font-medium hover:bg-white/80 hover:text-slate-900 hover:shadow-md'
+                ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
+                : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
             }`}
           >
             <span>Active</span>
@@ -299,10 +296,10 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <button
             type="button"
             onClick={() => setStatusFilter('threads')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs font-semibold transition-all active:scale-95 hover:scale-105 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
               statusFilter === 'threads'
-                ? 'bg-white/80 text-indigo-700 border-indigo-200 shadow-md'
-                : 'text-slate-600 font-medium hover:bg-white/80 hover:text-slate-900 hover:shadow-md'
+                ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
+                : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
             }`}
           >
             <span>Threads</span>
@@ -313,10 +310,10 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <button
             type="button"
             onClick={() => setStatusFilter('x')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs font-semibold transition-all active:scale-95 hover:scale-105 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
               statusFilter === 'x'
-                ? 'bg-white/80 text-indigo-700 border-indigo-200 shadow-md'
-                : 'text-slate-600 font-medium hover:bg-white/80 hover:text-slate-900 hover:shadow-md'
+                ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
+                : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
             }`}
           >
             <span>X (Twitter)</span>
@@ -327,10 +324,10 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <button
             type="button"
             onClick={() => setStatusFilter('instagram')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs font-semibold transition-all active:scale-95 hover:scale-105 cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
               statusFilter === 'instagram'
-                ? 'bg-white/80 text-indigo-700 border-indigo-200 shadow-md'
-                : 'text-slate-600 font-medium hover:bg-white/80 hover:text-slate-900 hover:shadow-md'
+                ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10'
+                : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
             }`}
           >
             <span>Instagram</span>
@@ -341,20 +338,20 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
         {/* Search & Filter Bar */}
         <div className="flex gap-3">
           <div className="flex-grow relative group">
-            <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
+            <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-focus-within:text-emerald-400 transition-colors" />
             <input
               type="text"
               aria-label="Search tasks"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Search for all Tasks..."
-              className="w-full glass-panel rounded-lg pl-10 pr-4 py-2.5 text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-indigo-400 focus:bg-white/80 focus:shadow-md transition-all focus:outline-none text-sm font-medium"
+              className="w-full bg-slate-950/60 border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 transition-all focus:outline-none text-sm font-medium"
             />
             {searchKeyword && (
               <button
                 type="button"
                 onClick={() => setSearchKeyword('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-mono"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-mono"
               >
                 ✕
               </button>
@@ -365,9 +362,9 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             <button
               type="button"
               onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg glass-panel text-slate-800 text-xs font-semibold hover:bg-white/80 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/60 border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-all active:scale-95 cursor-pointer"
             >
-              <IconFilter className="w-4 h-4 text-slate-700" />
+              <IconFilter className="w-4 h-4 text-slate-400" />
               <span>Filters</span>
               <span className="text-[10px]">▼</span>
             </button>
@@ -378,14 +375,14 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   className="fixed inset-0 z-20"
                   onClick={() => setIsFilterDropdownOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white/95 glass-panel shadow-lg p-1.5 z-30 flex flex-col gap-1 text-xs">
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-slate-900 border border-white/10 shadow-2xl p-1.5 z-30 flex flex-col gap-1 text-xs">
                   <button
                     type="button"
                     onClick={() => {
                       setStatusFilter('all');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     All Platforms
                   </button>
@@ -395,7 +392,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       setStatusFilter('active');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     Active Only
                   </button>
@@ -405,7 +402,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       setStatusFilter('instagram');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     Instagram
                   </button>
@@ -415,7 +412,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       setStatusFilter('tiktok');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     TikTok
                   </button>
@@ -425,7 +422,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       setStatusFilter('threads');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     Threads
                   </button>
@@ -435,7 +432,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       setStatusFilter('x');
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="px-3 py-1.5 text-left rounded-lg hover:bg-white/80 font-medium text-slate-700 cursor-pointer"
+                    className="px-3 py-1.5 text-left rounded-lg hover:bg-slate-800 font-medium text-slate-300 hover:text-white cursor-pointer"
                   >
                     X (Twitter)
                   </button>
@@ -447,7 +444,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
       </div>
 
       {/* Task List */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {paginatedJobs.map((job) => {
           const isDone = job.status === 'done' || job.status === 'dup';
           const isRunning = job.status === 'running';
@@ -457,18 +454,18 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           return (
             <div
               key={job.id}
-              className="flex items-center justify-between p-3.5 rounded-xl glass-panel hover:bg-white/80 transition-all duration-300 group shadow-sm hover:shadow-md hover:-translate-y-0.5"
+              className="flex items-center justify-between p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/[0.08] hover:border-white/20 transition-all duration-300 group shadow-sm hover:shadow-lg hover:-translate-y-0.5"
             >
               {/* Left */}
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-white/70 flex items-center justify-center shadow-sm group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-slate-950/60 border border-white/[0.06] flex items-center justify-center shadow-sm shrink-0">
                   {getPlatformIcon(job.platform)}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors capitalize text-sm">
+                  <span className="font-bold text-white group-hover:text-emerald-400 transition-colors capitalize text-sm">
                     {job.platform}
                   </span>
-                  <span className="text-xs text-slate-600 font-medium truncate max-w-[200px] md:max-w-md" title={job.url}>
+                  <span className="text-xs text-slate-400 font-medium truncate max-w-[200px] md:max-w-md" title={job.url}>
                     {job.url}
                   </span>
                 </div>
@@ -476,26 +473,26 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
 
               {/* Right */}
               <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-                <span className="text-slate-500 text-xs font-medium hidden sm:inline">
+                <span className="text-slate-400 text-xs font-mono hidden sm:inline">
                   {formatJobTime(job.created_at)}
                 </span>
 
                 {isDone ? (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 shadow-sm transition-all hover:bg-emerald-200 cursor-default">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 shadow-sm cursor-default">
                     <span className="text-sm font-bold">✓</span>
                     <span className="font-bold text-[10px] uppercase tracking-wider">Done</span>
                   </div>
                 ) : isRunning ? (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-indigo-100 text-indigo-700 shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-indigo-950/60 border border-indigo-500/30 text-indigo-400 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
                     <span className="font-bold text-[10px] uppercase tracking-wider">Running</span>
                   </div>
                 ) : isQueued ? (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-100 text-amber-700 shadow-sm">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-950/60 border border-amber-500/30 text-amber-400 shadow-sm">
                     <span className="font-bold text-[10px] uppercase tracking-wider">Queued</span>
                   </div>
                 ) : isFailed ? (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-100 text-rose-700 shadow-sm">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-950/60 border border-rose-500/30 text-rose-400 shadow-sm">
                     <span className="font-bold text-[10px] uppercase tracking-wider">Failed</span>
                   </div>
                 ) : null}
@@ -504,7 +501,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   <button
                     type="button"
                     onClick={() => onDeleteJob(job.id)}
-                    className="text-slate-500 hover:text-red-500 hover:bg-red-50 p-1 rounded-md transition-all active:scale-95 cursor-pointer"
+                    className="text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded-lg transition-all active:scale-95 cursor-pointer"
                     title="Remove task"
                   >
                     <IconClose className="w-4 h-4" />
@@ -516,15 +513,15 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
         })}
       </div>
 
-      {/* Ultra-Premium Glass Pagination & Metrics Bar */}
+      {/* Pagination & Metrics Bar */}
       {totalItems > 0 && (
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 pb-2 border-t border-white/20">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 pb-2 border-t border-white/[0.08]">
           
           {/* Left: Summary Metrics Pill */}
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-slate-700 font-medium shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/60 border border-white/[0.08] text-xs text-slate-300 font-medium shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>
-              Showing <strong className="font-bold text-slate-900">{startIndex}-{endIndex}</strong> of <strong className="font-bold text-slate-900">{totalItems}</strong> tasks
+              Showing <strong className="font-bold text-white">{startIndex}-{endIndex}</strong> of <strong className="font-bold text-white">{totalItems}</strong> tasks
             </span>
           </div>
 
@@ -536,14 +533,14 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={safeCurrentPage <= 1}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-white/80 hover:shadow-md transition-all duration-200 active:scale-95 shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900/60 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 active:scale-95 shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                 title="Previous Page"
               >
                 <IconChevronLeft className="w-4 h-4" />
               </button>
 
-              {/* Number Buttons inside Glass Capsule */}
-              <div className="flex items-center gap-1 p-1 glass-panel rounded-xl shadow-2xs">
+              {/* Number Buttons inside Capsule */}
+              <div className="flex items-center gap-1 p-1 bg-slate-900/60 border border-white/[0.08] rounded-xl shadow-2xs">
                 {visiblePages.map((page, idx) => {
                   if (page === '...') {
                     return (
@@ -566,8 +563,8 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center ${
                         isActive
-                          ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20 scale-105'
-                          : 'text-slate-700 hover:text-slate-900 hover:bg-white/70 active:scale-95'
+                          ? 'bg-white text-slate-950 font-bold shadow-md shadow-white/10 scale-105'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95'
                       }`}
                     >
                       {pageNum}
@@ -581,7 +578,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                 type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage >= totalPages}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl glass-panel flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-white/80 hover:shadow-md transition-all duration-200 active:scale-95 shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900/60 border border-white/[0.08] flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 active:scale-95 shadow-2xs disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                 title="Next Page"
               >
                 <IconChevronRight className="w-4 h-4" />
@@ -589,9 +586,9 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             </div>
           )}
 
-          {/* Right: Custom Per-Page Selector Glass Pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs text-slate-700 font-medium shadow-2xs">
-            <span className="text-slate-500 font-medium">Per page:</span>
+          {/* Right: Custom Per-Page Selector */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/60 border border-white/[0.08] text-xs text-slate-300 font-medium shadow-2xs">
+            <span className="text-slate-400 font-medium">Per page:</span>
             <div className="flex items-center gap-1">
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <button
@@ -603,8 +600,8 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   }}
                   className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     pageSize === size
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      ? 'bg-white text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   {size}

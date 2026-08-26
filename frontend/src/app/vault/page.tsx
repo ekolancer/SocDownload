@@ -498,7 +498,7 @@ export default function VaultPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="linear-dark-bg min-h-screen text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
       
       {/* 1. Top Application Header (Shared Navbar) */}
       <Navbar
@@ -515,10 +515,10 @@ export default function VaultPage() {
       {/* 2. Main Vault Dashboard Container */}
       <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
         
-        {/* Status & Quick Action Header Row (Identical to Studio) */}
+        {/* Status & Quick Action Header Row */}
         <div className="w-full flex justify-between items-center max-w-7xl">
           {/* Live System Heartbeat Pill */}
-          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default select-none shadow-2xs">
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-slate-800/60 transition-colors cursor-default select-none border border-white/[0.08] shadow-2xs">
             <span className="relative flex h-2.5 w-2.5">
               {backendStatus === 'ok' ? (
                 <>
@@ -531,7 +531,7 @@ export default function VaultPage() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
               )}
             </span>
-            <span className="text-xs text-slate-700 font-bold font-mono">
+            <span className="text-xs text-slate-300 font-bold font-mono">
               {backendStatus === 'ok' ? 'Vault Asset Center Online' : backendStatus === 'loading' ? 'Connecting...' : 'Vault Offline'}
             </span>
           </div>
@@ -541,9 +541,9 @@ export default function VaultPage() {
             <button
               type="button"
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-indigo-700 hover:bg-white/80 hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
             >
-              <IconUpload className="w-3.5 h-3.5 text-indigo-600" />
+              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
               <span>Import Archive</span>
             </button>
 
@@ -551,10 +551,10 @@ export default function VaultPage() {
               type="button"
               onClick={() => refreshData(true)}
               disabled={isRefreshing}
-              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
+              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-slate-800/80 text-slate-400 hover:text-white border border-white/[0.08] hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 cursor-pointer disabled:opacity-50"
               title="Perbarui data library"
             >
-              <IconRefresh className={`w-3.5 h-3.5 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+              <IconRefresh className={`w-3.5 h-3.5 text-slate-300 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
           </div>
         </div>
@@ -562,21 +562,21 @@ export default function VaultPage() {
         {/* 3. 4-Column Bento Metric Ribbon (SaaS Telemetry) */}
         <section className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Aset Media */}
-          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
-            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
+          <div className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md">
+            <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between h-full">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
                   Total Aset Media
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-emerald-400 border border-white/10 flex items-center justify-center shadow-2xs">
                   <IconPhoto className="w-4 h-4" />
                 </div>
               </div>
               <div className="mt-3">
-                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                <span className="text-3xl font-bold font-mono tracking-tight text-white">
                   {media.length}
                 </span>
-                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500">
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-400">
                   <span>{photoCount} Foto</span>
                   <span>•</span>
                   <span>{videoCount} Video</span>
@@ -586,23 +586,23 @@ export default function VaultPage() {
           </div>
 
           {/* Card 2: Kapasitas Penyimpanan */}
-          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
-            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
+          <div className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md">
+            <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between h-full">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
                   Penyimpanan Disk
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-teal-400 border border-white/10 flex items-center justify-center shadow-2xs">
                   <IconDownload className="w-4 h-4" />
                 </div>
               </div>
               <div className="mt-3">
-                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                <span className="text-3xl font-bold font-mono tracking-tight text-white">
                   {storageStats?.human_size || '0 MB'}
                 </span>
-                <div className="w-full h-1.5 rounded-full bg-slate-200/60 overflow-hidden shadow-inner mt-2">
+                <div className="w-full h-1.5 rounded-full bg-slate-900 border border-white/5 overflow-hidden shadow-inner mt-2">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full shadow-xs"
+                    className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-400 rounded-full shadow-xs"
                     style={{
                       width: `${Math.min(
                         100,
@@ -627,22 +627,22 @@ export default function VaultPage() {
               setSelectedCreator(null);
               setSelectedAlbum(null);
             }}
-            className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 hover:border-indigo-400 shadow-lg hover:shadow-xl transition-all cursor-pointer ring-1 ring-black/5"
+            className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] hover:border-emerald-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.4)] hover:shadow-xl transition-all cursor-pointer backdrop-blur-md group"
           >
-            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full group">
+            <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between h-full">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
                   Kreator & Akun
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-indigo-400 border border-white/10 flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
                   <IconUsers className="w-4 h-4" />
                 </div>
               </div>
               <div className="mt-3">
-                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                <span className="text-3xl font-bold font-mono tracking-tight text-white">
                   {creatorsList.length}
                 </span>
-                <span className="text-[11px] font-bold text-indigo-600 block mt-1 group-hover:underline">
+                <span className="text-[11px] font-bold text-emerald-400 block mt-1 group-hover:underline">
                   Jelajahi Profil Kreator →
                 </span>
               </div>
@@ -650,16 +650,16 @@ export default function VaultPage() {
           </div>
 
           {/* Card 4: Koleksi & Album */}
-          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
-            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
+          <div className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md">
+            <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between h-full">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
                   Album Kustom
                 </span>
                 <button
                   type="button"
                   onClick={handleOpenCreateAlbum}
-                  className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all"
+                  className="w-8 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all"
                   title="Buat Album Baru"
                 >
                   <IconFolderPlus className="w-4 h-4" />
@@ -667,10 +667,10 @@ export default function VaultPage() {
               </div>
               <div className="mt-3 flex items-end justify-between">
                 <div>
-                  <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                  <span className="text-3xl font-bold font-mono tracking-tight text-white">
                     {albums.length}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-500 block mt-1">
+                  <span className="text-[11px] font-mono text-slate-400 block mt-1">
                     Koleksi Album
                   </span>
                 </div>
@@ -681,7 +681,7 @@ export default function VaultPage() {
                     setSelectedAlbum(null);
                     setSelectedCreator(null);
                   }}
-                  className="text-xs font-bold text-amber-600 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-emerald-400 hover:underline cursor-pointer"
                 >
                   Lihat Semua →
                 </button>
@@ -691,11 +691,11 @@ export default function VaultPage() {
         </section>
 
         {/* 4. Universal SaaS Command & Filter Island */}
-        <section className="w-full max-w-7xl p-2 rounded-[2rem] bg-white/40 border border-white/60 shadow-xl backdrop-blur-xl ring-1 ring-black/5 flex flex-col gap-3">
-          <div className="p-3 sm:p-4 rounded-[calc(2rem-0.5rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <section className="w-full max-w-7xl p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-2xl backdrop-blur-xl flex flex-col gap-3">
+          <div className="p-3 sm:p-4 rounded-xl bg-slate-950/50 border border-white/[0.06] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
             
             {/* Left: View Tabs Switcher (Segmented Control) */}
-            <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-900/5 border border-white/80 shadow-inner overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-white/[0.08] overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => {
@@ -704,10 +704,10 @@ export default function VaultPage() {
                   setSelectedAlbum(null);
                   setSelectedIds([]);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   currentTab === 'photos' && !selectedAlbum && !selectedCreator
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <IconPhoto className="w-3.5 h-3.5" />
@@ -722,10 +722,10 @@ export default function VaultPage() {
                   setSelectedAlbum(null);
                   setSelectedIds([]);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   currentTab === 'explore' && !selectedCreator
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <IconUsers className="w-3.5 h-3.5" />
@@ -740,10 +740,10 @@ export default function VaultPage() {
                   setSelectedCreator(null);
                   setSelectedIds([]);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   currentTab === 'albums' && !selectedAlbum
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <IconLayers className="w-3.5 h-3.5" />
@@ -758,10 +758,10 @@ export default function VaultPage() {
                   setSelectedAlbum(null);
                   setSelectedIds([]);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   currentTab === 'favorites'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
                 <IconStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -773,19 +773,19 @@ export default function VaultPage() {
             <div className="flex-1 flex flex-col sm:flex-row items-center gap-3">
               {/* Omni Search Bar */}
               <div className="relative flex-1 w-full">
-                <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari caption, kreator (@username), platform..."
-                  className="w-full h-10 pl-10 pr-9 rounded-xl bg-white/70 hover:bg-white focus:bg-white border border-slate-200/80 focus:border-indigo-500/40 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-3 focus:ring-indigo-500/15 transition-all shadow-inner"
+                  className="w-full h-10 pl-10 pr-9 rounded-xl bg-slate-900/80 border border-white/[0.08] focus:border-emerald-500/40 text-xs font-medium text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-inner"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                   >
                     <IconClose className="w-3 h-3" />
                   </button>
@@ -793,14 +793,14 @@ export default function VaultPage() {
               </div>
 
               {/* Media Type Filter (All / Video / Photo) */}
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/5 border border-white/80 shrink-0">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-white/[0.08] shrink-0">
                 <button
                   type="button"
                   onClick={() => setMediaTypeFilter('all')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     mediaTypeFilter === 'all'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   Semua
@@ -810,8 +810,8 @@ export default function VaultPage() {
                   onClick={() => setMediaTypeFilter('video')}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     mediaTypeFilter === 'video'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <IconVideoCamera className="w-3.5 h-3.5" />
@@ -822,8 +822,8 @@ export default function VaultPage() {
                   onClick={() => setMediaTypeFilter('photo')}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     mediaTypeFilter === 'photo'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <IconPhoto className="w-3.5 h-3.5" />
@@ -835,7 +835,7 @@ export default function VaultPage() {
 
           {/* Platform Filter Pills Row */}
           <div className="flex items-center gap-2 px-3 pb-1 overflow-x-auto scrollbar-none">
-            <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-wider shrink-0">
+            <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider shrink-0">
               Platform:
             </span>
             {PLATFORMS.map((p) => {
@@ -850,13 +850,13 @@ export default function VaultPage() {
                   onClick={() => handleTogglePlatform(p.id)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer shrink-0 shadow-2xs ${
                     isSelected
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'glass-panel bg-white/60 hover:bg-white text-slate-700'
+                      ? 'bg-white text-slate-950 font-bold shadow-xs'
+                      : 'bg-slate-900/60 text-slate-400 border border-white/[0.08] hover:text-white hover:bg-slate-800'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{p.label}</span>
-                  <span className="opacity-70">({count})</span>
+                  <span className="opacity-70 font-normal">({count})</span>
                 </button>
               );
             })}
@@ -864,7 +864,7 @@ export default function VaultPage() {
               <button
                 type="button"
                 onClick={() => setSelectedPlatforms([])}
-                className="text-[11px] font-mono text-indigo-600 hover:underline shrink-0 cursor-pointer ml-1"
+                className="text-[11px] font-mono text-emerald-400 hover:underline shrink-0 cursor-pointer ml-1"
               >
                 Reset Filter
               </button>
@@ -890,13 +890,13 @@ export default function VaultPage() {
           {currentTab === 'albums' && !selectedAlbum && (
             <div className="flex flex-col gap-6">
               {/* Header & Create Button */}
-              <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
-                <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 flex items-center justify-between">
+              <div className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-xl backdrop-blur-xl">
+                <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                      Album & Koleksi Kustom
+                    <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                      Album &amp; Koleksi Kustom
                     </h2>
-                    <span className="text-xs text-slate-500 font-medium">
+                    <span className="text-xs text-slate-400 font-medium">
                       Kelola dan kelompokkan aset media vault Anda ke dalam album kustom
                     </span>
                   </div>
@@ -904,7 +904,7 @@ export default function VaultPage() {
                   <button
                     type="button"
                     onClick={handleOpenCreateAlbum}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs transition-all shadow-md shadow-white/10 cursor-pointer active:scale-95"
                   >
                     <IconFolderPlus className="w-4 h-4" />
                     <span>Buat Album Baru</span>
@@ -918,13 +918,13 @@ export default function VaultPage() {
                 <button
                   type="button"
                   onClick={handleOpenCreateAlbum}
-                  className="group p-1.5 rounded-[1.75rem] bg-white/40 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-white/60 transition-all cursor-pointer aspect-square shadow-sm flex flex-col"
+                  className="group p-1.5 rounded-2xl bg-slate-900/40 border-2 border-dashed border-slate-700 hover:border-emerald-400 hover:bg-slate-900/80 transition-all cursor-pointer aspect-square shadow-sm flex flex-col"
                 >
-                  <div className="w-full h-full rounded-[calc(1.75rem-0.375rem)] flex flex-col items-center justify-center p-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-xs">
+                  <div className="w-full h-full rounded-xl flex flex-col items-center justify-center p-4">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 text-emerald-400 border border-white/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-xs">
                       <IconFolderPlus className="w-6 h-6" />
                     </div>
-                    <span className="text-xs font-black text-slate-800 group-hover:text-indigo-600">
+                    <span className="text-xs font-bold text-slate-300 group-hover:text-white">
                       Album Baru
                     </span>
                   </div>
@@ -935,11 +935,11 @@ export default function VaultPage() {
                   <div
                     key={album.id}
                     onClick={() => setSelectedAlbum(album)}
-                    className="group relative p-1.5 rounded-[1.75rem] bg-white/40 border border-white/60 hover:border-indigo-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer aspect-square flex flex-col"
+                    className="group relative p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] hover:border-white/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer aspect-square flex flex-col backdrop-blur-md"
                   >
-                    <div className="p-3 rounded-[calc(1.75rem-0.375rem)] bg-white/80 border border-white/80 flex flex-col justify-between h-full">
+                    <div className="p-3 rounded-xl bg-slate-950/50 border border-white/[0.06] flex flex-col justify-between h-full">
                       {/* Stacked Cover Image Frame */}
-                      <div className="w-full flex-1 rounded-xl overflow-hidden bg-slate-950 relative">
+                      <div className="w-full flex-1 rounded-lg overflow-hidden bg-slate-950 relative border border-white/5">
                         {album.cover_file_url ? (
                           <img
                             src={
@@ -957,20 +957,20 @@ export default function VaultPage() {
                         )}
                         
                         {/* Count Badge */}
-                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-xs text-white font-mono text-[10px] font-bold">
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-xs text-white font-mono text-[10px] font-bold border border-white/10">
                           {album.items_count} media
                         </span>
                       </div>
 
                       {/* Title & Delete Action */}
                       <div className="flex items-center justify-between pt-2">
-                        <span className="font-extrabold text-xs text-slate-900 truncate tracking-tight">
+                        <span className="font-bold text-xs text-white truncate tracking-tight">
                           {album.name}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => handleDeleteAlbum(album.id, e)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors opacity-0 group-hover:opacity-100"
                           title="Hapus album"
                         >
                           <IconTrash className="w-3.5 h-3.5" />

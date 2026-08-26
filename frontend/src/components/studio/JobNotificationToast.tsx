@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,22 +38,22 @@ interface JobNotificationToastProps {
 function getPlatformIcon(platform: string) {
   switch (platform.toLowerCase()) {
     case 'instagram':
-      return <IconInstagram className="w-3.5 h-3.5 text-pink-600" />;
+      return <IconInstagram className="w-3.5 h-3.5 text-pink-400" />;
     case 'tiktok':
-      return <IconTikTok className="w-3.5 h-3.5 text-slate-900" />;
+      return <IconTikTok className="w-3.5 h-3.5 text-slate-200" />;
     case 'threads':
-      return <IconThreads className="w-3.5 h-3.5 text-slate-900" />;
+      return <IconThreads className="w-3.5 h-3.5 text-slate-200" />;
     case 'youtube':
-      return <IconYouTube className="w-3.5 h-3.5 text-red-600" />;
+      return <IconYouTube className="w-3.5 h-3.5 text-red-400" />;
     case 'x':
     case 'twitter':
-      return <IconX className="w-3.5 h-3.5 text-slate-900" />;
+      return <IconX className="w-3.5 h-3.5 text-slate-200" />;
     case 'reddit':
-      return <IconReddit className="w-3.5 h-3.5 text-orange-600" />;
+      return <IconReddit className="w-3.5 h-3.5 text-orange-400" />;
     case 'pinterest':
-      return <IconPinterest className="w-3.5 h-3.5 text-red-600" />;
+      return <IconPinterest className="w-3.5 h-3.5 text-red-400" />;
     default:
-      return <IconSparkles className="w-3.5 h-3.5 text-indigo-600" />;
+      return <IconSparkles className="w-3.5 h-3.5 text-emerald-400" />;
   }
 }
 
@@ -103,30 +103,30 @@ export function JobNotificationToast({
     ? {
         label: 'Downloaded',
         subtext: notice.username ? `@${notice.username} • Saved to vault` : 'Media successfully saved to vault',
-        icon: <IconCheckCircle className="w-4 h-4 text-emerald-600" />,
-        badgeBg: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-        cardBg: 'bg-white/95 border-emerald-100 shadow-[0_16px_36px_rgba(16,185,129,0.12),0_4px_12px_rgba(15,23,42,0.06)]',
+        icon: <IconCheckCircle className="w-4 h-4 text-emerald-400" />,
+        badgeBg: 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400',
+        cardBg: 'bg-slate-900/95 border-white/10 shadow-[0_16px_36px_rgba(0,0,0,0.6)]',
         timerBg: 'from-emerald-500 to-teal-400',
-        trackBg: 'bg-emerald-50',
+        trackBg: 'bg-slate-950/80',
       }
     : isDup
     ? {
         label: 'Di-skip (Duplikat)',
         subtext: 'Media sudah ada di vault (Dilewati)',
-        icon: <IconBookmark className="w-4 h-4 text-amber-600" />,
-        badgeBg: 'bg-amber-50 border-amber-200 text-amber-700',
-        cardBg: 'bg-white/95 border-amber-100 shadow-[0_16px_36px_rgba(245,158,11,0.12),0_4px_12px_rgba(15,23,42,0.06)]',
+        icon: <IconBookmark className="w-4 h-4 text-amber-400" />,
+        badgeBg: 'bg-amber-950/60 border-amber-500/30 text-amber-400',
+        cardBg: 'bg-slate-900/95 border-white/10 shadow-[0_16px_36px_rgba(0,0,0,0.6)]',
         timerBg: 'from-amber-500 to-yellow-400',
-        trackBg: 'bg-amber-50',
+        trackBg: 'bg-slate-950/80',
       }
     : {
         label: 'Gagal Download',
         subtext: notice.error ? `Error: ${notice.error}` : 'Gagal mengunduh media dari URL',
-        icon: <IconAlertCircle className="w-4 h-4 text-rose-600" />,
-        badgeBg: 'bg-rose-50 border-rose-200 text-rose-700',
-        cardBg: 'bg-white/95 border-rose-100 shadow-[0_16px_36px_rgba(244,63,94,0.12),0_4px_12px_rgba(15,23,42,0.06)]',
+        icon: <IconAlertCircle className="w-4 h-4 text-rose-400" />,
+        badgeBg: 'bg-rose-950/60 border-rose-500/30 text-rose-400',
+        cardBg: 'bg-slate-900/95 border-white/10 shadow-[0_16px_36px_rgba(0,0,0,0.6)]',
         timerBg: 'from-rose-500 to-pink-500',
-        trackBg: 'bg-rose-50',
+        trackBg: 'bg-slate-950/80',
       };
 
   return (
@@ -152,29 +152,31 @@ export function JobNotificationToast({
               {/* Title, Platform & Subtext */}
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-extrabold uppercase tracking-wider font-mono px-1.5 py-0.2 rounded border ${statusTheme.badgeBg}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider font-mono px-1.5 py-0.2 rounded border ${statusTheme.badgeBg}`}>
                     {statusTheme.label}
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-slate-300" />
+                  <span className="w-1 h-1 rounded-full bg-slate-700" />
                   <div className="flex items-center gap-1">
                     {getPlatformIcon(notice.platform)}
-                    <span className="text-[10px] font-bold text-slate-500 capitalize">
+                    <span className="text-[10px] font-bold text-slate-400 capitalize">
                       {notice.platform}
                     </span>
                   </div>
                 </div>
 
-                <h4 className="text-xs font-bold text-slate-900 truncate mt-0.5" title={notice.url}>
+                <h4 className="text-xs font-bold text-white truncate mt-0.5" title={notice.url}>
                   {statusTheme.subtext}
                 </h4>
               </div>
             </div>
 
-            {/* Symmetrical 1:1 Close Button */}
+            {/* Close Button */}
             <button
               type="button"
               onClick={handleDismiss}
-              className="w-6 h-6 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer" aria-label="Dismiss" title="Dismiss"
+              className="w-6 h-6 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+              aria-label="Dismiss"
+              title="Dismiss"
             >
               <IconClose className="w-3.5 h-3.5" />
             </button>

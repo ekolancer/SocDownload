@@ -1,44 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Public Sans', sans-serif;
+  --font-mono: 'Public Sans', monospace;
+}
+
 :root {
-  /* Material Design 3 Dynamic Theme Tokens (Light) */
-  --md-sys-color-primary: #4f46e5;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #eef2ff;
-  --md-sys-color-on-primary-container: #312e81;
+  --font-family-base: 'Public Sans', sans-serif;
+  /* Linear / Vercel Dark Theme Tokens */
+  --bg-base: #030712;
+  --bg-gradient-from: #0B1528;
+  --bg-gradient-to: #030712;
+  
+  --surface-card: rgba(15, 23, 42, 0.65);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --surface-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
-  --md-sys-color-secondary: #475569;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #e2e8f0;
-  --md-sys-color-on-secondary-container: #0f172a;
-
-  --md-sys-color-tertiary: #0284c7;
-  --md-sys-color-on-tertiary: #ffffff;
-  --md-sys-color-tertiary-container: #e0f2fe;
-  --md-sys-color-on-tertiary-container: #0369a1;
-
-  --md-sys-color-surface: #f8fafc;
-  --md-sys-color-surface-dim: #f1f5f9;
-  --md-sys-color-surface-bright: #ffffff;
-  --md-sys-color-surface-container-lowest: #ffffff;
-  --md-sys-color-surface-container-low: #f8fafc;
-  --md-sys-color-surface-container: #f1f5f9;
-  --md-sys-color-surface-container-high: #e2e8f0;
-  --md-sys-color-surface-container-highest: #cbd5e1;
-
-  --md-sys-color-on-surface: #0f172a;
-  --md-sys-color-on-surface-variant: #475569;
-  --md-sys-color-outline: #94a3b8;
-  --md-sys-color-outline-variant: #e2e8f0;
-
-  --md-sys-color-error: #dc2626;
-  --md-sys-color-error-container: #fee2e2;
-  --md-sys-color-on-error-container: #991b1b;
-
-  --md-sys-color-success: #16a34a;
-  --md-sys-color-success-container: #dcfce7;
-  --md-sys-color-on-success-container: #166534;
+  --color-primary: #ffffff;
+  --color-accent-emerald: #10b981;
+  --color-accent-indigo: #6366f1;
+  --color-muted: #94a3b8;
 }
 
 * {
@@ -47,42 +29,70 @@
 
 html {
   scroll-behavior: smooth;
-  font-family: 'Hanken Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Public Sans', sans-serif;
   line-height: 1.6;
-  background-color: #f9f9f9;
-  color: #0f172a;
+  background-color: #030712;
+  color: #f8fafc;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  color: #0f172a;
+  font-family: 'Public Sans', sans-serif;
+  background-color: #030712;
+  color: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Stitch Theme Glass Panel & Glow */
-/* Radius scale (locked): rounded=pills/badges-xs · lg=8 chips/small controls ·
-   xl=12 inputs/cards-sm · 2xl=16 cards/buttons-primary · 3xl=24 modals/heroes · full=nav/avatars */
+/* Linear / Vercel Dark Background Matrix Grid */
+.linear-dark-bg,
+.stitch-bg {
+  background-color: #030712;
+  background-image: 
+    radial-gradient(1200px 700px at 50% -10%, rgba(14, 116, 144, 0.15), transparent 70%),
+    radial-gradient(900px 600px at 85% 15%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(1000px 700px at 15% 45%, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(180deg, #0B1528 0%, #070e1c 35%, #030712 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 100% 100%;
+  background-position: center top, center top, center top, 0 0, center top;
+  background-attachment: fixed;
+}
+
+/* Dark Glassmorphism Surfaces */
 .glass-panel {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-panel-elevated {
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-card {
+  background-color: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
 .text-glow {
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  text-shadow: 0 0 24px rgba(255, 255, 255, 0.4);
 }
 
-.stitch-bg {
-  background-image:
-    radial-gradient(1100px 700px at 12% -5%, rgba(99, 102, 241, 0.10), transparent 60%),
-    radial-gradient(900px 600px at 88% 8%, rgba(129, 140, 248, 0.08), transparent 55%),
-    radial-gradient(1000px 800px at 50% 115%, rgba(148, 163, 184, 0.14), transparent 60%),
-    linear-gradient(180deg, #f9f9f9 0%, #f2f4f9 55%, #eef0f6 100%);
+.emerald-glow {
+  box-shadow: 0 0 20px -2px rgba(16, 185, 129, 0.4);
 }
 
 /* Ensure all SVGs are constrained and never overflow parent */
@@ -92,46 +102,25 @@ svg {
   flex-shrink: 0;
 }
 
-/* Keyboard focus ring - visible on glass surfaces (WCAG 2.4.7) */
+/* Keyboard focus ring - visible on dark glass surfaces */
 :focus-visible {
-  outline: 2px solid var(--md-sys-color-primary);
+  outline: 2px solid #10b981;
   outline-offset: 2px;
 }
 
 /* Hide scrollbar for clean chip/carousel rows */
-.no-scrollbar::-webkit-scrollbar {
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
   display: none;
 }
-.no-scrollbar {
+.no-scrollbar,
+.scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* Infinite Marquee Animation to Left */
-@keyframes marquee-left {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .animate-marquee-left {
-    display: flex;
-    width: max-content;
-    animation: marquee-left 28s linear infinite;
-  }
-
-  .animate-marquee-left:hover {
-    animation-play-state: paused;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-marquee-left {
-    display: flex;
-    width: max-content;
-  }
+/* Selection style */
+::selection {
+  background-color: rgba(16, 185, 129, 0.3);
+  color: #ffffff;
 }

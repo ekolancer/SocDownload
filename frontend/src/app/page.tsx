@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -216,7 +216,7 @@ export default function StudioPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="stitch-bg min-h-[100dvh] text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="linear-dark-bg min-h-[100dvh] text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
       
       {/* Top App Header (Stitch Comp) */}
       <Navbar
@@ -236,7 +236,7 @@ export default function StudioPage() {
         {/* Status & Import Header Row */}
         <div className="w-full flex justify-between items-center max-w-4xl">
           {/* Live System Heartbeat Pill */}
-          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default select-none shadow-2xs">
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-slate-800/60 transition-colors cursor-default select-none border border-white/[0.08] shadow-2xs">
             <span className="relative flex h-2.5 w-2.5">
               {backendStatus === 'ok' ? (
                 <>
@@ -249,7 +249,7 @@ export default function StudioPage() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
               )}
             </span>
-            <span className="text-xs text-slate-700 font-bold font-mono">
+            <span className="text-xs text-slate-300 font-bold font-mono">
               {backendStatus === 'ok' ? 'System Online' : backendStatus === 'loading' ? 'Connecting...' : 'System Offline'}
             </span>
           </div>
@@ -258,9 +258,9 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-indigo-700 hover:bg-white/80 hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
             >
-              <IconUpload className="w-3.5 h-3.5 text-indigo-600" />
+              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
               <span>Import</span>
             </button>
 
@@ -268,13 +268,14 @@ export default function StudioPage() {
               type="button"
               onClick={() => refreshData(true)}
               disabled={isRefreshing}
-              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
+              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-slate-800/80 text-slate-400 hover:text-white border border-white/[0.08] hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 cursor-pointer disabled:opacity-50"
               title="Sync library"
             >
-              <IconRefresh className={`w-3.5 h-3.5 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+              <IconRefresh className={`w-3.5 h-3.5 text-slate-300 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
           </div>
         </div>
+
 
         {/* Hero Section */}
         <DownloadStudio
@@ -300,11 +301,11 @@ export default function StudioPage() {
           <section className="w-full max-w-4xl flex flex-col gap-6">
             <div className="flex justify-between items-end mb-2">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Recent Downloads</h2>
+                <h2 className="text-2xl font-bold text-white tracking-tight">Recent Downloads</h2>
                 <span className="px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 font-bold tracking-wider">8 LATEST</span>
               </div>
               <Link
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                className="text-xs font-semibold text-slate-600 hover:text-indigo-800 hover:underline transition-colors"
                 href="/vault"
               >
                 View Full Vault

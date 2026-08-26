@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,35 +103,37 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden">
         
-        {/* Backdrop: Clicking outside triggers onClose */}
+        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={onClose}
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer"
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md cursor-pointer"
         />
 
-        {/* Modal Dialog Card - Side-by-Side Layout with Compact Hugging Media Canvas */}
+        {/* Modal Dialog Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 12 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative z-10 max-w-[95vw] max-h-[90vh] flex flex-col md:flex-row rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-2xl cursor-default"
+          className="relative z-10 max-w-[95vw] max-h-[90vh] flex flex-col md:flex-row rounded-3xl bg-slate-900/95 border border-white/10 overflow-hidden shadow-2xl backdrop-blur-2xl cursor-default"
         >
           {/* Close Button Top Right */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/50 hover:bg-black/75 md:bg-white/90 md:hover:bg-slate-100 text-white md:text-slate-700 shadow-md backdrop-blur-sm flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer" aria-label="Close Modal" title="Close Modal"
+            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 shadow-md backdrop-blur-sm flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+            aria-label="Close Modal"
+            title="Close Modal"
           >
             <IconClose className="w-4 h-4" />
           </button>
 
-          {/* Left Side: Compact Media Preview Canvas (Hugs media tightly, eliminating empty space) */}
+          {/* Left Side: Compact Media Preview Canvas */}
           <div className="relative flex items-center justify-center bg-slate-950 p-2 sm:p-3 overflow-hidden select-none min-w-[260px] md:min-w-[320px] max-h-[60vh] md:max-h-[85vh]">
             {fileUrl ? (
               isVideo ? (
@@ -140,13 +142,13 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                   controls
                   autoPlay
                   playsInline
-                  className="max-h-[55vh] md:max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg"
+                  className="max-h-[55vh] md:max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg border border-white/5"
                 />
               ) : (
                 <img
                   src={fileUrl}
                   alt={item.caption || 'Media Preview'}
-                  className="max-h-[55vh] md:max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg"
+                  className="max-h-[55vh] md:max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg border border-white/5"
                 />
               )
             ) : (
@@ -162,7 +164,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                   <button
                     type="button"
                     onClick={() => setActiveFileIndex((prev) => prev - 1)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm shadow-md flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-sm border border-white/10 shadow-md flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
                     title="Previous item"
                   >
                     <IconChevronLeft className="w-4 h-4" />
@@ -173,7 +175,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                   <button
                     type="button"
                     onClick={() => setActiveFileIndex((prev) => prev + 1)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm shadow-md flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-sm border border-white/10 shadow-md flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
                     title="Next item"
                   >
                     <IconChevronRight className="w-4 h-4" />
@@ -181,7 +183,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                 )}
 
                 {/* Indicator Pill */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-xs font-mono font-bold shadow-md">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-slate-900/80 border border-white/10 backdrop-blur-md text-white text-xs font-mono font-bold shadow-md">
                   {activeFileIndex + 1} / {item.files.length}
                 </div>
               </>
@@ -189,61 +191,60 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
           </div>
 
           {/* Right Side: Metadata Sidebar & Actions */}
-          <div className="w-full md:w-72 lg:w-80 p-5 sm:p-6 flex flex-col justify-between gap-5 overflow-y-auto bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 shrink-0">
+          <div className="w-full md:w-72 lg:w-80 p-5 sm:p-6 flex flex-col justify-between gap-5 overflow-y-auto bg-slate-950/80 border-t md:border-t-0 md:border-l border-white/[0.08] shrink-0">
             <div className="flex flex-col gap-3">
               {/* Header: Platform & Username */}
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono shrink-0">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 font-mono shrink-0">
                   {item.platform}
                 </span>
                 {item.username ? (
                   <button
                     type="button"
                     onClick={handleCreatorClick}
-                    className="font-extrabold text-sm text-slate-900 hover:text-indigo-600 truncate transition-colors text-left cursor-pointer group flex items-center gap-1"
+                    className="font-bold text-sm text-white hover:text-emerald-400 truncate transition-colors text-left cursor-pointer group flex items-center gap-1"
                     title={`Filter vault by @${item.username}`}
                     aria-label={`Filter vault by @${item.username}`}
                   >
                     <span>@{item.username}</span>
-                    <span className="text-[10px] text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    <span className="text-[10px] text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
                   </button>
                 ) : (
-                  <span className="font-extrabold text-sm text-slate-900 truncate">
+                  <span className="font-bold text-sm text-white truncate">
                     Archived Media
                   </span>
                 )}
               </div>
 
               {/* Date */}
-              <div className="text-[11px] font-mono text-slate-500">
+              <div className="text-[11px] font-mono text-slate-400">
                 Archived on {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
               </div>
 
-
               {/* Caption */}
               {item.caption && (
-                <div className="p-3 rounded-2xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap max-h-48 overflow-y-auto shadow-2xs">
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/[0.08] text-xs text-slate-300 leading-relaxed font-normal whitespace-pre-wrap max-h-48 overflow-y-auto shadow-2xs">
                   {item.caption}
                 </div>
               )}
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2 pt-3 border-t border-slate-200">
+            <div className="flex flex-col gap-2 pt-3 border-t border-white/[0.08]">
               {/* Copy Source Link */}
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-white/10 transition-all cursor-pointer shadow-2xs"
               >
                 {copiedLink ? (
                   <>
-                    <IconCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <IconCheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Copied Link!</span>
                   </>
                 ) : (
                   <>
-                    <IconExternalLink className="w-4 h-4 text-slate-500 shrink-0" />
+                    <IconExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
                     <span>Copy Source URL</span>
                   </>
                 )}
@@ -254,9 +255,9 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                 <a
                   href={fileUrl}
                   download
-                  className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 transition-all text-center shadow-xs"
+                  className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold text-slate-950 bg-white hover:bg-slate-100 transition-all text-center shadow-md shadow-white/10 cursor-pointer"
                 >
-                  <IconDownload className="w-4 h-4 text-white shrink-0" />
+                  <IconDownload className="w-4 h-4 text-slate-950 shrink-0" />
                   <span>Save to Device</span>
                 </a>
               )}
@@ -267,7 +268,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex items-center justify-center gap-2 w-full py-2 rounded-full text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-600 border border-rose-500/30 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <IconTrash className={`w-4 h-4 shrink-0 ${deleting ? 'animate-spin' : ''}`} />
                   <span>{deleting ? 'Deleting...' : 'Delete from Vault'}</span>

@@ -48,20 +48,20 @@ export function BatchActionBar({
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 80, opacity: 0, scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-[94vw] sm:w-auto p-1.5 rounded-full bg-slate-900/90 backdrop-blur-2xl border border-white/20 shadow-[0_20px_60px_rgba(0,0,0,0.4),0_0_1px_1px_rgba(255,255,255,0.1)] flex items-center justify-between sm:justify-center gap-2 select-none ring-1 ring-black/40"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-[94vw] sm:w-auto p-1.5 rounded-full bg-slate-900/90 backdrop-blur-2xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)] flex items-center justify-between sm:justify-center gap-2 select-none ring-1 ring-black/40"
         >
           {/* Selected Count & Dismiss Pill */}
           <div className="flex items-center gap-2 pl-2 pr-1 shrink-0">
             <button
               type="button"
               onClick={onDeselectAll}
-              className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90"
+              className="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 border border-white/10"
               title="Batal Memilih (Esc)"
             >
               <IconClose className="w-3.5 h-3.5" />
             </button>
             <div className="flex items-center gap-1.5">
-              <span className="min-w-[22px] h-5.5 px-2 rounded-full bg-indigo-500 text-white text-xs font-mono font-black flex items-center justify-center shadow-xs">
+              <span className="min-w-[22px] h-5.5 px-2 rounded-full bg-emerald-500 text-slate-950 text-xs font-mono font-bold flex items-center justify-center shadow-xs">
                 {count}
               </span>
               <span className="text-xs font-bold text-slate-200 hidden sm:inline">
@@ -70,7 +70,7 @@ export function BatchActionBar({
             </div>
           </div>
 
-          <div className="h-5 w-px bg-white/15 hidden sm:block shrink-0" />
+          <div className="h-5 w-px bg-white/10 hidden sm:block shrink-0" />
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pr-1">
@@ -79,7 +79,7 @@ export function BatchActionBar({
               <button
                 type="button"
                 onClick={isAllSelected ? onDeselectAll : onSelectAll}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 transition-all cursor-pointer active:scale-95"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-white/10 transition-all cursor-pointer active:scale-95"
               >
                 <IconCheck className="w-3.5 h-3.5" />
                 <span>{isAllSelected ? 'Batal Semua' : 'Pilih Semua'}</span>
@@ -91,9 +91,9 @@ export function BatchActionBar({
               type="button"
               onClick={onAddToAlbum}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-950 bg-white hover:bg-slate-100 active:scale-95 transition-all shadow-md shadow-white/10 disabled:opacity-50 cursor-pointer"
             >
-              <IconFolderPlus className="w-3.5 h-3.5" />
+              <IconFolderPlus className="w-3.5 h-3.5 text-slate-950" />
               <span>Album</span>
             </button>
 
@@ -103,7 +103,7 @@ export function BatchActionBar({
                 type="button"
                 onClick={onRemoveFromAlbum}
                 disabled={isProcessing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-100 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-100 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                 title="Hapus item dari album ini"
               >
                 <IconFolderMinus className="w-3.5 h-3.5" />
@@ -116,7 +116,7 @@ export function BatchActionBar({
               type="button"
               onClick={onToggleFavoriteBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-200 bg-white/10 hover:bg-white/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-200 bg-slate-800/80 hover:bg-slate-700 border border-white/10 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               title="Beri tanda bintang"
             >
               <IconStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -128,10 +128,10 @@ export function BatchActionBar({
               type="button"
               onClick={onDownloadZipBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-white/10 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               title="Unduh semua item terpilih dalam ZIP"
             >
-              <IconDownload className="w-3.5 h-3.5 text-indigo-400" />
+              <IconDownload className="w-3.5 h-3.5 text-emerald-400" />
               <span>ZIP</span>
             </button>
 
@@ -140,7 +140,7 @@ export function BatchActionBar({
               type="button"
               onClick={onDeleteBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-rose-300 hover:text-white bg-rose-500/20 hover:bg-rose-600 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-600 border border-rose-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
               title="Hapus permanen dari Vault"
             >
               <IconTrash className="w-3.5 h-3.5" />
