@@ -461,6 +461,39 @@ export function IconAdapter({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+export function IconMenu({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg width="24" height="24" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+export function IconGrid({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg width="24" height="24" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+export function IconGooglePhotos({ className = 'w-6 h-6' }: { className?: string }) {
+  return (
+    <svg width="24" height="24" className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C9.24 2 7 4.24 7 7V12H12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2Z" fill="#EA4335" />
+      <path d="M22 12C22 9.24 19.76 7 17 7H12V12C12 14.76 14.76 17 17 17C19.76 17 22 14.76 22 12Z" fill="#4285F4" />
+      <path d="M12 22C14.76 22 17 19.76 17 17V12H12C9.24 12 7 14.76 7 17C7 19.76 9.24 22 12 22Z" fill="#34A853" />
+      <path d="M2 12C2 14.76 4.24 17 7 17H12V12C12 9.24 9.24 7 7 7C4.24 7 2 9.24 2 12Z" fill="#FBBC05" />
+    </svg>
+  );
+}
+
+
 
 
 

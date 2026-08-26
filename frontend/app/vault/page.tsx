@@ -1,66 +1,70 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import { Navbar } from '../components/Navbar';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GooglePhotosSidebar, GooglePhotosTab } from '../components/GooglePhotosSidebar';
+import { GooglePhotosTopBar, MediaTypeFilter } from '../components/GooglePhotosTopBar';
 import { MediaGallery } from '../components/MediaGallery';
 import { MediaLightboxModal, MediaItem } from '../components/MediaLightboxModal';
-import {
-  VaultSidebar,
-  VaultViewMode,
-  AlbumSummary,
-  CreatorSummary,
-  SUPPORTED_PLATFORMS,
-} from '../components/VaultSidebar';
-import { BatchActionBar } from '../components/BatchActionBar';
 import { AlbumModal } from '../components/AlbumModal';
 import { AdapterHealthDrawer } from '../components/AdapterHealthDrawer';
 import { ArchiveImportModal } from '../components/ArchiveImportModal';
 import { CreatorsHub, CreatorStats } from '../components/CreatorsHub';
 import { JobNotificationToast, CompletedJobNotice } from '../components/JobNotificationToast';
 import { JobRow, JobStats } from '../components/JobPipeline';
-import Link from 'next/link';
 import {
-  IconFolder,
+  IconLayers,
   IconFolderPlus,
-  IconFolderMinus,
   IconPencil,
   IconTrash,
-  IconUser,
-  IconUsers,
-  IconLayers,
-  IconDownload,
-  IconFileText,
-  IconFolderZip,
+  IconPhoto,
   IconStar,
+  IconStarFilled,
   IconSparkles,
+  IconUsers,
+  IconDownload,
+  IconFolderZip,
+  IconCheck,
 } from '../components/Icons';
+
+import { AlbumSummary } from '../components/VaultSidebar';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 
 const API = '/api';
+
 
 export default function VaultPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
   const [creatorsList, setCreatorsList] = useState<CreatorStats[]>([]);
-  const [loadingCreators, setLoadingCreators] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
-  const [mediaError, setMediaError] = useState<string>('');
+  const [storageStats, setStorageStats] = useState<{ total_bytes: number; total_files: number; human_size: string } | null>(null);
 
-  // Navigation, Multi-Select Platform Filter & Slide-Over Sidebar State
-  const [currentView, setCurrentView] = useState<VaultViewMode>({ type: 'timeline' });
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+
+  // Google Photos Navigation & View States
+  const [currentTab, setCurrentTab] = useState<GooglePhotosTab>('photos');
+  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumSummary | null>(null);
   const [albumDetailItems, setAlbumDetailItems] = useState<MediaItem[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
-  // Multi-Selection State
+  // Search & Filter Omnibar States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaTypeFilter>('all');
+
+  // Sidebar Layout States
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Batch Multi-Selection States
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
-  // Modals & Notifications state
+  // Modals & Notifications
   const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album' | 'edit'>('create_only');
@@ -72,14 +76,11 @@ export default function VaultPage() {
 
   const prevJobsRef = useRef<JobRow[]>([]);
   const isFetchingRef = useRef(false);
-  // Dedup caches to skip re-render when polling returns identical data
   const lastMediaHashRef = useRef<string>('');
   const lastAlbumsHashRef = useRef<string>('');
   const lastCreatorsHashRef = useRef<string>('');
-  const lastJobStatsHashRef = useRef<string>('');
-  const lastJobsHashRef = useRef<string>('');
 
-  // Refresh Data
+  // Fetch & Synchronize Library Data
   const refreshData = useCallback(async (showIndicator = false) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -94,19 +95,15 @@ export default function VaultPage() {
         setBackendStatus('offline');
       }
 
-      // 2. Fetch Media
-      const mediaRes = await fetch(`${API}/media?limit=1000`).catch(() => null);
+      // 2. Fetch Media Library
+      const mediaRes = await fetch(`${API}/media?limit=1500`).catch(() => null);
       if (mediaRes && mediaRes.ok) {
         const mediaData = await mediaRes.json();
-        // Deduplicate: only update state if data actually changed
         const mediaHash = JSON.stringify(mediaData.map((m: MediaItem) => `${m.id}:${m.is_favorite}:${m.created_at}`));
         if (mediaHash !== lastMediaHashRef.current) {
           lastMediaHashRef.current = mediaHash;
           setMedia(mediaData);
         }
-        setMediaError('');
-      } else {
-        setMediaError('Could not sync media library');
       }
 
       // 3. Fetch Albums
@@ -135,283 +132,196 @@ export default function VaultPage() {
       const statsRes = await fetch(`${API}/jobs/stats`).catch(() => null);
       if (statsRes && statsRes.ok) {
         const statsData: JobStats = await statsRes.json();
-        const statsHash = JSON.stringify(statsData);
-        if (statsHash !== lastJobStatsHashRef.current) {
-          lastJobStatsHashRef.current = statsHash;
-          setJobStats(statsData);
-        }
+        setJobStats(statsData);
       }
 
-      // 5. Fetch Jobs & trigger completion toast
+      // 6. Fetch Active Jobs & trigger completion toast
       const jobsRes = await fetch(`${API}/jobs?limit=20`).catch(() => null);
       if (jobsRes && jobsRes.ok) {
         const jobsData: JobRow[] = await jobsRes.json();
 
         if (prevJobsRef.current.length > 0) {
-          jobsData.forEach((newJob) => {
-            const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
-            const wasInProgress = oldJob && (oldJob.status === 'running' || oldJob.status === 'queued');
-            const isFinished = newJob.status === 'done' || newJob.status === 'dup' || newJob.status === 'failed';
-            if (wasInProgress && isFinished) {
-              setCompletedNotice({
-                id: newJob.id,
-                platform: newJob.platform,
-                url: newJob.url,
-                status: newJob.status as 'done' | 'dup' | 'failed',
-                error: newJob.error,
-              });
-            }
+          const newlyFinished = jobsData.filter((curr) => {
+            const prev = prevJobsRef.current.find((p) => p.id === curr.id);
+            return prev && (prev.status === 'running' || prev.status === 'queued') && (curr.status === 'done' || curr.status === 'dup' || curr.status === 'failed');
           });
+
+          if (newlyFinished.length > 0) {
+            const first = newlyFinished[0];
+            setCompletedNotice({
+              id: first.id,
+              platform: first.platform || 'media',
+              url: first.url,
+              status: first.status as 'done' | 'dup' | 'failed',
+              error: first.error,
+            });
+
+          }
         }
-
-
         prevJobsRef.current = jobsData;
-        // Deduplicate: only update jobs state if data actually changed
-        const jobsHash = JSON.stringify(jobsData.map((j: JobRow) => `${j.id}:${j.status}:${j.finished_at}`));
-        if (jobsHash !== lastJobsHashRef.current) {
-          lastJobsHashRef.current = jobsHash;
-          setJobs(jobsData);
-        }
+        setJobs(jobsData);
+      }
+
+      // 7. Fetch Storage Usage Stats
+      const storageRes = await fetch(`${API}/media/storage`).catch(() => null);
+      if (storageRes && storageRes.ok) {
+        const sData = await storageRes.json();
+        setStorageStats(sData);
       }
     } catch (err) {
-      console.error('Fetch error in Vault:', err);
+
+      console.error('Vault polling failed:', err);
     } finally {
       isFetchingRef.current = false;
       if (showIndicator) {
-        setTimeout(() => setIsRefreshing(false), 300);
+        setTimeout(() => setIsRefreshing(false), 600);
       }
     }
   }, []);
 
+  // Fetch single album items when viewing album details
+  const fetchAlbumDetail = useCallback(async (albumId: number) => {
+    try {
+      const res = await fetch(`${API}/albums/${albumId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAlbumDetailItems(data.items || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch album details:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    refreshData();
-    const interval = setInterval(() => refreshData(false), 4000);
+    if (selectedAlbum) {
+      fetchAlbumDetail(selectedAlbum.id);
+    }
+  }, [selectedAlbum, fetchAlbumDetail]);
+
+  // Initial load & background polling
+  useEffect(() => {
+    refreshData(false);
+    const interval = setInterval(() => refreshData(false), 5000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  // Fetch Album Detail when view is album_detail
+  // Keyboard shortcut: Esc to clear multi-selection
   useEffect(() => {
-    if (currentView.type === 'album_detail') {
-      fetch(`${API}/albums/${currentView.albumId}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.items) {
-            setAlbumDetailItems(data.items);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [currentView]);
-
-  // Platform Counts Mapping
-  const platformCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    SUPPORTED_PLATFORMS.forEach((p) => {
-      counts[p.id] = 0;
-    });
-    media.forEach((item) => {
-      const p = item.platform?.toLowerCase();
-      if (counts[p] !== undefined) {
-        counts[p] += 1;
-      } else if (p === 'twitter') {
-        counts['x'] = (counts['x'] || 0) + 1;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedIds.length > 0) {
+        setSelectedIds([]);
       }
-    });
-    return counts;
-  }, [media]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds.length]);
 
-  // Compute Creators Summary
-  const creators = useMemo(() => {
-    const map = new Map<string, { count: number; platforms: Set<string> }>();
-    media.forEach((item) => {
-      const u = item.username ? item.username.trim() : 'Anonymous';
-      if (!map.has(u)) {
-        map.set(u, { count: 0, platforms: new Set() });
-      }
-      const entry = map.get(u)!;
-      entry.count += 1;
-      entry.platforms.add(item.platform);
-    });
-
-    const list: CreatorSummary[] = [];
-    map.forEach((val, username) => {
-      list.push({
-        username,
-        count: val.count,
-        platforms: Array.from(val.platforms),
-      });
-    });
-    return list.sort((a, b) => b.count - a.count);
-  }, [media]);
-
-  // Favorites count
-  const favoritesCount = useMemo(() => {
-    return media.filter((m) => m.is_favorite).length;
-  }, [media]);
-
-  // Determine active media list with Platform Multi-Selection filtering
-  const displayMedia = useMemo(() => {
-    let baseMedia: MediaItem[] = [];
-
-    switch (currentView.type) {
-      case 'timeline':
-        baseMedia = media;
-        break;
-      case 'favorites':
-        baseMedia = media.filter((m) => m.is_favorite);
-        break;
-      case 'album_detail':
-        baseMedia = albumDetailItems;
-        break;
-      case 'creator_detail':
-        baseMedia = media.filter((m) => (m.username || 'Anonymous') === currentView.username);
-        break;
-      case 'type_filter':
-        if (currentView.kind === 'photo') {
-          baseMedia = media.filter(
-            (m) =>
-              m.files?.some((f) => f.kind === 'image') &&
-              !m.files?.some((f) => f.path?.endsWith('.txt'))
-          );
-        } else if (currentView.kind === 'video') {
-          baseMedia = media.filter((m) =>
-            m.files?.some((f) => f.kind === 'video' || f.path?.endsWith('.mp4'))
-          );
-        } else if (currentView.kind === 'threads') {
-          baseMedia = media.filter(
-            (m) => m.platform === 'threads' || m.files?.some((f) => f.path?.endsWith('.txt'))
-          );
-        } else {
-          baseMedia = media;
-        }
-        break;
-      default:
-        baseMedia = media;
-        break;
-    }
-
-    // Apply Multi-Select Platform Filters if any platforms are selected
-    if (selectedPlatforms.length > 0) {
-      baseMedia = baseMedia.filter((m) => {
-        const p = m.platform?.toLowerCase();
-        return (
-          selectedPlatforms.includes(p) ||
-          (p === 'twitter' && selectedPlatforms.includes('x'))
-        );
-      });
-    }
-
-    return baseMedia;
-  }, [currentView, media, albumDetailItems, selectedPlatforms]);
-
-  // Platform Multi-Select Handlers
-  const handleTogglePlatform = (id: string) => {
+  // Platform Filter Toggle
+  const handleTogglePlatform = (platform: string) => {
     setSelectedPlatforms((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
     );
   };
 
-  const handleSelectAllPlatforms = () => {
-    setSelectedPlatforms(SUPPORTED_PLATFORMS.map((p) => p.id));
-  };
+  // Base items depending on view mode
+  const currentBaseMedia = useMemo(() => {
+    if (selectedAlbum) return albumDetailItems;
+    if (selectedCreator) {
+      return media.filter((m) => m.username?.toLowerCase() === selectedCreator.toLowerCase());
+    }
+    if (currentTab === 'favorites') {
+      return media.filter((m) => m.is_favorite);
+    }
+    return media;
+  }, [media, selectedAlbum, albumDetailItems, selectedCreator, currentTab]);
 
-  const handleClearPlatforms = () => {
-    setSelectedPlatforms([]);
-  };
+  // Filtered & Searched media items
+  const displayMedia = useMemo(() => {
+    let result = [...currentBaseMedia];
 
-  // Multi-Selection handlers
+    // Platform filter
+    if (selectedPlatforms.length > 0) {
+      result = result.filter((m) => selectedPlatforms.includes(m.platform?.toLowerCase()));
+    }
+
+    // Media Type filter (video vs photo)
+    if (mediaTypeFilter === 'video') {
+      result = result.filter((m) => m.files?.some((f) => f.kind === 'video' || Boolean(f.path?.endsWith('.mp4'))));
+    } else if (mediaTypeFilter === 'photo') {
+      result = result.filter((m) => m.files?.some((f) => f.kind === 'image' && !f.path?.endsWith('.mp4')));
+    }
+
+
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (m) =>
+          m.caption?.toLowerCase().includes(q) ||
+          m.username?.toLowerCase().includes(q) ||
+          m.source_url?.toLowerCase().includes(q) ||
+          m.platform?.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [currentBaseMedia, selectedPlatforms, mediaTypeFilter, searchQuery]);
+
+  // Selection handlers
   const handleToggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
-  const handleDeselectAll = () => setSelectedIds([]);
+  const handleSelectAll = () => {
+    setSelectedIds(displayMedia.map((m) => m.id));
+  };
 
-  // Single Item Handlers
-  const handleDeleteMedia = async (id: number) => {
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  // Single Item Actions
+  const handleToggleFavorite = async (id: number) => {
+    try {
+      const item = media.find((m) => m.id === id);
+      if (!item) return;
+      const res = await fetch(`${API}/media/${id}/favorite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_favorite: !item.is_favorite }),
+      });
+      if (res.ok) {
+        setMedia((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, is_favorite: !m.is_favorite } : m))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    }
+  };
+
+  const handleDeleteItem = async (id: number) => {
+    if (!confirm('Hapus media ini secara permanen dari Vault?')) return;
     try {
       const res = await fetch(`${API}/media/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMedia((prev) => prev.filter((m) => m.id !== id));
-        setAlbumDetailItems((prev) => prev.filter((m) => m.id !== id));
-        setSelectedIds((prev) => prev.filter((i) => i !== id));
+        setSelectedIds((prev) => prev.filter((item) => item !== id));
         if (lightboxItem?.id === id) setLightboxItem(null);
-        refreshData(true);
-      } else {
-        alert('Failed to delete media');
       }
     } catch (err) {
-      console.error('Delete error:', err);
+      console.error('Failed to delete media:', err);
     }
   };
 
-  const handleToggleFavorite = async (id: number) => {
-    try {
-      const res = await fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' });
-      if (res.ok) {
-        const data = await res.json();
-        setMedia((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
-        );
-        setAlbumDetailItems((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
-        );
-      }
-    } catch (err) {
-      console.error('Favorite error:', err);
-    }
-  };
-
-  // Batch Handlers
-  const handleBatchDelete = async () => {
-    if (selectedIds.length === 0) return;
-    if (confirm(`Hapus permanen ${selectedIds.length} item dari vault dan harddisk?`)) {
-      setIsBatchProcessing(true);
-      try {
-        const res = await fetch(`${API}/media/batch-delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ media_ids: selectedIds }),
-        });
-        if (res.ok) {
-          const removed = new Set(selectedIds);
-          setMedia((prev) => prev.filter((m) => !removed.has(m.id)));
-          setAlbumDetailItems((prev) => prev.filter((m) => !removed.has(m.id)));
-          setSelectedIds([]);
-          refreshData(true);
-        }
-      } catch (err) {
-        console.error('Batch delete error:', err);
-      } finally {
-        setIsBatchProcessing(false);
-      }
-    }
-  };
-
-  const handleBatchToggleFavorite = async () => {
-    if (selectedIds.length === 0) return;
-    setIsBatchProcessing(true);
-    try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
-        )
-      );
-      setSelectedIds([]);
-      await refreshData(true);
-    } catch (err) {
-      console.error('Batch favorite error:', err);
-    } finally {
-      setIsBatchProcessing(false);
-    }
-  };
-
+  // Batch Operations
   const handleBatchDownloadZip = async () => {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/media/batch-zip`, {
+      const res = await fetch(`${API}/export/zip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
@@ -421,25 +331,51 @@ export default function VaultPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `mediavault_export_${Date.now()}.zip`;
+        a.download = `mediavault-batch-${Date.now()}.zip`;
         document.body.appendChild(a);
         a.click();
         a.remove();
+        window.URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Batch zip error:', err);
+      console.error('Batch download failed:', err);
     } finally {
       setIsBatchProcessing(false);
     }
   };
 
-  const handleBatchDownloadCsv = () => {
+  const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    const idsParam = selectedIds.join(',');
-    window.location.href = `${API}/media/export/csv?ids=${idsParam}`;
+    if (!confirm(`Hapus ${selectedIds.length} item terpilih secara permanen dari Vault?`)) return;
+    setIsBatchProcessing(true);
+    try {
+      const res = await fetch(`${API}/media/batch-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_ids: selectedIds }),
+      });
+      if (res.ok) {
+        setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
+        setSelectedIds([]);
+      }
+    } catch (err) {
+      console.error('Batch delete failed:', err);
+    } finally {
+      setIsBatchProcessing(false);
+    }
   };
 
-  // Album CRUD handlers
+  const handleOpenAddToAlbum = () => {
+    setAlbumModalMode('add_to_album');
+    setIsAlbumModalOpen(true);
+  };
+
+  const handleOpenCreateAlbum = () => {
+    setEditingAlbum(null);
+    setAlbumModalMode('create_only');
+    setIsAlbumModalOpen(true);
+  };
+
   const handleCreateAlbum = async (name: string, description?: string): Promise<number | null> => {
     try {
       const res = await fetch(`${API}/albums`, {
@@ -448,12 +384,12 @@ export default function VaultPage() {
         body: JSON.stringify({ name, description }),
       });
       if (res.ok) {
-        const newAlbum = await res.json();
-        await refreshData(true);
-        return newAlbum.id;
+        const data = await res.json();
+        refreshData(false);
+        return data.id;
       }
     } catch (err) {
-      console.error('Create album error:', err);
+      console.error('Create album failed:', err);
     }
     return null;
   };
@@ -466,62 +402,13 @@ export default function VaultPage() {
         body: JSON.stringify({ name, description }),
       });
       if (res.ok) {
-        await refreshData(true);
-        if (currentView.type === 'album_detail' && currentView.albumId === albumId) {
-          setCurrentView({ type: 'album_detail', albumId, albumName: name });
-        }
+        refreshData(false);
         return true;
       }
     } catch (err) {
-      console.error('Update album error:', err);
+      console.error('Update album failed:', err);
     }
     return false;
-  };
-
-  const handleDeleteAlbum = async (albumId: number, albumName: string) => {
-    if (!window.confirm(`Are you sure you want to delete the album "${albumName}"?\n(Your downloaded media files will remain safely in the vault)`)) {
-      return;
-    }
-    try {
-      const res = await fetch(`${API}/albums/${albumId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        await refreshData(true);
-        if (currentView.type === 'album_detail' && currentView.albumId === albumId) {
-          setCurrentView({ type: 'albums_list' });
-        }
-      }
-    } catch (err) {
-      console.error('Delete album error:', err);
-    }
-  };
-
-  const handleRemoveFromAlbumBatch = async () => {
-    if (currentView.type !== 'album_detail' || selectedIds.length === 0) return;
-    if (!window.confirm(`Remove ${selectedIds.length} item(s) from "${currentView.albumName}"?`)) {
-      return;
-    }
-    try {
-      const res = await fetch(`${API}/albums/${currentView.albumId}/items`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ media_ids: selectedIds }),
-      });
-      if (res.ok) {
-        setSelectedIds([]);
-        await refreshData(true);
-        // Refresh album items
-        fetch(`${API}/albums/${currentView.albumId}`)
-          .then((r) => r.json())
-          .then((data) => {
-            if (data?.items) setAlbumDetailItems(data.items);
-          })
-          .catch(() => {});
-      }
-    } catch (err) {
-      console.error('Remove items from album error:', err);
-    }
   };
 
   const handleAddItemsToAlbum = async (albumId: number, mediaIds: number[]): Promise<boolean> => {
@@ -532,497 +419,248 @@ export default function VaultPage() {
         body: JSON.stringify({ media_ids: mediaIds }),
       });
       if (res.ok) {
-        setSelectedIds([]);
-        await refreshData(true);
+        refreshData(false);
+        if (selectedAlbum?.id === albumId) fetchAlbumDetail(albumId);
         return true;
       }
     } catch (err) {
-      console.error('Add items to album error:', err);
+      console.error('Add items to album failed:', err);
     }
     return false;
   };
 
-  const activeJobsCount = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
+  // Statistics for Sidebar Counters
 
-  // Find active album detail record if in album_detail view
-  const currentAlbumRecord = currentView.type === 'album_detail'
-    ? albums.find((a) => a.id === currentView.albumId)
-    : null;
+  const sidebarStats = useMemo(() => {
+    return {
+      totalMedia: media.length,
+      totalAlbums: albums.length,
+      totalCreators: creatorsList.length,
+      totalFavorites: media.filter((m) => m.is_favorite).length,
+      storageHumanSize: storageStats?.human_size || '0 MB',
+      totalBytes: storageStats?.total_bytes || 0,
+    };
+  }, [media, albums, creatorsList, storageStats]);
+
 
   return (
     <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
-      {/* Top App Bar */}
-      <Navbar
+      {/* 1. Google Photos Left Navigation Sidebar */}
+      <GooglePhotosSidebar
+        currentTab={currentTab}
+        onTabChange={(tab) => {
+          setCurrentTab(tab);
+          setSelectedCreator(null);
+          setSelectedAlbum(null);
+          setSelectedIds([]);
+        }}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        stats={sidebarStats}
         backendStatus={backendStatus}
-        mediaCount={media.length}
-        activeJobsCount={activeJobsCount}
-        queueStats={jobStats}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
-        onRefresh={() => refreshData(true)}
-        isRefreshing={isRefreshing}
       />
 
-      {/* Main Container */}
-      <main className="flex-grow max-w-[1440px] w-full mx-auto px-4 sm:px-6 md:px-8 py-8 flex flex-col gap-8">
-        
-        {/* Vault Navigation Bar & Global Export Tools */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 glass-panel rounded-2xl shadow-sm">
-          
-          {/* Sub-Navigation Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            
-            {/* All Media Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView({ type: 'timeline' });
-                setSelectedIds([]);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                currentView.type === 'timeline'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <IconLayers className="w-4 h-4" />
-              <span>All Media</span>
-              <span className={`text-[10px] font-mono ${currentView.type === 'timeline' ? 'opacity-80' : 'text-slate-500'}`}>
-                ({media.length})
-              </span>
-            </button>
+      {/* Main Viewport Container (Offset dynamically by sidebar width) */}
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          isSidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-64'
+        }`}
+      >
+        {/* 2. Google Photos Top Universal Omnibar & Contextual Action Bar */}
+        <GooglePhotosTopBar
+          onToggleMobileMenu={() => setIsMobileSidebarOpen(true)}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          mediaTypeFilter={mediaTypeFilter}
+          onMediaTypeChange={setMediaTypeFilter}
+          selectedCount={selectedIds.length}
+          totalCount={displayMedia.length}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onAddToAlbum={handleOpenAddToAlbum}
+          onBatchDownloadZip={handleBatchDownloadZip}
+          onBatchDelete={handleBatchDelete}
+          isBatchProcessing={isBatchProcessing}
+        />
 
-            {/* Creators Hub Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView({ type: 'creators_list' });
-                setSelectedIds([]);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                currentView.type === 'creators_list' || currentView.type === 'creator_detail'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <IconUsers className="w-4 h-4" />
-              <span>Creators Hub</span>
-              <span className={`text-[10px] font-mono ${currentView.type === 'creators_list' ? 'opacity-80' : 'text-slate-500'}`}>
-                ({creatorsList.length || creators.length})
-              </span>
-            </button>
 
-            {/* Albums Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView({ type: 'albums_list' });
-                setSelectedIds([]);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                currentView.type === 'albums_list' || currentView.type === 'album_detail'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <IconFolder className="w-4 h-4" />
-              <span>Albums</span>
-              <span className={`text-[10px] font-mono ${currentView.type === 'albums_list' ? 'opacity-80' : 'text-slate-500'}`}>
-                ({albums.length})
-              </span>
-            </button>
-
-            {/* Favorites Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentView({ type: 'favorites' });
-                setSelectedIds([]);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                currentView.type === 'favorites'
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              <IconStar className="w-4 h-4 text-amber-500" />
-              <span>Favorites</span>
-              <span className={`text-[10px] font-mono ${currentView.type === 'favorites' ? 'opacity-80' : 'text-slate-500'}`}>
-                ({favoritesCount})
-              </span>
-            </button>
-
-          </div>
-
-          {/* Export Vault Dropdown Menu */}
-          <div className="relative flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl glass-panel text-slate-800 hover:text-indigo-600 text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
-            >
-              <IconDownload className="w-4 h-4 text-indigo-600" />
-              <span>Export Vault</span>
-              <span className="text-[10px]">▼</span>
-            </button>
-
-            {isExportMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setIsExportMenuOpen(false)}
-                />
-                <div className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl glass-panel bg-white/95 shadow-xl p-1.5 z-30 flex flex-col gap-1">
-                  
-                  {/* Export Full ZIP */}
-                  <a
-                    href={`${API}/media/export/zip`}
-                    download
-                    onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
-                  >
-                    <IconFolderZip className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <div className="flex flex-col">
-                      <span>Full Backup (ZIP)</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Media files + metadata</span>
-                    </div>
-                  </a>
-
-                  {/* Export Metadata CSV */}
-                  <a
-                    href={`${API}/media/export/csv`}
-                    download
-                    onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
-                  >
-                    <IconFileText className="w-4 h-4 text-sky-600 shrink-0" />
-                    <div className="flex flex-col">
-                      <span>Metadata CSV</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Excel compatible</span>
-                    </div>
-                  </a>
-
-                  {/* Export Metadata JSON */}
-                  <a
-                    href={`${API}/media/export/json`}
-                    download
-                    onClick={() => setIsExportMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white transition-colors"
-                  >
-                    <IconSparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                    <div className="flex flex-col">
-                      <span>Metadata JSON</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Full raw records</span>
-                    </div>
-                  </a>
-
+        {/* 3. Main Dynamic Content View */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {/* VIEW: Creators Hub Tab */}
+          {currentTab === 'explore' && !selectedCreator && (
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                    Koleksi Kreator & Akun
+                  </h1>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Temukan dan jelajahi media berdasarkan kreator yang telah Anda arsipkan
+                  </span>
                 </div>
-              </>
-            )}
-          </div>
-
-        </div>
-
-        {/* View Router */}
-        {currentView.type === 'creators_list' ? (
-          /* Creators Hub Grid */
-          <CreatorsHub
-            creators={creatorsList}
-            onSelectCreator={(username) => {
-              setCurrentView({ type: 'creator_detail', username });
-            }}
-          />
-        ) : currentView.type === 'albums_list' ? (
-          /* Albums List Hub */
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Albums</h1>
-                <p className="text-xs text-slate-500 font-normal">
-                  Custom collections and categorized media
-                </p>
+                <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
+                  {creatorsList.length} Kreator
+                </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingAlbum(null);
-                    setAlbumModalMode('create_only');
-                    setIsAlbumModalOpen(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-sm transition-all cursor-pointer"
-                >
-                  <IconFolderPlus className="w-4 h-4" />
-                  <span>New Album</span>
-                </button>
-              </div>
+              <CreatorsHub
+                creators={creatorsList}
+                loading={false}
+                onSelectCreator={(username) => setSelectedCreator(username)}
+              />
             </div>
+          )}
 
-            {albums.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-14 rounded-2xl glass-panel text-center">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-                  <IconFolder className="w-6 h-6" />
+          {/* VIEW: Custom Albums Tab */}
+          {currentTab === 'albums' && !selectedAlbum && (
+            <div className="flex flex-col gap-6">
+              {/* Header & Create Button */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                    Album & Koleksi
+                  </h1>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Kelola dan kelompokkan media vault Anda ke dalam album kustom
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900">No albums created yet</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Organize your media into albums to quickly categorize your downloads.
-                </p>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingAlbum(null);
-                    setAlbumModalMode('create_only');
-                    setIsAlbumModalOpen(true);
-                  }}
-                  className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all cursor-pointer"
+                  onClick={handleOpenCreateAlbum}
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
                 >
                   <IconFolderPlus className="w-4 h-4" />
-                  <span>Create First Album</span>
+                  <span>Buat Album Baru</span>
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                {albums.map((a) => (
+
+              {/* Album Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {/* Create New Album Tile Card */}
+                <button
+                  type="button"
+                  onClick={handleOpenCreateAlbum}
+                  className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 transition-all cursor-pointer aspect-square shadow-2xs"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-xs">
+                    <IconFolderPlus className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-extrabold text-slate-800 group-hover:text-indigo-600">
+                    Album Baru
+                  </span>
+                </button>
+
+                {/* Album Items */}
+                {albums.map((album) => (
                   <div
-                    key={a.id}
-                    onClick={() =>
-                      setCurrentView({
-                        type: 'album_detail',
-                        albumId: a.id,
-                        albumName: a.name,
-                      })
-                    }
-                    className="group relative rounded-2xl glass-panel hover:bg-white/80 hover:shadow-xl hover:-translate-y-1 p-3.5 flex flex-col gap-3 cursor-pointer overflow-hidden transition-all"
+                    key={album.id}
+                    onClick={() => setSelectedAlbum(album)}
+                    className="group relative rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-400 p-2.5 flex flex-col gap-2 transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md aspect-square overflow-hidden"
                   >
-                    {/* Cover Thumbnail */}
-                    <div className="relative aspect-video w-full rounded-xl bg-slate-900 overflow-hidden flex items-center justify-center text-slate-400">
-                      {a.cover_file_url ? (
+                    {/* Stacked Cover Image Frame */}
+                    <div className="w-full flex-1 rounded-xl overflow-hidden bg-slate-100 relative">
+                      {album.cover_file_url ? (
                         <img
-                          src={a.cover_file_url}
-                          alt={a.name}
+                          src={
+                            album.cover_file_url.startsWith('http') || album.cover_file_url.startsWith('/api')
+                              ? album.cover_file_url
+                              : `/media-files/${album.cover_file_url}`
+                          }
+                          alt={album.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <IconFolder className="w-10 h-10 text-slate-400" />
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <IconLayers className="w-8 h-8" />
+                        </div>
                       )}
-                      
-                      <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-900/80 text-white border border-white/10">
-                        {a.items_count} items
-                      </span>
 
-                      {/* Top Right Action Overlay (Edit & Delete) */}
-                      <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingAlbum({ id: a.id, name: a.name, description: a.description || undefined });
-                            setAlbumModalMode('edit');
-                            setIsAlbumModalOpen(true);
-                          }}
-                          className="w-7 h-7 rounded-lg bg-white/95 text-slate-700 hover:text-indigo-600 flex items-center justify-center shadow-xs transition-all cursor-pointer hover:scale-105"
-                          title="Edit Album"
-                        >
-                          <IconPencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAlbum(a.id, a.name);
-                          }}
-                          className="w-7 h-7 rounded-lg bg-white/95 text-slate-700 hover:text-rose-600 flex items-center justify-center shadow-xs transition-all cursor-pointer hover:scale-105"
-                          title="Delete Album"
-                        >
-                          <IconTrash className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      
+                      {/* Count Badge */}
+                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white font-mono text-[10px] font-bold">
+                        {album.items_count} media
+                      </span>
                     </div>
 
-                    {/* Album Info */}
-                    <div className="flex flex-col px-0.5">
-                      <span className="text-sm font-bold text-slate-900">{a.name}</span>
-                      {a.description && (
-                        <span className="text-xs text-slate-400 truncate mt-0.5">{a.description}</span>
+                    {/* Album Meta */}
+                    <div className="flex flex-col px-1">
+                      <span className="text-xs font-bold text-slate-900 truncate">
+                        {album.name}
+                      </span>
+                      {album.description && (
+                        <span className="text-[10px] text-slate-400 truncate">
+                          {album.description}
+                        </span>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        ) : (
-          /* Gallery View with Album Header if in Album Detail */
-          <div className="flex flex-col gap-5">
-            
-            {/* Album Detail Header Banner with Edit & Delete Controls */}
-            {currentView.type === 'album_detail' && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-4 sm:p-5 rounded-2xl shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
-                    <IconFolder className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-lg font-bold text-slate-900 truncate">
-                        {currentView.albumName}
-                      </h1>
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-indigo-100/80 text-indigo-700">
-                        {albumDetailItems.length} items
-                      </span>
-                    </div>
-                    {currentAlbumRecord?.description && (
-                      <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
-                        {currentAlbumRecord.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
+            </div>
+          )}
 
-                {/* Album Management Action Buttons */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingAlbum({
-                        id: currentView.albumId,
-                        name: currentView.albumName,
-                        description: currentAlbumRecord?.description || undefined,
-                      });
-                      setAlbumModalMode('edit');
-                      setIsAlbumModalOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 glass-panel hover:bg-white/80 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <IconPencil className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Edit Album</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteAlbum(currentView.albumId, currentView.albumName)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <IconTrash className="w-3.5 h-3.5" />
-                    <span>Delete Album</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
+          {/* VIEW: Photos / Date Stream (or filtered Creator/Album view) */}
+          {(currentTab === 'photos' || currentTab === 'favorites' || selectedCreator || selectedAlbum) && (
             <MediaGallery
               media={displayMedia}
               onOpenLightbox={(item) => setLightboxItem(item)}
-              onDeleteItem={handleDeleteMedia}
+              onDeleteItem={handleDeleteItem}
               onToggleFavorite={handleToggleFavorite}
-              onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
-              onToggleSidebar={() => setIsSidebarOpen(true)}
-              activePlatformsCount={selectedPlatforms.length}
               viewTitle={
-                currentView.type === 'album_detail'
-                  ? `📁 ${currentView.albumName}`
-                  : currentView.type === 'creator_detail'
-                  ? `👤 @${currentView.username}'s Archive`
-                  : currentView.type === 'favorites'
-                  ? '⭐ Starred Favorites'
-                  : currentView.type === 'type_filter'
-                  ? `🎬 ${currentView.kind.toUpperCase()} Archive`
-                  : selectedPlatforms.length > 0
-                  ? `Filtered (${selectedPlatforms.join(', ')})`
-                  : 'Media Vault'
+                selectedAlbum
+                  ? `Album: ${selectedAlbum.name}`
+                  : selectedCreator
+                  ? `Arsip Kreator: @${selectedCreator}`
+                  : currentTab === 'favorites'
+                  ? 'Media Favorit & Berbintang'
+                  : undefined
               }
               viewSubtitle={
-                selectedPlatforms.length > 0
-                  ? `Showing media from ${selectedPlatforms.join(', ')}`
-                  : currentView.type === 'album_detail'
-                  ? 'Custom Album Collection'
-                  : currentView.type === 'creator_detail'
-                  ? 'Media downloaded from this author'
+                selectedAlbum
+                  ? selectedAlbum.description || 'Koleksi album pengguna'
+                  : selectedCreator
+                  ? 'Semua video dan foto dari akun ini'
                   : undefined
               }
               onBackToTimeline={
-                currentView.type === 'creator_detail'
-                  ? () => setCurrentView({ type: 'creators_list' })
-                  : currentView.type === 'album_detail'
-                  ? () => setCurrentView({ type: 'albums_list' })
-                  : currentView.type !== 'timeline'
-                  ? () => setCurrentView({ type: 'timeline' })
+                selectedAlbum || selectedCreator
+                  ? () => {
+                      setSelectedAlbum(null);
+                      setSelectedCreator(null);
+                    }
                   : undefined
               }
-              error={mediaError}
             />
-          </div>
-        )}
+          )}
+        </main>
+      </div>
 
-      </main>
+      {/* 4. Lightbox Modal */}
+      {lightboxItem && (
+        <MediaLightboxModal
+          item={lightboxItem}
+          onClose={() => setLightboxItem(null)}
+          onDelete={handleDeleteItem}
+          onSelectCreator={(username) => {
+            setSelectedCreator(username);
+            setCurrentTab('photos');
+          }}
+        />
+      )}
 
-      {/* Footer (Shared Component) */}
-      <footer className="glass-panel w-full py-6 mt-auto border-t-0 shadow-[0_-8px_32px_0_rgba(31,38,135,0.07)]">
-        <div className="flex flex-col md:flex-row justify-between items-center px-6 max-w-[1440px] mx-auto gap-4">
-          <div className="font-medium text-xs tracking-wider text-slate-600 uppercase">
-            © 2024 MediaVault Studio. All rights reserved.
-          </div>
-          <nav className="flex gap-6">
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">API Docs</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Help Center</a>
-          </nav>
-        </div>
-      </footer>
 
-      {/* Slide-Over Drawer Panel */}
-      <VaultSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        currentView={currentView}
-        onSelectView={(view) => {
-          setCurrentView(view);
-          setSelectedIds([]);
-        }}
-        totalMediaCount={media.length}
-        favoritesCount={favoritesCount}
-        albums={albums}
-        creators={creators}
-        platformCounts={platformCounts}
-        selectedPlatforms={selectedPlatforms}
-        onTogglePlatform={handleTogglePlatform}
-        onSelectAllPlatforms={handleSelectAllPlatforms}
-        onClearPlatforms={handleClearPlatforms}
-        onOpenCreateAlbum={() => {
-          setEditingAlbum(null);
-          setAlbumModalMode('create_only');
-          setIsAlbumModalOpen(true);
-        }}
-      />
-
-      {/* Floating Bottom Action Bar */}
-      <BatchActionBar
-        selectedIds={selectedIds}
-        onDeselectAll={handleDeselectAll}
-        onAddToAlbum={() => {
-          setAlbumModalMode('add_to_album');
-          setIsAlbumModalOpen(true);
-        }}
-        onRemoveFromAlbum={currentView.type === 'album_detail' ? handleRemoveFromAlbumBatch : undefined}
-        onToggleFavoriteBatch={handleBatchToggleFavorite}
-        onDownloadZipBatch={handleBatchDownloadZip}
-        onDownloadCsvBatch={handleBatchDownloadCsv}
-        onDeleteBatch={handleBatchDelete}
-        isProcessing={isBatchProcessing}
-      />
-
-      {/* Create / Edit / Add to Album Modal */}
+      {/* 5. Album Creation / Add Modal */}
       <AlbumModal
         isOpen={isAlbumModalOpen}
-        onClose={() => {
-          setIsAlbumModalOpen(false);
-          setEditingAlbum(null);
-        }}
+        onClose={() => setIsAlbumModalOpen(false)}
         mode={albumModalMode}
         albums={albums}
         selectedMediaIds={selectedIds}
@@ -1032,32 +670,30 @@ export default function VaultPage() {
         onAddItemsToAlbum={handleAddItemsToAlbum}
       />
 
-      {/* Lightbox Modal */}
-      <MediaLightboxModal
-        item={lightboxItem}
-        onClose={() => setLightboxItem(null)}
-        onDelete={handleDeleteMedia}
-        onSelectCreator={(username) => setCurrentView({ type: 'creator_detail', username })}
-      />
 
-      {/* Adapter Health Drawer */}
-      <AdapterHealthDrawer
-        isOpen={isAdaptersDrawerOpen}
-        onClose={() => setIsAdaptersDrawerOpen(false)}
-      />
-
-      {/* Archive Import Modal */}
+      {/* 6. Archive Ingestion Modal */}
       <ArchiveImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => refreshData(true)}
       />
 
-      {/* Global Job Completion Toast Notification */}
-      <JobNotificationToast
-        notice={completedNotice}
-        onClose={() => setCompletedNotice(null)}
+      {/* 7. Adapters & Health Drawer */}
+      <AdapterHealthDrawer
+        isOpen={isAdaptersDrawerOpen}
+        onClose={() => setIsAdaptersDrawerOpen(false)}
       />
+
+
+      {/* 8. Toast Notifications */}
+      {completedNotice && (
+        <JobNotificationToast
+          notice={completedNotice}
+          onClose={() => setCompletedNotice(null)}
+        />
+      )}
+
+
     </div>
   );
 }

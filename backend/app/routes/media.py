@@ -75,8 +75,44 @@ def list_media(
         return results
 
 
+@router.get("/storage")
+def get_storage_stats():
+    """Return total media files count, total bytes used on disk, and formatted human size."""
+    settings = get_settings()
+    media_root = Path(settings.media_root).resolve()
+    if not media_root.is_absolute():
+        media_root = (ROOT / media_root).resolve()
+
+    total_bytes = 0
+    total_files = 0
+
+    if media_root.is_dir():
+        for p in media_root.rglob("*"):
+            if p.is_file() and not p.name.startswith("."):
+                try:
+                    total_bytes += p.stat().st_size
+                    total_files += 1
+                except Exception:
+                    pass
+
+    # Human-readable string
+    if total_bytes < 1024 * 1024:
+        human_size = f"{total_bytes / 1024:.1f} KB"
+    elif total_bytes < 1024 * 1024 * 1024:
+        human_size = f"{total_bytes / (1024 * 1024):.1f} MB"
+    else:
+        human_size = f"{total_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+    return {
+        "total_bytes": total_bytes,
+        "total_files": total_files,
+        "human_size": human_size,
+    }
+
+
 @router.get("/files/{file_id}")
 def serve_media_file(file_id: int):
+
     factory = get_session_factory()
     with factory() as session:
         mf = session.get(MediaFile, file_id)
