@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
@@ -344,6 +344,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4 group-focus-within:text-indigo-500 transition-colors" />
             <input
               type="text"
+              aria-label="Search tasks"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Search for all Tasks..."
@@ -353,7 +354,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
               <button
                 type="button"
                 onClick={() => setSearchKeyword('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-mono"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 text-xs font-mono"
               >
                 ✕
               </button>
@@ -368,7 +369,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
             >
               <IconFilter className="w-4 h-4 text-slate-700" />
               <span>Filters</span>
-              <span className="text-[10px]">▾</span>
+              <span className="text-[10px]">▼</span>
             </button>
 
             {isFilterDropdownOpen && (
@@ -503,7 +504,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   <button
                     type="button"
                     onClick={() => onDeleteJob(job.id)}
-                    className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded-md transition-all active:scale-95 cursor-pointer"
+                    className="text-slate-500 hover:text-red-500 hover:bg-red-50 p-1 rounded-md transition-all active:scale-95 cursor-pointer"
                     title="Remove task"
                   >
                     <IconClose className="w-4 h-4" />
@@ -523,7 +524,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl glass-panel text-xs text-slate-700 font-medium shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
             <span>
-              Showing <strong className="font-bold text-slate-900">{startIndex}–{endIndex}</strong> of <strong className="font-bold text-slate-900">{totalItems}</strong> tasks
+              Showing <strong className="font-bold text-slate-900">{startIndex}-{endIndex}</strong> of <strong className="font-bold text-slate-900">{totalItems}</strong> tasks
             </span>
           </div>
 
@@ -548,7 +549,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                     return (
                       <span
                         key={`ellipsis-${idx}`}
-                        className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-bold text-slate-400 select-none font-mono"
+                        className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-bold text-slate-500 select-none font-mono"
                       >
                         •••
                       </span>

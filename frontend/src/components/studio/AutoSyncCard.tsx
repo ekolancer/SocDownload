@@ -103,9 +103,9 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
             `✓ Sync selesai: +${r.enqueued_count} terdownload, ${r.skipped_dup_count || 0} duplikat di-skip`
           );
         } else if (r.status === 'session_expired') {
-          setSyncFeedback('⚠️ Session expired. Silakan update cookie Instagram di panel adapters.');
+          setSyncFeedback('Session expired. Silakan update cookie Instagram di panel adapters.');
         } else {
-          setSyncFeedback(`⚠️ Info: ${r.status}`);
+          setSyncFeedback(`Info: ${r.status}`);
         }
         if (data.config) {
           setConfig(data.config);
@@ -231,8 +231,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
               type="button"
               onClick={handleTriggerSync}
               disabled={syncing || !isEnabled}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white border border-white/80 hover:border-white shadow-2xs hover:shadow-xs active:scale-95 text-indigo-700 font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              title="Jalankan sinkronisasi sekarang"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/70 hover:bg-white border border-white/80 hover:border-white shadow-2xs hover:shadow-xs active:scale-95 text-indigo-700 font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" aria-label="Jalankan sinkronisasi sekarang" title="Jalankan sinkronisasi sekarang"
             >
               <IconRefresh className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-600' : ''}`} />
               <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Now'}</span>

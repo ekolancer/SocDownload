@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -136,7 +136,7 @@ export function GooglePhotosSidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white/80 border border-transparent hover:border-white/60 flex items-center justify-center lg:hidden cursor-pointer"
+              className="w-8 h-8 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white/80 border border-transparent hover:border-white/60 flex items-center justify-center lg:hidden cursor-pointer"
             >
               <IconClose className="w-4 h-4" />
             </button>
@@ -199,8 +199,7 @@ export function GooglePhotosSidebar({
             {/* Import Archive Button */}
             <button
               type="button"
-              onClick={onOpenImport}
-              title="Import JSON/HTML Export"
+              onClick={onOpenImport} aria-label="Import JSON/HTML Export" title="Import JSON/HTML Export"
               className={`flex items-center rounded-2xl glass-panel hover:bg-white/90 text-slate-700 hover:text-indigo-700 transition-all cursor-pointer shadow-2xs ${
                 isCollapsed && !isMobileOpen
                   ? 'justify-center p-3 h-12 w-12 mx-auto'
@@ -216,8 +215,7 @@ export function GooglePhotosSidebar({
             {/* Adapters & Engine Status */}
             <button
               type="button"
-              onClick={onOpenAdapters}
-              title="Platform Adapters"
+              onClick={onOpenAdapters} aria-label="Platform Adapters" title="Platform Adapters"
               className={`flex items-center rounded-2xl glass-panel hover:bg-white/90 text-slate-700 hover:text-purple-700 transition-all cursor-pointer shadow-2xs ${
                 isCollapsed && !isMobileOpen
                   ? 'justify-center p-3 h-12 w-12 mx-auto'
@@ -296,7 +294,8 @@ export function GooglePhotosSidebar({
             type="button"
             onClick={onToggleCollapse}
             title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            className="hidden lg:flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors cursor-pointer w-full"
+            aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            className="hidden lg:flex items-center justify-center p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white/80 transition-colors cursor-pointer w-full"
           >
             {isCollapsed ? (
               <IconChevronRight className="w-4 h-4" />

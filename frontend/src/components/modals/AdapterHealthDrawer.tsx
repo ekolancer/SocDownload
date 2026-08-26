@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -96,7 +96,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
                 <h3 className="text-base font-extrabold text-slate-900">
                   Platform Adapters
                 </h3>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-500 font-mono">
                   Engine & Ingestion Health Check
                 </span>
               </div>
@@ -104,7 +104,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <IconClose className="w-4 h-4" />
             </button>
@@ -120,7 +120,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
           {/* Adapters List: M3 Outlined List Items */}
           <div className="flex flex-col gap-2.5">
             {loading && adapters.length === 0 ? (
-              <div className="py-8 text-center text-xs font-mono text-slate-400">
+              <div className="py-8 text-center text-xs font-mono text-slate-500">
                 Checking adapter engines...
               </div>
             ) : (
@@ -137,7 +137,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
                       <span className="text-xs font-extrabold text-slate-800 capitalize">
                         {ad.platform}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-slate-500">
                         Engine: {ad.engine}
                       </span>
                     </div>

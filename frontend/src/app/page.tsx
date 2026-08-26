@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
@@ -216,7 +216,7 @@ export default function StudioPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="stitch-bg min-h-[100dvh] text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
       {/* Top App Header (Stitch Comp) */}
       <Navbar
@@ -333,7 +333,7 @@ export default function StudioPage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 font-mono">
+                        <div className="w-full h-full flex items-center justify-center text-xs text-slate-500 font-mono">
                           No preview
                         </div>
                       )}

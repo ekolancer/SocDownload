@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -243,6 +243,7 @@ export function DownloadStudio({
             <input
               type="url"
               required
+              aria-label="Media URL"
               disabled={isBusy}
               value={url}
               onChange={(e) => {
@@ -265,7 +266,7 @@ export function DownloadStudio({
               <button
                 type="button"
                 onClick={() => setUrl('')}
-                className="w-5 h-5 rounded-full text-slate-400 hover:text-slate-700 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                className="w-5 h-5 rounded-full text-slate-500 hover:text-slate-700 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
                 title="Clear input"
               >
                 <IconClose className="w-3.5 h-3.5" />
@@ -387,7 +388,7 @@ export function DownloadStudio({
         {/* Optional Error Alert */}
         {errorMsg && (
           <div className="w-full max-w-3xl px-4 py-2 rounded-xl bg-rose-50/90 border border-rose-200 text-xs font-semibold text-rose-700 text-left mt-2 animate-fade-in shadow-2xs">
-            ⚠️ {errorMsg}
+            ⚠ï¸ {errorMsg}
           </div>
         )}
 

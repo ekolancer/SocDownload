@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -222,7 +222,7 @@ export function MediaGallery({
 
   if (media.length === 0) {
     return (
-      <div className="w-full flex flex-col items-center justify-center p-12 sm:p-16 rounded-[28px] bg-white/70 border border-slate-200/80 shadow-sm text-center">
+      <div className="w-full flex flex-col items-center justify-center p-12 sm:p-16 rounded-3xl bg-white/70 border border-slate-200/80 shadow-sm text-center">
         <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 text-indigo-500 flex items-center justify-center mb-4 shadow-xs">
           <IconPhoto className="w-8 h-8" />
         </div>
@@ -293,6 +293,7 @@ export function MediaGallery({
                         : 'border-slate-300 hover:border-blue-500 bg-white/80'
                     }`}
                     title={isGroupAllSelected ? 'Batal pilih tanggal ini' : 'Pilih semua media tanggal ini'}
+                    aria-label={isGroupAllSelected ? 'Batal pilih tanggal ini' : 'Pilih semua media tanggal ini'}
                   >
                     {isGroupAllSelected && <IconCheck className="w-3.5 h-3.5 stroke-[3]" />}
                     {isGroupPartiallySelected && <span className="w-2 h-2 rounded-full bg-blue-600" />}
@@ -304,7 +305,7 @@ export function MediaGallery({
                 </div>
 
 
-                <span className="text-[11px] font-mono font-semibold text-slate-400">
+                <span className="text-[11px] font-mono font-semibold text-slate-500">
                   {group.items.length} item
                 </span>
               </div>
@@ -376,8 +377,7 @@ export function MediaGallery({
                             isSelected
                               ? 'bg-blue-600 border-white text-white scale-110'
                               : 'bg-black/30 border-white text-white hover:bg-black/50 backdrop-blur-xs'
-                          }`}
-                          title="Pilih item"
+                          }`} aria-label="Pilih item" title="Pilih item"
                         >
                           {isSelected && <IconCheck className="w-3.5 h-3.5 stroke-[3]" />}
                         </button>
@@ -434,6 +434,7 @@ export function MediaGallery({
                               : 'bg-black/30 text-white hover:bg-black/50 opacity-0 group-hover:opacity-100'
                           }`}
                           title={item.is_favorite ? 'Hapus dari Favorit' : 'Tandai Favorit'}
+                          aria-label={item.is_favorite ? 'Hapus dari Favorit' : 'Tandai Favorit'}
                         >
                           {item.is_favorite ? (
                             <IconStarFilled className="w-3.5 h-3.5" />
@@ -484,7 +485,7 @@ export function MediaGallery({
             {visiblePages.map((page, idx) => {
               if (page === '...') {
                 return (
-                  <span key={`ellipsis-${idx}`} className="px-2 font-mono text-xs text-slate-400">
+                  <span key={`ellipsis-${idx}`} className="px-2 font-mono text-xs text-slate-500">
                     ...
                   </span>
                 );

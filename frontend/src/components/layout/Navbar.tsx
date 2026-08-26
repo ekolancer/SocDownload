@@ -103,8 +103,7 @@ export function Navbar({
           <button
             type="button"
             onClick={onOpenAdapters}
-            className="group flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-white/50 hover:bg-white/80 border border-white/60 hover:border-white shadow-2xs hover:shadow-md transition-all duration-300 active:scale-95 text-slate-700 cursor-pointer"
-            title="Inspect Platform Adapters & Engine Status"
+            className="group flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-white/50 hover:bg-white/80 border border-white/60 hover:border-white shadow-2xs hover:shadow-md transition-all duration-300 active:scale-95 text-slate-700 cursor-pointer" aria-label="Inspect Platform Adapters & Engine Status" title="Inspect Platform Adapters & Engine Status"
           >
             <IconAdapter className="w-4 h-4 text-slate-700 group-hover:text-indigo-600 transition-colors" />
             <span className="hidden md:inline text-xs font-bold text-slate-700 group-hover:text-slate-900 transition-colors">

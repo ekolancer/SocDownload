@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -174,8 +174,7 @@ export function JobNotificationToast({
             <button
               type="button"
               onClick={handleDismiss}
-              className="w-6 h-6 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
-              title="Dismiss"
+              className="w-6 h-6 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer" aria-label="Dismiss" title="Dismiss"
             >
               <IconClose className="w-3.5 h-3.5" />
             </button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -115,10 +115,10 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
             animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
             exit={{ opacity: 0, scale: 0.95, y: 16, filter: 'blur(6px)' }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-            className="relative w-full max-w-lg p-1.5 sm:p-2 rounded-[28px] bg-white/70 border border-white/80 shadow-[0_24px_60px_rgba(15,23,42,0.2),0_4px_16px_rgba(99,102,241,0.08)] backdrop-blur-2xl z-10 select-none my-auto"
+            className="relative w-full max-w-lg p-1.5 sm:p-2 rounded-3xl bg-white/70 border border-white/80 shadow-[0_24px_60px_rgba(15,23,42,0.2),0_4px_16px_rgba(99,102,241,0.08)] backdrop-blur-2xl z-10 select-none my-auto"
           >
             {/* Inner Core Container */}
-            <div className="relative rounded-[22px] bg-white/85 border border-white/60 p-5 sm:p-7 flex flex-col gap-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9)]">
+            <div className="relative rounded-3xl bg-white/85 border border-white/60 p-5 sm:p-7 flex flex-col gap-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9)]">
               
               {/* Header Telemetry */}
               <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-slate-200/70">
@@ -144,8 +144,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 border border-transparent hover:border-slate-200/60 flex items-center justify-center shrink-0 transition-all duration-200 active:scale-95 cursor-pointer"
-                  title="Close Modal"
+                  className="w-8 h-8 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100/80 border border-transparent hover:border-slate-200/60 flex items-center justify-center shrink-0 transition-all duration-200 active:scale-95 cursor-pointer" aria-label="Close Modal" title="Close Modal"
                 >
                   <IconClose className="w-4 h-4" />
                 </button>
@@ -171,6 +170,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                 <input
                   ref={fileInputRef}
                   type="file"
+                  aria-label="Choose archive file"
                   accept=".json,.html,.htm,.txt"
                   onChange={handleFileChange}
                   className="hidden"

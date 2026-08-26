@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
@@ -444,7 +444,7 @@ export default function VaultPage() {
 
 
   return (
-    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="stitch-bg min-h-[100dvh] text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
       {/* 1. Google Photos Left Navigation Sidebar */}
       <GooglePhotosSidebar
@@ -594,7 +594,7 @@ export default function VaultPage() {
                         {album.name}
                       </span>
                       {album.description && (
-                        <span className="text-[10px] text-slate-400 truncate">
+                        <span className="text-[10px] text-slate-500 truncate">
                           {album.description}
                         </span>
                       )}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -116,14 +116,14 @@ export function VaultSidebar({
             {/* Header with Title and Close Button */}
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-[8px] bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-xs">
                   <IconLayers className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-extrabold text-sm text-slate-900 leading-none">
                     Vault Filters & Albums
                   </span>
-                  <span className="text-[10px] font-mono text-slate-400 mt-0.5">
+                  <span className="text-[10px] font-mono text-slate-500 mt-0.5">
                     Collections & Platforms
                   </span>
                 </div>
@@ -132,8 +132,7 @@ export function VaultSidebar({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-7 h-7 rounded-[7px] bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer"
-                title="Close Sidebar"
+                className="w-7 h-7 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all cursor-pointer" aria-label="Close Sidebar" title="Close Sidebar"
               >
                 <IconClose className="w-4 h-4" />
               </button>
@@ -143,8 +142,8 @@ export function VaultSidebar({
             <div className="flex-1 overflow-y-auto py-4 pr-1 no-scrollbar flex flex-col gap-4 text-sm">
               
               {/* 1. Core Navigation Library */}
-              <div className="flex flex-col gap-1 p-2 rounded-[18px] bg-slate-50/70 border border-slate-200/80 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono px-3 pt-1 pb-0.5">
+              <div className="flex flex-col gap-1 p-2 rounded-2xl bg-slate-50/70 border border-slate-200/80 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 font-mono px-3 pt-1 pb-0.5">
                   Library
                 </span>
 
@@ -155,7 +154,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'timeline' });
                     onClose();
                   }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-[10px] text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isTimelineActive
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-700 hover:bg-white hover:translate-x-0.5'
@@ -166,7 +165,7 @@ export function VaultSidebar({
                     <span>All Timeline</span>
                   </div>
                   <span
-                    className={`min-w-[20px] h-5 px-1.5 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                    className={`min-w-[20px] h-5 px-1.5 rounded flex items-center justify-center text-[10px] font-mono font-bold ${
                       isTimelineActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -181,7 +180,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'favorites' });
                     onClose();
                   }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-[10px] text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isFavoritesActive
                       ? 'bg-amber-500 text-white shadow-sm'
                       : 'text-slate-700 hover:bg-white hover:translate-x-0.5'
@@ -189,11 +188,11 @@ export function VaultSidebar({
                 >
                   <div className="flex items-center gap-2.5">
                     <IconStarFilled className={`w-4 h-4 shrink-0 ${isFavoritesActive ? 'text-white' : 'text-amber-500'}`} />
-                    <span>Favorites ⭐</span>
+                    <span>Favorites </span>
                   </div>
                   {favoritesCount > 0 && (
                     <span
-                      className={`min-w-[20px] h-5 px-1.5 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                      className={`min-w-[20px] h-5 px-1.5 rounded flex items-center justify-center text-[10px] font-mono font-bold ${
                         isFavoritesActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'
                       }`}
                     >
@@ -209,7 +208,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'creators_list' });
                     onClose();
                   }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-[10px] text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isCreatorsActive
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-700 hover:bg-white hover:translate-x-0.5'
@@ -220,7 +219,7 @@ export function VaultSidebar({
                     <span>Creators Hub</span>
                   </div>
                   <span
-                    className={`min-w-[20px] h-5 px-1.5 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                    className={`min-w-[20px] h-5 px-1.5 rounded flex items-center justify-center text-[10px] font-mono font-bold ${
                       isCreatorsActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -230,9 +229,9 @@ export function VaultSidebar({
               </div>
 
               {/* 2. Multi-Select Social Media Platforms Filter */}
-              <div className="flex flex-col gap-1.5 p-2.5 rounded-[18px] bg-slate-50/70 border border-slate-200/80 shadow-xs">
+              <div className="flex flex-col gap-1.5 p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 shadow-xs">
                 <div className="flex items-center justify-between px-1.5 pt-0.5 pb-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 font-mono">
                     Platforms
                   </span>
                   <div className="flex items-center gap-1">
@@ -248,7 +247,7 @@ export function VaultSidebar({
                       <button
                         type="button"
                         onClick={onSelectAllPlatforms}
-                        className="text-[10px] font-mono text-slate-400 hover:text-indigo-600 px-1 py-0.5"
+                        className="text-[10px] font-mono text-slate-500 hover:text-indigo-600 px-1 py-0.5"
                       >
                         Select All
                       </button>
@@ -267,7 +266,7 @@ export function VaultSidebar({
                         key={platform.id}
                         type="button"
                         onClick={() => onTogglePlatform(platform.id)}
-                        className={`flex items-center justify-between px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                        className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           isChecked
                             ? 'bg-indigo-50 text-indigo-950 border border-indigo-200'
                             : 'text-slate-600 hover:bg-white border border-transparent'
@@ -275,7 +274,7 @@ export function VaultSidebar({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <div
-                            className={`w-4 h-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
                               isChecked
                                 ? 'bg-indigo-600 border-indigo-600 text-white'
                                 : 'border-slate-300 bg-white'
@@ -289,7 +288,7 @@ export function VaultSidebar({
                         </div>
 
                         <span
-                          className={`min-w-[18px] h-4.5 px-1 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                          className={`min-w-[18px] h-4.5 px-1 rounded flex items-center justify-center text-[10px] font-mono font-bold ${
                             isChecked
                               ? 'bg-indigo-200/80 text-indigo-900'
                               : 'bg-slate-200 text-slate-500'
@@ -304,16 +303,15 @@ export function VaultSidebar({
               </div>
 
               {/* 3. Custom Albums */}
-              <div className="flex flex-col gap-1.5 p-2.5 rounded-[18px] bg-slate-50/70 border border-slate-200/80 shadow-xs">
+              <div className="flex flex-col gap-1.5 p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 shadow-xs">
                 <div className="flex items-center justify-between px-1.5 pt-0.5 pb-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 font-mono">
                     Albums ({albums.length})
                   </span>
                   <button
                     type="button"
                     onClick={onOpenCreateAlbum}
-                    className="w-5 h-5 rounded-[5px] text-indigo-600 hover:bg-indigo-50 border border-indigo-200 flex items-center justify-center transition-all cursor-pointer"
-                    title="Create New Album"
+                    className="w-5 h-5 rounded text-indigo-600 hover:bg-indigo-50 border border-indigo-200 flex items-center justify-center transition-all cursor-pointer" aria-label="Create New Album" title="Create New Album"
                   >
                     <IconFolderPlus className="w-3 h-3" />
                   </button>
@@ -321,7 +319,7 @@ export function VaultSidebar({
 
                 <div className="flex flex-col gap-1 max-h-40 overflow-y-auto no-scrollbar">
                   {albums.length === 0 ? (
-                    <div className="px-2 py-2 text-center text-xs text-slate-400">
+                    <div className="px-2 py-2 text-center text-xs text-slate-500">
                       <span>No albums yet</span>
                     </div>
                   ) : (
@@ -340,7 +338,7 @@ export function VaultSidebar({
                             });
                             onClose();
                           }}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-indigo-600 text-white shadow-sm font-bold'
                               : 'text-slate-700 hover:bg-white'
@@ -351,7 +349,7 @@ export function VaultSidebar({
                             <span className="truncate">{album.name}</span>
                           </div>
                           <span
-                            className={`min-w-[18px] h-4.5 px-1 rounded-[5px] flex items-center justify-center text-[10px] font-mono font-bold ${
+                            className={`min-w-[18px] h-4.5 px-1 rounded flex items-center justify-center text-[10px] font-mono font-bold ${
                               isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
                             }`}
                           >
@@ -365,8 +363,8 @@ export function VaultSidebar({
               </div>
 
               {/* 4. Media Categories */}
-              <div className="flex flex-col gap-1 p-2 rounded-[18px] bg-slate-50/70 border border-slate-200/80 shadow-xs">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 font-mono px-3 pt-1 pb-0.5">
+              <div className="flex flex-col gap-1 p-2 rounded-2xl bg-slate-50/70 border border-slate-200/80 shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 font-mono px-3 pt-1 pb-0.5">
                   Type
                 </span>
 
@@ -376,7 +374,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'type_filter', kind: 'photo' });
                     onClose();
                   }}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     currentView.type === 'type_filter' && currentView.kind === 'photo'
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'text-slate-700 hover:bg-white'
@@ -392,7 +390,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'type_filter', kind: 'video' });
                     onClose();
                   }}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     currentView.type === 'type_filter' && currentView.kind === 'video'
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'text-slate-700 hover:bg-white'
@@ -408,7 +406,7 @@ export function VaultSidebar({
                     onSelectView({ type: 'type_filter', kind: 'threads' });
                     onClose();
                   }}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     currentView.type === 'type_filter' && currentView.kind === 'threads'
                       ? 'bg-indigo-600 text-white font-bold'
                       : 'text-slate-700 hover:bg-white'

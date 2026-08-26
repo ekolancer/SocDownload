@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -120,14 +120,13 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
           exit={{ opacity: 0, scale: 0.94, y: 12 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative z-10 max-w-[95vw] max-h-[90vh] flex flex-col md:flex-row rounded-[24px] bg-white border border-slate-200 overflow-hidden shadow-2xl cursor-default"
+          className="relative z-10 max-w-[95vw] max-h-[90vh] flex flex-col md:flex-row rounded-3xl bg-white border border-slate-200 overflow-hidden shadow-2xl cursor-default"
         >
           {/* Close Button Top Right */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/50 hover:bg-black/75 md:bg-white/90 md:hover:bg-slate-100 text-white md:text-slate-700 shadow-md backdrop-blur-sm flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
-            title="Close Modal"
+            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/50 hover:bg-black/75 md:bg-white/90 md:hover:bg-slate-100 text-white md:text-slate-700 shadow-md backdrop-blur-sm flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer" aria-label="Close Modal" title="Close Modal"
           >
             <IconClose className="w-4 h-4" />
           </button>
@@ -151,7 +150,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                 />
               )
             ) : (
-              <div className="text-slate-400 font-mono text-sm p-6 text-center">
+              <div className="text-slate-500 font-mono text-sm p-6 text-center">
                 No direct preview available
               </div>
             )}
@@ -203,6 +202,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
                     onClick={handleCreatorClick}
                     className="font-extrabold text-sm text-slate-900 hover:text-indigo-600 truncate transition-colors text-left cursor-pointer group flex items-center gap-1"
                     title={`Filter vault by @${item.username}`}
+                    aria-label={`Filter vault by @${item.username}`}
                   >
                     <span>@{item.username}</span>
                     <span className="text-[10px] text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
@@ -215,7 +215,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
               </div>
 
               {/* Date */}
-              <div className="text-[11px] font-mono text-slate-400">
+              <div className="text-[11px] font-mono text-slate-500">
                 Archived on {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
               </div>
 

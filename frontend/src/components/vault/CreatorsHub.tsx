@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import {
@@ -128,9 +128,10 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
-          <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
+            aria-label="Search creators"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search creator by @username..."
@@ -140,7 +141,7 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 hover:text-slate-700 cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-500 hover:text-slate-700 cursor-pointer"
             >
               Clear
             </button>
@@ -195,11 +196,11 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
         </div>
       ) : filteredCreators.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 rounded-2xl glass-panel text-center">
-          <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center mb-3">
             <IconUsers className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-bold text-slate-800">No creators found</h3>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <p className="text-xs text-slate-500 mt-1 font-mono">
             {search ? `No creator matching "@${search}"` : 'Archive posts to see creators here'}
           </p>
         </div>
@@ -272,7 +273,7 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
                       {creator.image_count} photos • {creator.video_count} videos
                     </span>
                     {creator.last_posted_at && (
-                      <span className="text-slate-400 text-[10px]">
+                      <span className="text-slate-500 text-[10px]">
                         Last: {new Date(creator.last_posted_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}
                       </span>
                     )}
@@ -293,6 +294,7 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
                     onClick={(e) => e.stopPropagation()}
                     download
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg glass-panel hover:bg-white text-slate-700 hover:text-indigo-700 text-[11px] font-mono font-bold transition-all cursor-pointer shadow-2xs"
+                    aria-label={`Export all media from @${creator.username} as ZIP`}
                     title={`Export all media from @${creator.username} as ZIP`}
                   >
                     <IconFolderZip className="w-3.5 h-3.5 text-indigo-600" />

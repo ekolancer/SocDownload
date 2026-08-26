@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,8 +68,7 @@ export function GooglePhotosTopBar({
               <button
                 type="button"
                 onClick={onDeselectAll}
-                className="w-9 h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-white transition-colors cursor-pointer"
-                title="Batal Memilih (Esc)"
+                className="w-9 h-9 rounded-xl hover:bg-white/15 flex items-center justify-center text-white transition-colors cursor-pointer" aria-label="Batal Memilih (Esc)" title="Batal Memilih (Esc)"
               >
                 <IconClose className="w-5 h-5" />
               </button>
@@ -101,8 +100,7 @@ export function GooglePhotosTopBar({
                 type="button"
                 onClick={onAddToAlbum}
                 disabled={isBatchProcessing}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-xs font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                title="Tambah ke Album"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-xs font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50" aria-label="Tambah ke Album" title="Tambah ke Album"
               >
                 <IconLayers className="w-4 h-4" />
                 <span className="hidden sm:inline">Tambah ke Album</span>
@@ -113,8 +111,7 @@ export function GooglePhotosTopBar({
                 type="button"
                 onClick={onBatchDownloadZip}
                 disabled={isBatchProcessing}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-bold text-white transition-all cursor-pointer disabled:opacity-50"
-                title="Unduh Batch sebagai ZIP"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-bold text-white transition-all cursor-pointer disabled:opacity-50" aria-label="Unduh Batch sebagai ZIP" title="Unduh Batch sebagai ZIP"
               >
                 <IconDownload className="w-4 h-4" />
                 <span className="hidden sm:inline">Unduh ZIP</span>
@@ -125,8 +122,7 @@ export function GooglePhotosTopBar({
                 type="button"
                 onClick={onBatchDelete}
                 disabled={isBatchProcessing}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white active:scale-95 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
-                title="Hapus dari Vault"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white active:scale-95 text-xs font-bold transition-all cursor-pointer disabled:opacity-50" aria-label="Hapus dari Vault" title="Hapus dari Vault"
               >
                 <IconTrash className="w-4 h-4" />
                 <span className="hidden md:inline">Hapus</span>
@@ -147,8 +143,7 @@ export function GooglePhotosTopBar({
             <button
               type="button"
               onClick={onToggleMobileMenu}
-              className="w-9 h-9 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-white/60 flex items-center justify-center lg:hidden shrink-0 cursor-pointer shadow-2xs"
-              title="Buka Menu"
+              className="w-9 h-9 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-white/60 flex items-center justify-center lg:hidden shrink-0 cursor-pointer shadow-2xs" aria-label="Buka Menu" title="Buka Menu"
             >
               <IconMenu className="w-5 h-5" />
             </button>
@@ -157,13 +152,14 @@ export function GooglePhotosTopBar({
             <div className="relative flex-1 max-w-3xl mx-auto flex items-center gap-3">
               {/* Search Bar Input Frame */}
               <div className="relative flex-1 flex items-center">
-                <IconSearch className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                <IconSearch className="absolute left-3.5 w-4 h-4 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
+                  aria-label="Search media"
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Cari foto, kreator (@username), caption..."
-                  className="w-full h-11 pl-10 pr-10 rounded-2xl bg-white/70 hover:bg-white/90 focus:bg-white border border-white/80 focus:border-indigo-500/40 text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-3 focus:ring-indigo-500/15 transition-all shadow-inner"
+                  className="w-full h-11 pl-10 pr-10 rounded-2xl bg-white/70 hover:bg-white/90 focus:bg-white border border-white/80 focus:border-indigo-500/40 text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-3 focus:ring-indigo-500/15 transition-all shadow-inner"
                 />
                 {searchQuery && (
                   <button
