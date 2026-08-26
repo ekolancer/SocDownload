@@ -8,77 +8,93 @@ import {
   IconFolderPlus,
   IconFolderMinus,
   IconDownload,
-  IconFileText,
   IconTrash,
+  IconCheck,
 } from '@/components/ui/Icons';
 
 interface BatchActionBarProps {
   selectedIds: number[];
+  totalCount?: number;
+  onSelectAll?: () => void;
   onDeselectAll: () => void;
   onAddToAlbum: () => void;
   onRemoveFromAlbum?: () => void;
   onToggleFavoriteBatch: () => void;
   onDownloadZipBatch: () => void;
-  onDownloadCsvBatch?: () => void;
   onDeleteBatch: () => void;
   isProcessing?: boolean;
 }
 
 export function BatchActionBar({
   selectedIds,
+  totalCount,
+  onSelectAll,
   onDeselectAll,
   onAddToAlbum,
   onRemoveFromAlbum,
   onToggleFavoriteBatch,
   onDownloadZipBatch,
-  onDownloadCsvBatch,
   onDeleteBatch,
   isProcessing = false,
 }: BatchActionBarProps) {
   const count = selectedIds.length;
+  const isAllSelected = totalCount !== undefined && totalCount > 0 && count === totalCount;
 
   return (
     <AnimatePresence>
       {count > 0 && (
         <motion.div
-          initial={{ y: 60, opacity: 0, scale: 0.95 }}
+          initial={{ y: 80, opacity: 0, scale: 0.92 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 40, opacity: 0, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-[94vw] sm:w-auto p-2 sm:p-2.5 rounded-2xl bg-white text-slate-900 border border-indigo-100 shadow-[0_20px_50px_rgba(15,23,42,0.14),0_6px_16px_rgba(79,70,229,0.08)] flex items-center justify-between sm:justify-center gap-2 sm:gap-3 select-none"
+          exit={{ y: 80, opacity: 0, scale: 0.92 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-[94vw] sm:w-auto p-1.5 rounded-full bg-slate-900/90 backdrop-blur-2xl border border-white/20 shadow-[0_20px_60px_rgba(0,0,0,0.4),0_0_1px_1px_rgba(255,255,255,0.1)] flex items-center justify-between sm:justify-center gap-2 select-none ring-1 ring-black/40"
         >
           {/* Selected Count & Dismiss Pill */}
-          <div className="flex items-center gap-2 px-1.5 shrink-0">
+          <div className="flex items-center gap-2 pl-2 pr-1 shrink-0">
             <button
               type="button"
               onClick={onDeselectAll}
-              className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer shadow-2xs active:scale-95" aria-label="Deselect All" title="Deselect All"
+              className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90"
+              title="Batal Memilih (Esc)"
             >
               <IconClose className="w-3.5 h-3.5" />
             </button>
             <div className="flex items-center gap-1.5">
-              <span className="min-w-[20px] h-5 px-1.5 rounded-md bg-indigo-600 text-white text-xs font-mono font-black flex items-center justify-center shadow-2xs">
+              <span className="min-w-[22px] h-5.5 px-2 rounded-full bg-indigo-500 text-white text-xs font-mono font-black flex items-center justify-center shadow-xs">
                 {count}
               </span>
-              <span className="text-xs font-black text-slate-800 hidden sm:inline">
-                Selected
+              <span className="text-xs font-bold text-slate-200 hidden sm:inline">
+                Terpilih
               </span>
             </div>
           </div>
 
-          <div className="h-5 w-px bg-slate-200/90 hidden sm:block shrink-0" />
+          <div className="h-5 w-px bg-white/15 hidden sm:block shrink-0" />
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pr-1">
+            {/* Select All Toggle */}
+            {onSelectAll && totalCount !== undefined && totalCount > 0 && (
+              <button
+                type="button"
+                onClick={isAllSelected ? onDeselectAll : onSelectAll}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 transition-all cursor-pointer active:scale-95"
+              >
+                <IconCheck className="w-3.5 h-3.5" />
+                <span>{isAllSelected ? 'Batal Semua' : 'Pilih Semua'}</span>
+              </button>
+            )}
+
             {/* Add to Album */}
             <button
               type="button"
               onClick={onAddToAlbum}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:text-indigo-700 bg-slate-50 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
             >
-              <IconFolderPlus className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Album</span>
+              <IconFolderPlus className="w-3.5 h-3.5" />
+              <span>Album</span>
             </button>
 
             {/* Remove from Album (Shown when viewing an album) */}
@@ -87,10 +103,11 @@ export function BatchActionBar({
                 type="button"
                 onClick={onRemoveFromAlbum}
                 disabled={isProcessing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs" aria-label="Remove selected items from this album" title="Remove selected items from this album"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-100 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                title="Hapus item dari album ini"
               >
-                <IconFolderMinus className="w-3.5 h-3.5 text-amber-600" />
-                <span className="hidden sm:inline">Remove</span>
+                <IconFolderMinus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Keluarkan</span>
               </button>
             )}
 
@@ -99,45 +116,35 @@ export function BatchActionBar({
               type="button"
               onClick={onToggleFavoriteBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:text-amber-700 bg-slate-50 hover:bg-amber-50 border border-slate-200/80 hover:border-amber-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-300 hover:text-amber-200 bg-white/10 hover:bg-white/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              title="Beri tanda bintang"
             >
-              <IconStar className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hidden sm:inline">Star</span>
+              <IconStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span className="hidden md:inline">Favorit</span>
             </button>
 
-            {/* Download ZIP (Primary Action) */}
+            {/* Download ZIP Batch */}
             <button
               type="button"
               onClick={onDownloadZipBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-xs" aria-label="Download selected media as ZIP package" title="Download selected media as ZIP package"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-200 hover:text-white bg-white/10 hover:bg-white/20 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              title="Unduh semua item terpilih dalam ZIP"
             >
-              <IconDownload className="w-3.5 h-3.5 text-white" />
+              <IconDownload className="w-3.5 h-3.5 text-indigo-400" />
               <span>ZIP</span>
             </button>
-
-            {/* Export CSV */}
-            {onDownloadCsvBatch && (
-              <button
-                type="button"
-                onClick={onDownloadCsvBatch}
-                disabled={isProcessing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:text-sky-700 bg-slate-50 hover:bg-sky-50 border border-slate-200/80 hover:border-sky-200 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs" aria-label="Export selected metadata as CSV" title="Export selected metadata as CSV"
-              >
-                <IconFileText className="w-3.5 h-3.5 text-sky-600" />
-                <span>CSV</span>
-              </button>
-            )}
 
             {/* Delete Batch */}
             <button
               type="button"
               onClick={onDeleteBatch}
               disabled={isProcessing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200/80 hover:border-rose-600 active:scale-95 transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-rose-300 hover:text-white bg-rose-500/20 hover:bg-rose-600 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              title="Hapus permanen dari Vault"
             >
               <IconTrash className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Delete</span>
+              <span className="hidden md:inline">Hapus</span>
             </button>
           </div>
         </motion.div>

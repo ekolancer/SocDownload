@@ -1,18 +1,18 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GooglePhotosSidebar, GooglePhotosTab } from '@/components/vault/GooglePhotosSidebar';
-import { GooglePhotosTopBar, MediaTypeFilter } from '@/components/vault/GooglePhotosTopBar';
+import { Navbar } from '@/components/layout/Navbar';
 import { MediaGallery } from '@/components/vault/MediaGallery';
+import { CreatorsHub, CreatorStats } from '@/components/vault/CreatorsHub';
+import { BatchActionBar } from '@/components/vault/BatchActionBar';
 import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
 import { AlbumModal } from '@/components/modals/AlbumModal';
 import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
 import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
-import { CreatorsHub, CreatorStats } from '@/components/vault/CreatorsHub';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { JobRow, JobStats } from '@/components/studio/JobPipeline';
+import { AlbumSummary } from '@/components/vault/VaultSidebar';
 import {
   IconLayers,
   IconFolderPlus,
@@ -26,14 +26,29 @@ import {
   IconDownload,
   IconFolderZip,
   IconCheck,
+  IconSearch,
+  IconClose,
+  IconRefresh,
+  IconUpload,
+  IconVideoCamera,
+  IconInstagram,
+  IconTikTok,
+  IconX,
+  IconThreads,
 } from '@/components/ui/Icons';
 
-import { AlbumSummary } from '@/components/vault/VaultSidebar';
-
 type BackendStatus = 'loading' | 'ok' | 'offline';
+export type VaultTab = 'photos' | 'explore' | 'albums' | 'favorites';
+export type MediaTypeFilter = 'all' | 'video' | 'photo';
 
 const API = '/api';
 
+const PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', icon: IconInstagram },
+  { id: 'tiktok', label: 'TikTok', icon: IconTikTok },
+  { id: 'x', label: 'X', icon: IconX },
+  { id: 'threads', label: 'Threads', icon: IconThreads },
+];
 
 export default function VaultPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
@@ -44,23 +59,18 @@ export default function VaultPage() {
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [storageStats, setStorageStats] = useState<{ total_bytes: number; total_files: number; human_size: string } | null>(null);
 
-
-  // Google Photos Navigation & View States
-  const [currentTab, setCurrentTab] = useState<GooglePhotosTab>('photos');
+  // Navigation & View States
+  const [currentTab, setCurrentTab] = useState<VaultTab>('photos');
   const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumSummary | null>(null);
   const [albumDetailItems, setAlbumDetailItems] = useState<MediaItem[]>([]);
 
-  // Search & Filter Omnibar States
+  // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaTypeFilter>('all');
 
-  // Sidebar Layout States
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  // Batch Multi-Selection States
+  // Multi-Selection States
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
@@ -155,7 +165,6 @@ export default function VaultPage() {
               status: first.status as 'done' | 'dup' | 'failed',
               error: first.error,
             });
-
           }
         }
         prevJobsRef.current = jobsData;
@@ -169,7 +178,6 @@ export default function VaultPage() {
         setStorageStats(sData);
       }
     } catch (err) {
-
       console.error('Vault polling failed:', err);
     } finally {
       isFetchingRef.current = false;
@@ -188,7 +196,7 @@ export default function VaultPage() {
         setAlbumDetailItems(data.items || []);
       }
     } catch (err) {
-      console.error('Failed to fetch album details:', err);
+      console.error('Fetch album detail failed:', err);
     }
   }, []);
 
@@ -251,7 +259,6 @@ export default function VaultPage() {
       result = result.filter((m) => m.files?.some((f) => f.kind === 'image' && !f.path?.endsWith('.mp4')));
     }
 
-
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -267,11 +274,9 @@ export default function VaultPage() {
     return result;
   }, [currentBaseMedia, selectedPlatforms, mediaTypeFilter, searchQuery]);
 
-  // Selection handlers
+  // Multi-Selection Handlers
   const handleToggleSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
 
   const handleSelectAll = () => {
@@ -282,46 +287,67 @@ export default function VaultPage() {
     setSelectedIds([]);
   };
 
-  // Single Item Actions
-  const handleToggleFavorite = async (id: number) => {
-    try {
-      const item = media.find((m) => m.id === id);
-      if (!item) return;
-      const res = await fetch(`${API}/media/${id}/favorite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_favorite: !item.is_favorite }),
-      });
-      if (res.ok) {
-        setMedia((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, is_favorite: !m.is_favorite } : m))
-        );
-      }
-    } catch (err) {
-      console.error('Failed to toggle favorite:', err);
-    }
-  };
-
+  // Single Item Handlers
   const handleDeleteItem = async (id: number) => {
-    if (!confirm('Hapus media ini secara permanen dari Vault?')) return;
     try {
       const res = await fetch(`${API}/media/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMedia((prev) => prev.filter((m) => m.id !== id));
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
+        setSelectedIds((prev) => prev.filter((i) => i !== id));
         if (lightboxItem?.id === id) setLightboxItem(null);
+        refreshData(false);
       }
     } catch (err) {
-      console.error('Failed to delete media:', err);
+      console.error('Delete item failed:', err);
     }
   };
 
-  // Batch Operations
+  const handleToggleFavorite = async (id: number) => {
+    try {
+      const res = await fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' });
+      if (res.ok) {
+        const data = await res.json();
+        setMedia((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
+        );
+        if (lightboxItem && lightboxItem.id === id) {
+          setLightboxItem((prev) => prev ? { ...prev, is_favorite: data.is_favorite } : null);
+        }
+      }
+    } catch (err) {
+      console.error('Favorite toggle failed:', err);
+    }
+  };
+
+  // Batch Handlers
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Hapus ${selectedIds.length} media terpilih secara permanen dari vault?`)) return;
+
+    setIsBatchProcessing(true);
+    try {
+      const res = await fetch(`${API}/media/batch/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_ids: selectedIds }),
+      });
+      if (res.ok) {
+        setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
+        setSelectedIds([]);
+        refreshData(false);
+      }
+    } catch (err) {
+      console.error('Batch delete failed:', err);
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+
   const handleBatchDownloadZip = async () => {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/export/zip`, {
+      const res = await fetch(`${API}/media/batch/download-zip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
@@ -331,35 +357,52 @@ export default function VaultPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `mediavault-batch-${Date.now()}.zip`;
+        a.download = `mediavault-batch-${new Date().toISOString().slice(0, 10)}.zip`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Batch download failed:', err);
+      console.error('Batch download zip failed:', err);
     } finally {
       setIsBatchProcessing(false);
     }
   };
 
-  const handleBatchDelete = async () => {
+  const handleToggleFavoriteBatch = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Hapus ${selectedIds.length} item terpilih secara permanen dari Vault?`)) return;
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/media/batch-delete`, {
-        method: 'POST',
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
+        )
+      );
+      refreshData(false);
+    } catch (err) {
+      console.error('Batch favorite toggle failed:', err);
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+
+  const handleRemoveFromAlbum = async () => {
+    if (!selectedAlbum || selectedIds.length === 0) return;
+    setIsBatchProcessing(true);
+    try {
+      const res = await fetch(`${API}/albums/${selectedAlbum.id}/items`, {
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
       });
       if (res.ok) {
-        setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
         setSelectedIds([]);
+        fetchAlbumDetail(selectedAlbum.id);
+        refreshData(false);
       }
     } catch (err) {
-      console.error('Batch delete failed:', err);
+      console.error('Remove from album failed:', err);
     } finally {
       setIsBatchProcessing(false);
     }
@@ -429,115 +472,444 @@ export default function VaultPage() {
     return false;
   };
 
-  // Statistics for Sidebar Counters
+  const handleDeleteAlbum = async (albumId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Hapus album ini? (Media di dalamnya tetap tersimpan di Vault)')) return;
+    try {
+      const res = await fetch(`${API}/albums/${albumId}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (selectedAlbum?.id === albumId) setSelectedAlbum(null);
+        refreshData(false);
+      }
+    } catch (err) {
+      console.error('Delete album failed:', err);
+    }
+  };
 
-  const sidebarStats = useMemo(() => {
-    return {
-      totalMedia: media.length,
-      totalAlbums: albums.length,
-      totalCreators: creatorsList.length,
-      totalFavorites: media.filter((m) => m.is_favorite).length,
-      storageHumanSize: storageStats?.human_size || '0 MB',
-      totalBytes: storageStats?.total_bytes || 0,
-    };
-  }, [media, albums, creatorsList, storageStats]);
+  // Video and Image count metrics
+  const videoCount = useMemo(() => {
+    return media.filter((m) => m.files?.some((f) => f.kind === 'video' || Boolean(f.path?.endsWith('.mp4')))).length;
+  }, [media]);
 
+  const photoCount = useMemo(() => {
+    return media.length - videoCount;
+  }, [media.length, videoCount]);
+
+  const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="stitch-bg min-h-[100dvh] text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
+    <div className="stitch-bg min-h-screen text-slate-900 flex flex-col antialiased selection:bg-indigo-500/20 selection:text-indigo-900 overflow-x-hidden">
       
-      {/* 1. Google Photos Left Navigation Sidebar */}
-      <GooglePhotosSidebar
-        currentTab={currentTab}
-        onTabChange={(tab) => {
-          setCurrentTab(tab);
-          setSelectedCreator(null);
-          setSelectedAlbum(null);
-          setSelectedIds([]);
-        }}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        isMobileOpen={isMobileSidebarOpen}
-        onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        stats={sidebarStats}
+      {/* 1. Top Application Header (Shared Navbar) */}
+      <Navbar
         backendStatus={backendStatus}
+        mediaCount={media.length}
+        activeJobsCount={activeJobsCount}
+        queueStats={jobStats}
         onOpenImport={() => setIsImportModalOpen(true)}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
+        onRefresh={() => refreshData(true)}
+        isRefreshing={isRefreshing}
       />
 
-      {/* Main Viewport Container (Offset dynamically by sidebar width) */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-64'
-        }`}
-      >
-        {/* 2. Google Photos Top Universal Omnibar & Contextual Action Bar */}
-        <GooglePhotosTopBar
-          onToggleMobileMenu={() => setIsMobileSidebarOpen(true)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          mediaTypeFilter={mediaTypeFilter}
-          onMediaTypeChange={setMediaTypeFilter}
-          selectedCount={selectedIds.length}
-          totalCount={displayMedia.length}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onAddToAlbum={handleOpenAddToAlbum}
-          onBatchDownloadZip={handleBatchDownloadZip}
-          onBatchDelete={handleBatchDelete}
-          isBatchProcessing={isBatchProcessing}
-        />
+      {/* 2. Main Vault Dashboard Container */}
+      <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
+        
+        {/* Status & Quick Action Header Row (Identical to Studio) */}
+        <div className="w-full flex justify-between items-center max-w-7xl">
+          {/* Live System Heartbeat Pill */}
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-white/60 transition-colors cursor-default select-none shadow-2xs">
+            <span className="relative flex h-2.5 w-2.5">
+              {backendStatus === 'ok' ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </>
+              ) : backendStatus === 'loading' ? (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400 animate-pulse" />
+              ) : (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+              )}
+            </span>
+            <span className="text-xs text-slate-700 font-bold font-mono">
+              {backendStatus === 'ok' ? 'Vault Asset Center Online' : backendStatus === 'loading' ? 'Connecting...' : 'Vault Offline'}
+            </span>
+          </div>
 
+          {/* Action Tools */}
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-indigo-700 hover:bg-white/80 hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
+            >
+              <IconUpload className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Import Archive</span>
+            </button>
 
-        {/* 3. Main Dynamic Content View */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {/* VIEW: Creators Hub Tab */}
-          {currentTab === 'explore' && !selectedCreator && (
-            <div className="flex flex-col gap-6">
+            <button
+              type="button"
+              onClick={() => refreshData(true)}
+              disabled={isRefreshing}
+              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-white/80 hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 text-slate-700 cursor-pointer disabled:opacity-50"
+              title="Perbarui data library"
+            >
+              <IconRefresh className={`w-3.5 h-3.5 text-slate-700 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* 3. 4-Column Bento Metric Ribbon (SaaS Telemetry) */}
+        <section className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Total Aset Media */}
+          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
+            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
               <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                    Koleksi Kreator & Akun
-                  </h1>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Temukan dan jelajahi media berdasarkan kreator yang telah Anda arsipkan
-                  </span>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                  Total Aset Media
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+                  <IconPhoto className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
-                  {creatorsList.length} Kreator
+              </div>
+              <div className="mt-3">
+                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                  {media.length}
+                </span>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-500">
+                  <span>{photoCount} Foto</span>
+                  <span>•</span>
+                  <span>{videoCount} Video</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Kapasitas Penyimpanan */}
+          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
+            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                  Penyimpanan Disk
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-2xs">
+                  <IconDownload className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                  {storageStats?.human_size || '0 MB'}
+                </span>
+                <div className="w-full h-1.5 rounded-full bg-slate-200/60 overflow-hidden shadow-inner mt-2">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full shadow-xs"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          10,
+                          storageStats?.total_bytes
+                            ? (storageStats.total_bytes / (5 * 1024 * 1024 * 1024)) * 100
+                            : (media.length / 500) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Discovery Kreator */}
+          <div
+            onClick={() => {
+              setCurrentTab('explore');
+              setSelectedCreator(null);
+              setSelectedAlbum(null);
+            }}
+            className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 hover:border-indigo-400 shadow-lg hover:shadow-xl transition-all cursor-pointer ring-1 ring-black/5"
+          >
+            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full group">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                  Kreator & Akun
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+                  <IconUsers className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                  {creatorsList.length}
+                </span>
+                <span className="text-[11px] font-bold text-indigo-600 block mt-1 group-hover:underline">
+                  Jelajahi Profil Kreator →
                 </span>
               </div>
-
-              <CreatorsHub
-                creators={creatorsList}
-                loading={false}
-                onSelectCreator={(username) => setSelectedCreator(username)}
-              />
             </div>
+          </div>
+
+          {/* Card 4: Koleksi & Album */}
+          <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-lg backdrop-blur-xl ring-1 ring-black/5">
+            <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                  Album Kustom
+                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenCreateAlbum}
+                  className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all"
+                  title="Buat Album Baru"
+                >
+                  <IconFolderPlus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mt-3 flex items-end justify-between">
+                <div>
+                  <span className="text-3xl font-black font-mono tracking-tight text-slate-900">
+                    {albums.length}
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500 block mt-1">
+                    Koleksi Album
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTab('albums');
+                    setSelectedAlbum(null);
+                    setSelectedCreator(null);
+                  }}
+                  className="text-xs font-bold text-amber-600 hover:underline cursor-pointer"
+                >
+                  Lihat Semua →
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Universal SaaS Command & Filter Island */}
+        <section className="w-full max-w-7xl p-2 rounded-[2rem] bg-white/40 border border-white/60 shadow-xl backdrop-blur-xl ring-1 ring-black/5 flex flex-col gap-3">
+          <div className="p-3 sm:p-4 rounded-[calc(2rem-0.5rem)] bg-white/80 border border-white/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            
+            {/* Left: View Tabs Switcher (Segmented Control) */}
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-900/5 border border-white/80 shadow-inner overflow-x-auto scrollbar-none">
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentTab('photos');
+                  setSelectedCreator(null);
+                  setSelectedAlbum(null);
+                  setSelectedIds([]);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  currentTab === 'photos' && !selectedAlbum && !selectedCreator
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <IconPhoto className="w-3.5 h-3.5" />
+                <span>Foto & Video</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentTab('explore');
+                  setSelectedCreator(null);
+                  setSelectedAlbum(null);
+                  setSelectedIds([]);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  currentTab === 'explore' && !selectedCreator
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <IconUsers className="w-3.5 h-3.5" />
+                <span>Kreator ({creatorsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentTab('albums');
+                  setSelectedAlbum(null);
+                  setSelectedCreator(null);
+                  setSelectedIds([]);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  currentTab === 'albums' && !selectedAlbum
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <IconLayers className="w-3.5 h-3.5" />
+                <span>Album ({albums.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentTab('favorites');
+                  setSelectedCreator(null);
+                  setSelectedAlbum(null);
+                  setSelectedIds([]);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  currentTab === 'favorites'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <IconStar className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>Favorit</span>
+              </button>
+            </div>
+
+            {/* Center & Right: Omni-Search & Media Type Filters */}
+            <div className="flex-1 flex flex-col sm:flex-row items-center gap-3">
+              {/* Omni Search Bar */}
+              <div className="relative flex-1 w-full">
+                <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari caption, kreator (@username), platform..."
+                  className="w-full h-10 pl-10 pr-9 rounded-xl bg-white/70 hover:bg-white focus:bg-white border border-slate-200/80 focus:border-indigo-500/40 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-3 focus:ring-indigo-500/15 transition-all shadow-inner"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    <IconClose className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Media Type Filter (All / Video / Photo) */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/5 border border-white/80 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMediaTypeFilter('all')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    mediaTypeFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaTypeFilter('video')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    mediaTypeFilter === 'video'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <IconVideoCamera className="w-3.5 h-3.5" />
+                  <span>Video</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaTypeFilter('photo')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    mediaTypeFilter === 'photo'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <IconPhoto className="w-3.5 h-3.5" />
+                  <span>Foto</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Platform Filter Pills Row */}
+          <div className="flex items-center gap-2 px-3 pb-1 overflow-x-auto scrollbar-none">
+            <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-wider shrink-0">
+              Platform:
+            </span>
+            {PLATFORMS.map((p) => {
+              const Icon = p.icon;
+              const isSelected = selectedPlatforms.includes(p.id);
+              const count = media.filter((m) => m.platform?.toLowerCase() === p.id).length;
+
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleTogglePlatform(p.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer shrink-0 shadow-2xs ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'glass-panel bg-white/60 hover:bg-white text-slate-700'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{p.label}</span>
+                  <span className="opacity-70">({count})</span>
+                </button>
+              );
+            })}
+            {selectedPlatforms.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedPlatforms([])}
+                className="text-[11px] font-mono text-indigo-600 hover:underline shrink-0 cursor-pointer ml-1"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* 5. Dynamic Content Views */}
+        <section className="w-full max-w-7xl">
+          {/* VIEW: Creators Hub Tab */}
+          {currentTab === 'explore' && !selectedCreator && (
+            <CreatorsHub
+              creators={creatorsList}
+              loading={false}
+              onSelectCreator={(username) => {
+                setSelectedCreator(username);
+                setCurrentTab('photos');
+              }}
+            />
           )}
 
           {/* VIEW: Custom Albums Tab */}
           {currentTab === 'albums' && !selectedAlbum && (
             <div className="flex flex-col gap-6">
               {/* Header & Create Button */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                    Album & Koleksi
-                  </h1>
-                  <span className="text-xs text-slate-500 font-medium">
-                    Kelola dan kelompokkan media vault Anda ke dalam album kustom
-                  </span>
-                </div>
+              <div className="p-1.5 rounded-[2rem] bg-white/40 border border-white/60 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+                <div className="p-5 rounded-[calc(2rem-0.375rem)] bg-white/80 border border-white/80 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                      Album & Koleksi Kustom
+                    </h2>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Kelola dan kelompokkan aset media vault Anda ke dalam album kustom
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleOpenCreateAlbum}
-                  className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
-                >
-                  <IconFolderPlus className="w-4 h-4" />
-                  <span>Buat Album Baru</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateAlbum}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+                  >
+                    <IconFolderPlus className="w-4 h-4" />
+                    <span>Buat Album Baru</span>
+                  </button>
+                </div>
               </div>
 
               {/* Album Cards Grid */}
@@ -546,14 +918,16 @@ export default function VaultPage() {
                 <button
                   type="button"
                   onClick={handleOpenCreateAlbum}
-                  className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-white border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 transition-all cursor-pointer aspect-square shadow-2xs"
+                  className="group p-1.5 rounded-[1.75rem] bg-white/40 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-white/60 transition-all cursor-pointer aspect-square shadow-sm flex flex-col"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-xs">
-                    <IconFolderPlus className="w-6 h-6" />
+                  <div className="w-full h-full rounded-[calc(1.75rem-0.375rem)] flex flex-col items-center justify-center p-4">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-xs">
+                      <IconFolderPlus className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-black text-slate-800 group-hover:text-indigo-600">
+                      Album Baru
+                    </span>
                   </div>
-                  <span className="text-xs font-extrabold text-slate-800 group-hover:text-indigo-600">
-                    Album Baru
-                  </span>
                 </button>
 
                 {/* Album Items */}
@@ -561,43 +935,47 @@ export default function VaultPage() {
                   <div
                     key={album.id}
                     onClick={() => setSelectedAlbum(album)}
-                    className="group relative rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-400 p-2.5 flex flex-col gap-2 transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md aspect-square overflow-hidden"
+                    className="group relative p-1.5 rounded-[1.75rem] bg-white/40 border border-white/60 hover:border-indigo-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer aspect-square flex flex-col"
                   >
-                    {/* Stacked Cover Image Frame */}
-                    <div className="w-full flex-1 rounded-xl overflow-hidden bg-slate-100 relative">
-                      {album.cover_file_url ? (
-                        <img
-                          src={
-                            album.cover_file_url.startsWith('http') || album.cover_file_url.startsWith('/api')
-                              ? album.cover_file_url
-                              : `/media-files/${album.cover_file_url}`
-                          }
-                          alt={album.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                          <IconLayers className="w-8 h-8" />
-                        </div>
-                      )}
-
-                      
-                      {/* Count Badge */}
-                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-xs text-white font-mono text-[10px] font-bold">
-                        {album.items_count} media
-                      </span>
-                    </div>
-
-                    {/* Album Meta */}
-                    <div className="flex flex-col px-1">
-                      <span className="text-xs font-bold text-slate-900 truncate">
-                        {album.name}
-                      </span>
-                      {album.description && (
-                        <span className="text-[10px] text-slate-500 truncate">
-                          {album.description}
+                    <div className="p-3 rounded-[calc(1.75rem-0.375rem)] bg-white/80 border border-white/80 flex flex-col justify-between h-full">
+                      {/* Stacked Cover Image Frame */}
+                      <div className="w-full flex-1 rounded-xl overflow-hidden bg-slate-950 relative">
+                        {album.cover_file_url ? (
+                          <img
+                            src={
+                              album.cover_file_url.startsWith('http') || album.cover_file_url.startsWith('/api')
+                                ? album.cover_file_url
+                                : `/media-files/${album.cover_file_url}`
+                            }
+                            alt={album.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-600">
+                            <IconLayers className="w-8 h-8" />
+                          </div>
+                        )}
+                        
+                        {/* Count Badge */}
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-xs text-white font-mono text-[10px] font-bold">
+                          {album.items_count} media
                         </span>
-                      )}
+                      </div>
+
+                      {/* Title & Delete Action */}
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="font-extrabold text-xs text-slate-900 truncate tracking-tight">
+                          {album.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteAlbum(album.id, e)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Hapus album"
+                        >
+                          <IconTrash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -605,29 +983,26 @@ export default function VaultPage() {
             </div>
           )}
 
-          {/* VIEW: Photos / Date Stream (or filtered Creator/Album view) */}
-          {(currentTab === 'photos' || currentTab === 'favorites' || selectedCreator || selectedAlbum) && (
+          {/* VIEW: Media Gallery (Photos / Favorites / Album Detail / Creator Archive) */}
+          {((currentTab === 'photos' || currentTab === 'favorites') || selectedAlbum || selectedCreator) && (
             <MediaGallery
               media={displayMedia}
               onOpenLightbox={(item) => setLightboxItem(item)}
               onDeleteItem={handleDeleteItem}
               onToggleFavorite={handleToggleFavorite}
+              onSelectCreator={(username) => {
+                setSelectedCreator(username);
+                setCurrentTab('photos');
+              }}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               viewTitle={
                 selectedAlbum
                   ? `Album: ${selectedAlbum.name}`
                   : selectedCreator
-                  ? `Arsip Kreator: @${selectedCreator}`
+                  ? `Kreator: @${selectedCreator}`
                   : currentTab === 'favorites'
-                  ? 'Media Favorit & Berbintang'
-                  : undefined
-              }
-              viewSubtitle={
-                selectedAlbum
-                  ? selectedAlbum.description || 'Koleksi album pengguna'
-                  : selectedCreator
-                  ? 'Semua video dan foto dari akun ini'
+                  ? 'Koleksi Favorit Bintang'
                   : undefined
               }
               onBackToTimeline={
@@ -640,10 +1015,24 @@ export default function VaultPage() {
               }
             />
           )}
-        </main>
-      </div>
+        </section>
+      </main>
 
-      {/* 4. Lightbox Modal */}
+      {/* 6. Floating Glass Batch Action Bar (Agency Double-Bezel Island) */}
+      <BatchActionBar
+        selectedIds={selectedIds}
+        totalCount={displayMedia.length}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
+        onAddToAlbum={handleOpenAddToAlbum}
+        onRemoveFromAlbum={selectedAlbum ? handleRemoveFromAlbum : undefined}
+        onToggleFavoriteBatch={handleToggleFavoriteBatch}
+        onDownloadZipBatch={handleBatchDownloadZip}
+        onDeleteBatch={handleBatchDelete}
+        isProcessing={isBatchProcessing}
+      />
+
+      {/* 7. Lightbox Modal */}
       {lightboxItem && (
         <MediaLightboxModal
           item={lightboxItem}
@@ -656,8 +1045,7 @@ export default function VaultPage() {
         />
       )}
 
-
-      {/* 5. Album Creation / Add Modal */}
+      {/* 8. Album Creation / Add Modal */}
       <AlbumModal
         isOpen={isAlbumModalOpen}
         onClose={() => setIsAlbumModalOpen(false)}
@@ -670,29 +1058,26 @@ export default function VaultPage() {
         onAddItemsToAlbum={handleAddItemsToAlbum}
       />
 
-
-      {/* 6. Archive Ingestion Modal */}
+      {/* 9. Archive Ingestion Modal */}
       <ArchiveImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => refreshData(true)}
       />
 
-      {/* 7. Adapters & Health Drawer */}
+      {/* 10. Adapters & Health Drawer */}
       <AdapterHealthDrawer
         isOpen={isAdaptersDrawerOpen}
         onClose={() => setIsAdaptersDrawerOpen(false)}
       />
 
-
-      {/* 8. Toast Notifications */}
+      {/* 11. Toast Notifications */}
       {completedNotice && (
         <JobNotificationToast
           notice={completedNotice}
           onClose={() => setCompletedNotice(null)}
         />
       )}
-
 
     </div>
   );
