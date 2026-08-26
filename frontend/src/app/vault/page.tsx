@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GooglePhotosSidebar, GooglePhotosTab } from '../components/GooglePhotosSidebar';
-import { GooglePhotosTopBar, MediaTypeFilter } from '../components/GooglePhotosTopBar';
-import { MediaGallery } from '../components/MediaGallery';
-import { MediaLightboxModal, MediaItem } from '../components/MediaLightboxModal';
-import { AlbumModal } from '../components/AlbumModal';
-import { AdapterHealthDrawer } from '../components/AdapterHealthDrawer';
-import { ArchiveImportModal } from '../components/ArchiveImportModal';
-import { CreatorsHub, CreatorStats } from '../components/CreatorsHub';
-import { JobNotificationToast, CompletedJobNotice } from '../components/JobNotificationToast';
-import { JobRow, JobStats } from '../components/JobPipeline';
+import { GooglePhotosSidebar, GooglePhotosTab } from '@/components/vault/GooglePhotosSidebar';
+import { GooglePhotosTopBar, MediaTypeFilter } from '@/components/vault/GooglePhotosTopBar';
+import { MediaGallery } from '@/components/vault/MediaGallery';
+import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
+import { AlbumModal } from '@/components/modals/AlbumModal';
+import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
+import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
+import { CreatorsHub, CreatorStats } from '@/components/vault/CreatorsHub';
+import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
+import { JobRow, JobStats } from '@/components/studio/JobPipeline';
 import {
   IconLayers,
   IconFolderPlus,
@@ -26,9 +26,9 @@ import {
   IconDownload,
   IconFolderZip,
   IconCheck,
-} from '../components/Icons';
+} from '@/components/ui/Icons';
 
-import { AlbumSummary } from '../components/VaultSidebar';
+import { AlbumSummary } from '@/components/vault/VaultSidebar';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 

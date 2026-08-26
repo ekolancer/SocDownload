@@ -15,7 +15,7 @@ import {
   IconSparkles,
   IconAlertCircle,
   IconBookmark,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export interface CompletedJobNotice {
   id: number;

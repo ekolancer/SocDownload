@@ -15,7 +15,7 @@ import {
   IconSearch,
   IconChevronLeft,
   IconChevronRight,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export interface JobRow {
   id: number;

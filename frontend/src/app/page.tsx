@@ -1,21 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Navbar } from './components/Navbar';
-import { DownloadStudio } from './components/DownloadStudio';
-import { AutoSyncCard } from './components/AutoSyncCard';
-import { JobPipeline, JobRow, JobStats } from './components/JobPipeline';
-import { AdapterHealthDrawer } from './components/AdapterHealthDrawer';
-import { ArchiveImportModal } from './components/ArchiveImportModal';
-import { JobNotificationToast, CompletedJobNotice } from './components/JobNotificationToast';
-import { MediaLightboxModal, MediaItem } from './components/MediaLightboxModal';
+import { Navbar } from '@/components/layout/Navbar';
+import { DownloadStudio } from '@/components/studio/DownloadStudio';
+import { AutoSyncCard } from '@/components/studio/AutoSyncCard';
+import { JobPipeline, JobRow, JobStats } from '@/components/studio/JobPipeline';
+import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
+import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
+import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
+import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
 import Link from 'next/link';
 import {
   IconVideoCamera,
   IconLayers,
   IconRefresh,
   IconUpload,
-} from './components/Icons';
+} from '@/components/ui/Icons';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 

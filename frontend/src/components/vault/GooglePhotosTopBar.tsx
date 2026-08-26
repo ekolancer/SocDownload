@@ -12,7 +12,7 @@ import {
   IconCheck,
   IconVideoCamera,
   IconPhoto,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export type MediaTypeFilter = 'all' | 'video' | 'photo';
 

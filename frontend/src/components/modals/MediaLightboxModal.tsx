@@ -10,7 +10,7 @@ import {
   IconExternalLink,
   IconCheckCircle,
   IconTrash,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export interface MediaFile {
   id: number;

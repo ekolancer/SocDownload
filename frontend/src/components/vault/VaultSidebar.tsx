@@ -19,7 +19,7 @@ import {
   IconPinterest,
   IconCheck,
   IconLayers,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export interface AlbumSummary {
   id: number;

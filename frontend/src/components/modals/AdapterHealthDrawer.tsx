@@ -13,7 +13,7 @@ import {
   IconYouTube,
   IconReddit,
   IconPinterest,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 interface AdapterInfo {
   platform: string;

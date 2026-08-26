@@ -13,7 +13,7 @@ import {
   IconSparkles,
   IconFolderZip,
   IconUsers,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export interface CreatorStats {
   username: string;

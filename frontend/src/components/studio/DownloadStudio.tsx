@@ -13,8 +13,8 @@ import {
   IconCheckCircle,
   IconAlertCircle,
   IconBookmark,
-} from './Icons';
-import { JobRow } from './JobPipeline';
+} from '@/components/ui/Icons';
+import { JobRow } from '@/components/studio/JobPipeline';
 
 interface DownloadStudioProps {
   onQueueDownload: (url: string, platform?: string) => Promise<{ success: boolean; jobId?: number }>;

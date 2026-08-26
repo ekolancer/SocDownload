@@ -4,8 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { IconAdapter } from './Icons';
-import { JobStats } from './JobPipeline';
+import { IconAdapter } from '@/components/ui/Icons';
+import { JobStats } from '@/components/studio/JobPipeline';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
 

@@ -8,8 +8,8 @@ import {
   IconFolderPlus,
   IconPencil,
   IconCheck,
-} from './Icons';
-import { AlbumSummary } from './VaultSidebar';
+} from '@/components/ui/Icons';
+import { AlbumSummary } from '@/components/vault/VaultSidebar';
 
 interface AlbumModalProps {
   isOpen: boolean;

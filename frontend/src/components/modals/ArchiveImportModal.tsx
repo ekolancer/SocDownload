@@ -11,7 +11,7 @@ import {
   IconFolderZip,
   IconCheck,
   IconBookmark,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 interface ArchiveImportModalProps {
   isOpen: boolean;

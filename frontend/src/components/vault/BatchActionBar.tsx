@@ -10,7 +10,7 @@ import {
   IconDownload,
   IconFileText,
   IconTrash,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 interface BatchActionBarProps {
   selectedIds: number[];

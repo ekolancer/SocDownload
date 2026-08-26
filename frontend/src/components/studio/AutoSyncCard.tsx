@@ -8,7 +8,7 @@ import {
   IconCheckCircle,
   IconAlertCircle,
   IconSparkles,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 
 interface AutoSyncConfig {

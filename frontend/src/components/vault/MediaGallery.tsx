@@ -23,8 +23,8 @@ import {
   IconLink,
   IconExternalLink,
   IconSparkles,
-} from './Icons';
-import { MediaItem } from './MediaLightboxModal';
+} from '@/components/ui/Icons';
+import { MediaItem } from '@/components/modals/MediaLightboxModal';
 
 interface MediaGalleryProps {
   media: MediaItem[];

@@ -15,7 +15,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconClose,
-} from './Icons';
+} from '@/components/ui/Icons';
 
 export type GooglePhotosTab = 'photos' | 'explore' | 'albums' | 'favorites';
 
