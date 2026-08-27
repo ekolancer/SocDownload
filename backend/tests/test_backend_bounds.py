@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import patch
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from backend.app.db import Base, Job, JobStatus, utcnow
+from backend.app.service import claim_job
 
 from pydantic import ValidationError
 from starlette.testclient import TestClient
@@ -21,6 +26,25 @@ class BackendBoundsTestCase(unittest.TestCase):
         self.assertEqual(sanitize_zip_component("../../evil/name", "unknown"), "evil_name")
         self.assertEqual(sanitize_zip_component("..", "unknown"), "unknown")
         self.assertEqual(sanitize_zip_component("valid-name_1.jpg", "file"), "valid-name_1.jpg")
+
+    def test_job_claim_is_single_use(self):
+        engine = create_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        factory = sessionmaker(bind=engine)
+        with factory() as session:
+            job = Job(platform="x", url="https://example.com", status=JobStatus.QUEUED.value)
+            session.add(job)
+            session.commit()
+            job_id = job.id
+        with patch("backend.app.service.get_session_factory", return_value=factory):
+            token = claim_job(job_id)
+            self.assertIsNotNone(token)
+            self.assertIsNone(claim_job(job_id))
+        with factory() as session:
+            job = session.get(Job, job_id)
+            self.assertEqual(job.status, JobStatus.RUNNING.value)
+            self.assertEqual(job.lease_token, token)
+            self.assertGreater(job.lease_until, utcnow().replace(tzinfo=None))
 
     def test_settings_bounds(self):
         with self.assertRaises(ValidationError):

@@ -14,6 +14,8 @@ from .db import get_session_factory
 router = APIRouter(prefix="/api", tags=["health"])
 _request_id: ContextVar[str] = ContextVar("request_id", default="-")
 _metrics = Counter()
+_job_metrics = Counter()
+_job_durations: list[float] = []
 
 
 class RequestFormatter(logging.Formatter):
@@ -44,7 +46,26 @@ def readiness():
 
 @router.get("/metrics")
 def metrics():
-    return {"requests_total": sum(_metrics.values()), "requests_by_status": dict(_metrics)}
+    from .service import get_queue
+
+    return {
+        "requests_total": sum(_metrics.values()),
+        "requests_by_status": dict(_metrics),
+        "queue_depth": get_queue().qsize(),
+        "jobs": dict(_job_metrics),
+        "job_duration_seconds": {
+            "count": len(_job_durations),
+            "total": sum(_job_durations),
+            "max": max(_job_durations, default=0),
+        },
+    }
+
+
+def record_job(status: str, duration: float, retried: bool = False) -> None:
+    _job_metrics[f"{status}_total"] += 1
+    if retried:
+        _job_metrics["retries_total"] += 1
+    _job_durations.append(duration)
 
 
 def request_metrics_middleware(app):

@@ -4,9 +4,10 @@ import asyncio
 import os
 import shutil
 import tempfile
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
@@ -33,6 +34,43 @@ def _parse_posted_at(value: str | None) -> datetime | None:
         except ValueError:
             continue
     return None
+
+
+def recover_jobs() -> None:
+    factory = get_session_factory()
+    with factory() as session:
+        session.query(Job).filter(Job.status == JobStatus.RUNNING.value).update(
+            {Job.status: JobStatus.QUEUED.value, Job.started_at: None, Job.lease_until: None, Job.lease_token: None, Job.error: "Recovered after restart"},
+            synchronize_session=False,
+        )
+        job_ids = session.scalars(select(Job.id).where(Job.status == JobStatus.QUEUED.value)).all()
+        session.commit()
+    queue = get_queue()
+    for job_id in job_ids:
+        queue.put_nowait(job_id)
+
+
+def claim_job(job_id: int, lease_seconds: int = 300) -> str | None:
+    token = uuid.uuid4().hex
+    now = now_wib()
+    factory = get_session_factory()
+    with factory() as session:
+        result = session.execute(
+            update(Job)
+            .where(Job.id == job_id, Job.status == JobStatus.QUEUED.value)
+            .values(
+                status=JobStatus.RUNNING.value,
+                started_at=now,
+                lease_until=now + timedelta(seconds=lease_seconds),
+                lease_token=token,
+                attempts=Job.attempts + 1,
+            )
+        )
+        if result.rowcount != 1:
+            session.rollback()
+            return None
+        session.commit()
+    return token
 
 
 def get_queue() -> asyncio.Queue[int]:
@@ -208,6 +246,9 @@ def _sync_process_job(job_id: int) -> None:
         settings = get_settings()
         media_root = str((ROOT / settings.media_root).resolve())
         temp_dir = tempfile.mkdtemp(prefix="mv_dl_")
+        final_files: list[str] = []
+        downloaded: list[str] = []
+        metadata_path: str | None = None
 
         try:
             downloaded = adapter.download(job.url, temp_dir)
@@ -251,7 +292,7 @@ def _sync_process_job(job_id: int) -> None:
                 "hashtags": res.hashtags,
                 "files": [os.path.basename(f) for f in final_files],
             }
-            write_metadata(dest_dir, meta_dict)
+            metadata_path = write_metadata(dest_dir, meta_dict)
 
             # 7. Save DB records
             item = MediaItem(
@@ -278,12 +319,25 @@ def _sync_process_job(job_id: int) -> None:
 
             job.status = JobStatus.DONE.value
             job.finished_at = now_wib()
+            job.lease_until = None
+            job.lease_token = None
             session.commit()
 
         except Exception as exc:
+            for source, target in zip(downloaded, final_files):
+                if os.path.exists(target) and not os.path.exists(source):
+                    os.makedirs(os.path.dirname(source), exist_ok=True)
+                    shutil.move(target, source)
+            if metadata_path:
+                try:
+                    os.remove(metadata_path)
+                except FileNotFoundError:
+                    pass
             job.status = JobStatus.FAILED.value
             job.error = str(exc)
             job.finished_at = now_wib()
+            job.lease_until = None
+            job.lease_token = None
             session.commit()
             raise
 

@@ -25,26 +25,8 @@ from sqlalchemy import update
 from .routes import adapters, albums, autosync, health, importer, jobs, media
 from . import observability
 from .scheduler import check_adapters_health, start_scheduler
-from .service import get_queue
+from .service import get_queue, recover_jobs
 from .worker import Worker
-
-
-def recover_jobs() -> None:
-    factory = get_session_factory()
-    with factory() as session:
-        session.execute(
-            update(Job)
-            .where(Job.status == JobStatus.RUNNING.value)
-            .values(status=JobStatus.QUEUED.value, started_at=None, error="Recovered after restart")
-        )
-        session.commit()
-        jobs = session.scalars(
-            __import__("sqlalchemy").select(Job.id).where(Job.status == JobStatus.QUEUED.value)
-        ).all()
-    queue = get_queue()
-    for job_id in jobs:
-        queue.put_nowait(job_id)
-
 
 
 @asynccontextmanager

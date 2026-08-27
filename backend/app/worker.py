@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from .db import Job, JobStatus, now_wib
 
@@ -34,7 +35,9 @@ class Worker:
     async def _worker(self, idx: int) -> None:
         while True:
             job_id = await self.queue.get()
+            started = time.perf_counter()
             try:
+                from .observability import record_job
                 # If jobs have already been processed, apply the delay before the next job
                 if self._has_processed_any and self.cooldown_seconds > 0:
                     self._cooldown_state["active"] = True
@@ -52,27 +55,24 @@ class Worker:
                 logger.exception("worker %s failed job %s: %s", idx, job_id, exc)
                 await self._set_status(job_id, JobStatus.FAILED, str(exc))
             finally:
+                record_job("completed", time.perf_counter() - started)
                 self.queue.task_done()
 
     async def _process(self, job_id: int) -> None:
         from .service import process_job
         from .db import get_session_factory
 
-        def _should_process() -> bool:
-            factory = get_session_factory()
-            with factory() as session:
-                job = session.get(Job, job_id)
-                return bool(job and job.status in (JobStatus.QUEUED.value, JobStatus.RUNNING.value))
+        from .service import claim_job
 
-        should = await asyncio.to_thread(_should_process)
-        if not should:
+
+        token = await asyncio.to_thread(claim_job, job_id)
+        if not token:
             return
-
-        await self._set_status(job_id, JobStatus.RUNNING)
         await process_job(job_id)
 
     async def _set_status(self, job_id: int, status: JobStatus, error: str | None = None) -> None:
         from .db import get_session_factory
+        from .service import get_queue
 
         def _update():
             factory = get_session_factory()
@@ -82,10 +82,20 @@ class Worker:
                     job.status = status.value
                     if error:
                         job.error = error
+                    if status == JobStatus.FAILED and job.attempts < 3:
+                        job.status = JobStatus.QUEUED.value
+                        job.finished_at = None
+                        job.lease_until = None
+                        job.lease_token = None
+                        session.commit()
+                        get_queue().put_nowait(job_id)
+                        return
                     if status == JobStatus.RUNNING:
                         job.started_at = now_wib()
                     if status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.DUP):
                         job.finished_at = now_wib()
+                        job.lease_until = None
+                        job.lease_token = None
 
                     session.commit()
 

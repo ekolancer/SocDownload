@@ -64,6 +64,9 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class MediaItem(Base):
@@ -162,6 +165,50 @@ class AutoSyncConfig(Base):
 _engine = None
 _session_factory = None
 
+MIGRATIONS = {
+    1: (
+        "CREATE INDEX IF NOT EXISTS ix_jobs_status ON jobs (status)",
+        "CREATE INDEX IF NOT EXISTS ix_jobs_url ON jobs (url)",
+        "CREATE INDEX IF NOT EXISTS ix_media_items_source_url ON media_items (source_url)",
+        "CREATE INDEX IF NOT EXISTS ix_media_items_sha256 ON media_items (sha256)",
+    ),
+    2: (
+        "ALTER TABLE media_items ADD COLUMN is_favorite BOOLEAN DEFAULT 0",
+    ),
+    3: (
+        "ALTER TABLE jobs ADD COLUMN lease_until DATETIME",
+        "ALTER TABLE jobs ADD COLUMN lease_token VARCHAR(64)",
+    ),
+    4: (
+        "ALTER TABLE auto_sync_config ADD COLUMN last_discovered_count INTEGER DEFAULT 0",
+        "ALTER TABLE auto_sync_config ADD COLUMN last_enqueued_count INTEGER DEFAULT 0",
+        "ALTER TABLE auto_sync_config ADD COLUMN last_skipped_count INTEGER DEFAULT 0",
+        "ALTER TABLE auto_sync_config ADD COLUMN last_failed_count INTEGER DEFAULT 0",
+    ),
+    5: (
+        "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+    ),
+}
+
+
+def _migration_applied(conn, version: int) -> bool:
+    return conn.execute(text("SELECT 1 FROM schema_migrations WHERE version = :version"), {"version": version}).first() is not None
+
+
+def _apply_migrations(eng) -> None:
+    with eng.begin() as conn:
+        conn.execute(text("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at DATETIME NOT NULL)"))
+        for version, statements in MIGRATIONS.items():
+            if _migration_applied(conn, version):
+                continue
+            for statement in statements:
+                try:
+                    conn.execute(text(statement))
+                except Exception as exc:
+                    if not ("duplicate column" in str(exc).lower() or "already exists" in str(exc).lower()):
+                        raise
+            conn.execute(text("INSERT INTO schema_migrations(version, applied_at) VALUES (:version, :applied_at)"), {"version": version, "applied_at": utcnow()})
+
 
 def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
     if dbapi_connection.__class__.__module__.startswith("sqlite3"):
@@ -197,27 +244,6 @@ def get_session_factory():
 def init_db() -> None:
     eng = get_engine()
     Base.metadata.create_all(eng)
-
-    with eng.begin() as conn:
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_status ON jobs (status)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_url ON jobs (url)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_items_source_url ON media_items (source_url)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_items_sha256 ON media_items (sha256)"))
-
-    # Safe migration for existing sqlite database: ensure is_favorite exists in media_items
-    with eng.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE media_items ADD COLUMN is_favorite BOOLEAN DEFAULT 0"))
-            conn.commit()
-        except Exception:
-            # Column already exists
-            pass
-
-        for col in ["last_discovered_count", "last_enqueued_count", "last_skipped_count", "last_failed_count"]:
-            try:
-                conn.execute(text(f"ALTER TABLE auto_sync_config ADD COLUMN {col} INTEGER DEFAULT 0"))
-                conn.commit()
-            except Exception:
-                pass
+    _apply_migrations(eng)
 
 

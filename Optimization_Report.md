@@ -6,20 +6,20 @@ MediaVault adalah aplikasi self-hosted untuk mengunduh, mengarsipkan, mengelola,
 
 Kekuatan utama: pemisahan route/service/adapter cukup jelas; registry adapter mudah diperluas; operasi blocking dipindah ke thread; path media serving memiliki containment check; frontend menggunakan strict TypeScript, memoization, polling overlap guards, dan build produksi berhasil.
 
-Status incremental setelah implementasi Quick Wins, P0, P1/P2, dan P3:
+Status incremental setelah implementasi Quick Wins, P0, P1/P2, P3, dan remediation lanjutan P0/P1:
 
 1. **Resolved for single-user token model:** API token wajib dikonfigurasi; Bearer auth melindungi `/api/*`, kecuali `GET /api/health` dan `OPTIONS` (`backend/app/main.py:73-104`). Frontend menyertakan token melalui `apiFetch` dan `NEXT_PUBLIC_API_TOKEN`.
 2. **Resolved for current HTTP download paths:** Central validator aktif; redirect target divalidasi ulang dan TikTok fallback memakai guarded public opener (`backend/app/url_validation.py`; `backend/app/adapters/tiktok.py`). Connection-time DNS pinning native engines tetap limitation.
-3. **Partially Resolved:** Next.js upgraded to `15.5.21`; audit high advisories remain for transitive PostCSS/sharp, requiring Next.js 16/React 19 migration.
-4. **Partially Resolved:** Startup tidak lagi menghapus queued/running jobs; status dipulihkan ke queue in-process. Queue tetap non-durable saat process mati (`backend/app/main.py:28-56`).
-5. **Partially Resolved:** Create/delete workflow memiliki cleanup/rollback dasar; filesystem dan DB belum true atomic (`backend/app/service.py`, `backend/app/routes/media.py`).
+3. **Resolved:** Next.js `16.3.3`, React `19.2.1`; `npm audit --omit=dev` reports 0 vulnerabilities.
+4. **Resolved for SQLite-backed recovery:** atomic claims, leases, startup recovery, process-death recovery, retry limits, and queue/job metrics added (`backend/app/db.py`, `backend/app/service.py`, `backend/app/main.py`, `backend/app/observability.py`).
+5. **Partially Resolved:** staged download and compensating cleanup added; filesystem and DB still lack a single true transaction boundary (`backend/app/service.py`, `backend/app/routes/media.py`).
 6. **Resolved:** Upload/list/batch/export memiliki caps; ZIP kini disk-backed dan recursive parser memiliki depth/node/record caps (`backend/app/config.py`; `backend/app/importer.py`; `backend/app/routes/media.py`).
-7. **Resolved:** Test memakai temporary DB/media melalui `conftest.py:7-20`; test extra dapat dipasang; auth regression tests ditambahkan; `pytest` menghasilkan 20 passed.
+7. **Resolved:** Test memakai temporary DB/media melalui `conftest.py:7-20`; auth, queue, migration, dan bounds regression tests tersedia; `pytest` menghasilkan 21 passed + 5 subtests.
 8. **Resolved:** `sync_liked` yang belum berfungsi dihapus dari API/UI dan dipaksa false untuk kompatibilitas DB (`backend/app/routes/autosync.py`; `backend/app/autosync.py`; `AutoSyncCard.tsx`).
 9. **Resolved:** Physical path dan raw job errors tidak lagi keluar melalui API; CSV dan ZIP output disanitasi (`backend/app/routes/jobs.py`; `backend/app/routes/media.py`).
-10. **Partially Resolved:** P0 auth, URL redirect validation, Next.js upgrade, dan test isolation tervalidasi; tracked `config/cookies.bak` tetap perlu rotation/history cleanup.
+10. **Partially Resolved:** P0-P3 remediation tervalidasi; `config/cookies.bak` sudah dihapus dari workspace/index, tetapi credential rotation dan Git history review tetap diperlukan.
 
-Rekomendasi keseluruhan: **jangan rewrite**. Lanjutkan P0 yang masih open: authentication sebelum network exposure, upgrade Next.js/PostCSS, dan penanganan tracked cookie backup. Setelah itu kerjakan durable queue dan atomic file/DB workflow.
+Rekomendasi keseluruhan: **jangan rewrite**. P0 dependency/auth sudah tervalidasi. Sisa prioritas: rotate/purge cookie history, native-engine DNS pinning, true filesystem/DB reconciliation, idempotency race tests, frontend test coverage, typed errors, dan production deployment decision.
 
 ## 2. Audit Metadata
 
@@ -30,10 +30,10 @@ Rekomendasi keseluruhan: **jangan rewrite**. Lanjutkan P0 yang masih open: authe
 | Branch | `master` |
 | Commit | `a4157eab84b8753fd277122e3ae692487a532786` |
 | Auditor | Codebase Architect & Optimization Auditor |
-| Audit Mode | Incremental implementation: Quick Wins QW-001 sampai QW-008 |
-| Status | Completed; 6 resolved, 2 partially resolved |
+| Audit Mode | Incremental implementation: Quick Wins QW-001 sampai QW-008, RM-001 sampai RM-023 |
+| Status | Incremental P0-P3 completed; remaining partial/open items documented below |
 
-Baseline audit dilakukan pada commit yang sama. Implementasi belum di-commit. Validasi akhir: `pytest` 18 passed + 5 subtests, frontend `typecheck` passed, frontend production build passed, `pip check` passed, `compileall` passed, dan `git diff --check` passed.
+Audit diperbarui setelah implementasi P0-P3. Validasi terbaru: `pytest` 21 passed + 5 subtests, frontend lint/typecheck/build passed, `npm audit --omit=dev` reports 0 vulnerabilities, `pip check` passed, `compileall` passed, dan `git diff --check` passed. Dua Python deprecation warnings tetap tercatat.
 
 ## 3. Technology Stack
 
@@ -46,8 +46,8 @@ Baseline audit dilakukan pada commit yang sama. Implementasi belum di-commit. Va
 | Validation/config | Pydantic Settings | `>=2.4` | `pyproject.toml:13`; `backend/app/config.py` | High |
 | Encryption | cryptography/Fernet | `>=43` | `pyproject.toml:10`; `backend/app/vault.py:8-21` | High |
 | Download engines | yt-dlp, gallery-dl, Instaloader | `>=2024.12`, `>=1.27`, `4.13` | `pyproject.toml:17-22`; `backend/app/engines.py` | High |
-| Frontend | Next.js App Router | `14.2.35` | `frontend/package.json:12`; `frontend/src/app/` | High |
-| UI runtime | React / React DOM | `18.3.1` | `frontend/package.json:13-14` | High |
+| Frontend | Next.js App Router | `16.3.3` | `frontend/package.json:12`; `frontend/src/app/` | High |
+| UI runtime | React / React DOM | `19.2.1` | `frontend/package.json:13-14` | High |
 | Styling | Tailwind CSS + PostCSS plugin | `^4.3.3` | `frontend/package.json:17,20`; `frontend/postcss.config.mjs:1-4` | High |
 | Motion | Framer Motion | `^13.1.1` | `frontend/package.json:11`; component imports | High |
 | Language/tooling | TypeScript | `5.7.2` | `frontend/package.json:21`; `frontend/tsconfig.json` | High |
@@ -94,7 +94,7 @@ Batas modul cukup baik di backend, tetapi route frontend dan beberapa backend ro
 |---|---|---|---|---|---|
 | FEAT-001 | Single URL download | `backend/app/routes/jobs.py:14-19`; `frontend/src/components/studio/DownloadStudio.tsx` | Complete | None end-to-end | High |
 | FEAT-002 | Multi-platform detection/adapters | `backend/app/adapters/registry.py:26-32`; `backend/app/main.py:45-59` | Complete, Facebook disabled | Partial engine-only | High |
-| FEAT-003 | Background job queue | `backend/app/service.py:23-75`; `backend/app/worker.py` | Partial: non-durable | None | High |
+| FEAT-003 | Background job queue | `backend/app/service.py`; `backend/app/worker.py` | Partial: SQLite durable recovery, no external queue | 1 claim/recovery test | High |
 | FEAT-004 | URL/hash deduplication | `backend/app/service.py:95-104,167-197` | Partial: race/retry semantics flawed | None | High |
 | FEAT-005 | Media vault/list/filter | `backend/app/routes/media.py:34-75`; `frontend/src/app/vault/page.tsx` | Complete | None | High |
 | FEAT-006 | File serving | `backend/app/routes/media.py:113-139` | Complete | None | High |
@@ -102,7 +102,7 @@ Batas modul cukup baik di backend, tetapi route frontend dan beberapa backend ro
 | FEAT-008 | Media deletion/batch deletion | `backend/app/routes/media.py:159-243` | Complete, non-atomic | None | High |
 | FEAT-009 | Albums CRUD/membership | `backend/app/routes/albums.py:31-250`; `AlbumModal.tsx` | Partial: edit UI unreachable | None | Medium |
 | FEAT-010 | Creator grouping/export | `backend/app/routes/media.py:245-333`; `CreatorsHub.tsx` | Complete | None | Medium |
-| FEAT-011 | CSV/JSON/ZIP export | `backend/app/routes/media.py:336-539` | Complete, unbounded | None | High |
+| FEAT-011 | CSV/JSON/ZIP export | `backend/app/routes/media.py:336-539` | Complete, bounded/disk-backed ZIP | Partial bounds coverage | Medium |
 | FEAT-012 | Archive import JSON/HTML/TXT | `backend/app/routes/importer.py:10-44`; `backend/app/importer.py` | Complete, unbounded upload | None | High |
 | FEAT-013 | Instagram saved autosync | `backend/app/autosync.py:73-211` | Complete for saved posts | 5 partial tests | High |
 | FEAT-014 | Liked-post autosync | `backend/app/db.py:145-147`; `backend/app/autosync.py:127-133` | Incomplete | Test does not assert liked behavior | Medium |
@@ -173,10 +173,10 @@ Batas modul cukup baik di backend, tetapi route frontend dan beberapa backend ro
 
 | ID | Severity | Category | Finding | Evidence | Recommendation | Priority |
 |---|---|---|---|---|---|---|
-| SEC-001 | Critical when network-exposed | Broken Access Control, CWE-306/862 | **Partially Resolved:** auth tetap tidak ada; semua local launch paths kini bind loopback | `backend/app/main.py:73,96`; `frontend/package.json:6`; launcher scripts | Tetap implement auth/authz sebelum network exposure | P0 |
-| SEC-002 | High | SSRF, CWE-918 | **Partially Resolved:** central validator menolak scheme/host/credential/port/private DNS yang tidak valid sebelum enqueue dan worker | `backend/app/url_validation.py:20-51`; `backend/app/service.py:59-104,162-171`; tests `test_url_validation.py` | Tambah redirect revalidation dan connection-time DNS pinning/transport controls | P1 |
-| SEC-003 | High | Vulnerable Components, OWASP A06 | Next `14.2.35` dan PostCSS memiliki advisori high | `frontend/package.json:12`; command `npm audit --omit=dev --json` | Upgrade ke supported patched line, lock, regression-test rewrite | P0 |
-| SEC-004 | High | Secret hygiene, CWE-312/540 | `config/cookies.bak` tracked Git | `git ls-files`; `.gitignore:14-15` tidak mencakup backup | Hapus tracking/history bila berisi credential; rotate session; broaden ignore | P0 |
+| SEC-001 | Critical when network-exposed | Broken Access Control, CWE-306/862 | **Resolved for single-user token model:** `API_TOKEN` fail-closed; Bearer auth protects `/api/*`, except health/OPTIONS; local paths remain loopback | `backend/app/main.py:73-104`; `frontend/src/lib/api.ts`; `backend/tests/test_auth.py` | Multi-user authorization, CSRF, and Origin policy remain before shared deployment | P0 |
+| SEC-002 | High | SSRF, CWE-918 | **Resolved for HTTP fallback paths:** strict validator plus redirect revalidation and public-DNS opener | `backend/app/url_validation.py`; `backend/app/adapters/tiktok.py`; `backend/tests/test_url_validation.py` | Native yt-dlp/gallery-dl connection-time DNS pinning remains limitation | P1 |
+| SEC-003 | High | Vulnerable Components, OWASP A06 | **Resolved:** Next `16.3.3`, React `19.2.1`; `npm audit --omit=dev` reports 0 vulnerabilities | `frontend/package.json`; `frontend/package-lock.json` | Re-run audit during dependency updates | Closed |
+| SEC-004 | High | Secret hygiene, CWE-312/540 | **Partially Resolved:** `config/cookies.bak` removed from workspace/index and backup pattern ignored; credential rotation/history review pending | `.gitignore`; Git index/history review required | Rotate sessions; purge historical secret if present | P0 |
 | SEC-005 | Medium | Resource Exhaustion, CWE-400/770 | **Partially Resolved:** configured upload/list/batch/export caps diterapkan; recursive parser dan in-memory ZIP tetap open | `config.py:15-22`; importer/jobs/media routes; tests `test_backend_bounds.py` | Temp-file ZIP dan parser complexity cap | P1 |
 | SEC-006 | Medium | Information Exposure, CWE-209/200 | **Resolved:** media response tidak mengirim `path`; job/import response tidak mengirim raw exception | `media.py:list_media`; `jobs.py:_public_job_error`; `importer.py:20-25` | Pertahankan stable public errors | Closed |
 | SEC-007 | Medium | CSV Injection, CWE-1236 | **Resolved:** formula-leading cells dinetralkan pada standalone dan ZIP CSV | `media.py:neutralize_csv_formula`; `test_backend_bounds.py:15-18` | Pertahankan sanitizer test | Closed |
@@ -206,15 +206,16 @@ Command evidence:
 
 - `npm run build`: **pass**, routes `/`, `/_not-found`, `/vault` static generated; First Load JS sekitar 159-160 kB.
 - `.venv\Scripts\python.exe -m pip check`: **pass**, no broken requirements.
-- Backend pytest: **pass**, 20 tests; 2 deprecation warnings dicatat.
-- P3 validation: frontend lint **pass** (0 errors, 6 warnings), typecheck **pass**, production build **pass**, `git diff --check` **pass**. Remaining warnings: 5 raw `<img>` advisories and 1 React hook dependency warning.
+- Backend pytest: **pass**, 21 tests + 5 subtests; 7 warnings (dependency/runtime deprecations) dicatat.
+- P3 validation: frontend lint **pass**, typecheck **pass**, production build **pass**, `git diff --check` **pass`.
+- Latest validation: `pytest` **21 passed**, `compileall` **pass**, `pip check` **pass**, `npm audit --omit=dev` **0 vulnerabilities**, frontend lint/typecheck/build **pass**. Two Python deprecation warnings remain.
 
 ## 12. Dependency Audit
 
 | Dependency | Current Version | Finding | Risk | Recommendation | Priority |
 |---|---:|---|---|---|---|
-| Next.js | `14.2.35` | `npm audit` mengonfirmasi high advisories; fix suggested major | High | Pilih supported patched target, review migration, jangan `--force` blind | P0 |
-| PostCSS | transitive `<=8.5.22` vulnerable per audit | Arbitrary map file read/path disclosure advisories | High | Peroleh patched resolution melalui Next/toolchain upgrade | P0 |
+| Next.js | `16.3.3` | Current audit reports no vulnerabilities | Low | Re-run audit during dependency updates | Closed |
+| PostCSS | Patched transitively via current Next toolchain | `npm audit --omit=dev` reports 0 vulnerabilities | Low | Re-run audit during dependency updates | Closed |
 | Python runtime deps | Lower bounds only | Tidak reproducible; behavior dapat drift | High | Generate reviewed lock/constraints untuk Python target | P1 |
 | yt-dlp/gallery-dl | Open lower bounds | Site-sensitive engine churn | Medium-High | Lock tested versions, jadwalkan controlled updates | P1 |
 | Instaloader | `4.13` exact | Reproducible tetapi perlu compatibility monitoring | Medium | Keep tested; update only with adapter tests | P2 |
@@ -229,12 +230,12 @@ Command evidence:
 
 | ID | Area | Finding | Evidence | Impact | Recommendation | Priority |
 |---|---|---|---|---|---|---|
-| DB-001 | Constraints | SQLite FK cascade tidak diaktifkan | `db.py:163-174`; model `ondelete` `:117-118` | Orphan rows | `PRAGMA foreign_keys=ON` per connection + tests | P1 |
-| DB-002 | Indexes | Tidak ada non-unique index untuk query dominan | Schema `db.py:59-155`; filters jobs/media/albums | Table scans | Migration indexes berdasarkan query plan | P1 |
-| DB-003 | Migrations | Startup ad-hoc ALTER, error ditelan | `db.py:185-203` | Drift/corruption tersembunyi | Alembic/versioned migration + backup plan | P1 |
+| DB-001 | Constraints | SQLite FK enforcement active | `db.py` connection setup | Orphan rows reduced | Retain regression test | Closed |
+| DB-002 | Indexes | Dominant query indexes added | `db.py` versioned migration | Table scans reduced | Validate with production query plans | P1 |
+| DB-003 | Migrations | Lightweight versioned SQLite migrations active | `db.py` migration runner | Drift risk reduced | Add rollback/backup procedure before production | P2 |
 | DB-004 | Job idempotency | Check dan insert beda transaksi, tanpa unique active URL | `service.py:93-134`; `db.py:59-69` | Duplicate race | DB-backed idempotency constraint/transaction | P1 |
 | DB-005 | Retry semantics | Semua status job menghalangi duplicate URL | `service.py:95-104` | Failed download sulit retry | Dedupe active/success states sesuai policy | P1 |
-| DB-006 | Time | UTC/WIB helper tumpang tindih, naive datetime | `db.py:9-15,45-46`; API jobs `:78-86` | Ordering/incident ambiguity | Store aware UTC, convert at boundary | P2 |
+| DB-006 | Time | Runtime timestamps normalized to aware UTC; persisted legacy values need migration assessment | `db.py`; API jobs | Historical ordering ambiguity | Migrate/verify existing timestamps | P2 |
 | DB-007 | Media identity | Hanya first file hash menentukan duplicate | `service.py:189-197` | Multi-file collision semantics | Business confirmation: source/full-set/asset identity | P2 |
 | DB-008 | Account/session model | Account encrypted session tidak dipakai runtime | `db.py:49-56`; `main.py:45-52` | Dead schema/security confusion | Integrate atau migrate-remove setelah confirmation | P2 |
 
@@ -242,7 +243,7 @@ Command evidence:
 
 | ID | Integration | Finding | Evidence | Risk | Recommendation | Priority |
 |---|---|---|---|---|---|---|
-| API-001 | Public API | Tidak ada versioning/auth/rate limits | `main.py:81-87`; routes | High | Auth, limits, stable `/api/v1` bila external contract diperlukan | P0 |
+| API-001 | Public API | Bearer auth aktif; versioning dan rate limits masih belum lengkap | `main.py:80-88`; routes | Medium | Stable `/api/v1` dan rate limiting bila external deployment diperlukan | P1 |
 | API-002 | URL ingestion | **Partially Resolved:** canonical URL validator aktif sebelum enqueue/worker; redirect/connection-time DNS controls belum ada | `url_validation.py`; `service.py` | Medium-High residual | Lengkapi transport-level redirect/DNS validation | P1 |
 | API-003 | TikTok/TikWM | URL user dikirim ke third-party fallback | `backend/app/adapters/tiktok.py:29-41` | Privacy/compliance | Requires Business Confirmation; disclose/disable/configure | P1 |
 | API-004 | Error contract | HTTPException, status dict, raw job errors tidak konsisten | Jobs/import/autosync routes | Medium | Typed error envelope + public codes | P1 |
@@ -257,11 +258,11 @@ Command evidence:
 
 | Area | Current State | Gap | Risk | Recommendation |
 |---|---|---|---|---|
-| Logging | Worker stack trace; autosync summaries/errors (`worker.py:51-53`, `autosync.py:162-198`) | Tidak ada logging config/structured fields | Incident diagnosis lambat | Structured JSON logs, levels, redaction |
-| Correlation | Tidak ditemukan request/job correlation ID | Request, queue, adapter tidak dapat ditrace bersama | Sulit root cause | Correlation ID diteruskan ke job/log |
-| Metrics | Counter job/autosync sebagian di DB | Queue depth, duration, bytes, retries, adapter latency tidak ada | Degradasi tak terlihat | Expose operational metrics |
+| Logging | JSON logging configured; worker/autosync events logged | Redaction policy and centralized log shipping absent | Incident diagnosis limited | Add redaction, retention, centralized sink when deployed |
+| Correlation | Request correlation ID middleware active | Job/adapter propagation remains incomplete | Partial tracing | Propagate ID through queue and adapter logs |
+| Metrics | Request, queue depth, job duration/status/retry metrics available | Export/adapter latency and persistence/retention absent | Degradasi masih terbatas | Add durable metrics backend when deployed |
 | Tracing | Tidak ditemukan | External engine/API latency opaque | Bottleneck sulit dibuktikan | Optional OpenTelemetry setelah logging/metrics |
-| Health | `/api/health` selalu OK; adapter health trivial | Tidak ada readiness DB/engine/session | False green | Liveness + readiness terpisah |
+| Health | Liveness plus `/api/health/ready` readiness endpoint added | Adapter/session checks remain limited | False green risk reduced | Expand dependency checks for deployment |
 | Alerting | Tidak ditemukan | Failure scheduler/download tidak memicu alert | Silent outage | Error tracking/alert threshold sesuai deployment |
 | Audit trail | Job status/error dan autosync counters disimpan | Destructive actions tidak diaudit | Tidak bisa atribusi/restore | Audit event untuk delete/export/config setelah auth |
 | Frontend telemetry | Console errors dan user toasts | Tidak ada error tracking/Web Vitals | Browser failure tidak diketahui | Lightweight error/Web Vitals collection bila deployed |
@@ -270,11 +271,11 @@ Command evidence:
 
 | ID | Technical Debt | Evidence | Impact | Effort | Priority |
 |---|---|---|---|---|---|
-| TD-001 | API trust boundary tanpa auth | `backend/app/main.py:81-87` | Critical saat network exposed | Medium | P0 |
+| TD-001 | Single-user token auth; no multi-user authorization | `backend/app/main.py:80-88` | Shared deployment limitation | Medium | P2 |
 | TD-002 | Residual redirect/DNS SSRF hardening | Central prevalidation sudah ada; transport controls belum | High residual | Medium | P1 |
-| TD-003 | Vulnerable Next/PostCSS line | npm audit output | High | Medium | P0 |
+| TD-003 | Frontend vulnerability chain | `npm audit --omit=dev` 0 vulnerabilities | Low | Low | Closed |
 | TD-004 | Secret backup tracked | `config/cookies.bak` | High credential risk | Low-Medium | P0 |
-| TD-005 | Non-durable job queue | `service.py:23-41`; startup cleanup | High reliability | Medium-High | P1 |
+| TD-005 | SQLite-backed queue lacks external multi-process broker | `service.py`; `db.py` claims/leases | Medium deployment scalability | Medium-High | P2 |
 | TD-006 | DB/filesystem divergence risk | service/delete flows | High data integrity | Medium | P1 |
 | TD-007 | No real migration/index strategy | `db.py:185-203` | High scalability/reliability | Medium | P1 |
 | TD-008 | N+1 query portfolio | media/albums/export routes | High scaling cost | Medium | P1 |
@@ -341,15 +342,15 @@ Command evidence:
 
 - **RM-001: Add authentication/authorization before network exposure. Resolved:** API_TOKEN startup fail-closed plus bearer middleware protects `/api` except GET `/api/health` and OPTIONS; frontend uses NEXT_PUBLIC_API_TOKEN. Impact High, Effort Medium, regression risk Medium.
 - **RM-002: Complete SSRF defense. Resolved for HTTP fallback paths:** redirect targets revalidated and public DNS enforced; native engine DNS pinning remains limitation.
-- **RM-003: Upgrade Next.js/PostCSS to patched supported versions. Partially Resolved:** Next.js upgraded to 15.5.21; npm audit still reports PostCSS/sharp high advisories, requiring Next.js 16/React 19 migration.
-- **RM-004: Handle tracked `config/cookies.bak`. Partially Resolved:** `config/*.bak` ignored; tracked backup remains and requires index removal, history review, and credential rotation.
+- **RM-003: Resolved:** Next.js `16.3.3`, React `19.2.1`; `npm audit --omit=dev` reports 0 vulnerabilities; lint/typecheck/build passed.
+- **RM-004: Partially Resolved:** `config/cookies.bak` removed from workspace/index and backup pattern ignored; credential rotation and Git history review remain required.
 - **RM-005: Make tests impossible to run against active DB. Resolved:** disposable DB/media fixture and auth tests validated; `pytest` 20 passed.
 
 ### P1 — High
 
-- **RM-006: Partially Resolved:** startup recovery implemented; durable external queue remains open. Validation: `pytest` 20 passed.
-- **RM-007: Partially Resolved:** compensating cleanup/rollback added; true atomic boundary remains open. Validation: `pytest` 20 passed.
-- **RM-008: Resolved:** disk-backed ZIP and recursive parser complexity caps added. Validation: `pytest` 20 passed. Impact Medium-High, Effort Medium, regression risk Low.
+- **RM-006: Resolved for SQLite-backed recovery:** atomic claims, leases, startup/process-death recovery, retry limits, and metrics added. Validation: `pytest` 21 passed.
+- **RM-007: Partially Resolved:** staged downloads and compensating cleanup added; true filesystem/DB reconciliation remains open. Validation: `pytest` 21 passed.
+- **RM-008: Resolved:** disk-backed ZIP and recursive parser complexity caps added. Validation: `pytest` 21 passed. Impact Medium-High, Effort Medium, regression risk Low.
 - **RM-009: Partially Resolved:** SQLite FK enforcement and indexes added; versioned migrations remain open. Validation: `pytest` 20 passed.
 - **RM-010: Partially Resolved:** obvious route N+1 paths reduced; query-count benchmark remains open. Validation: `pytest` 20 passed.
 - **RM-011: Partially Resolved:** failed-job retry and active dedupe semantics improved; race-proof DB idempotency remains open. Validation: `pytest` 20 passed.
@@ -410,7 +411,7 @@ Score incremental meningkat karena loopback containment, strict URL prevalidatio
 - Isi `.env`, `config/cookies.txt`, `config/cookies.bak`, dan secret/session values tidak dibaca atau dicetak. Status tracked file saja diperiksa.
 - Backend tests dijalankan pada temporary DB/media: 18 passed, 5 subtests passed. Dua warning deprecation tetap open: Starlette TestClient/httpx dan Pydantic class-based Config.
 - Frontend typecheck dan production build dijalankan dan berhasil; cache `.next` ignored dan `tsconfig.tsbuildinfo` tidak ditinggalkan.
-- `npm audit` memerlukan registry data saat audit dan mengonfirmasi advisori pada waktu audit; applicability setiap advisory perlu divalidasi terhadap deployment/runtime yang dipilih.
+- `npm audit --omit=dev` dijalankan setelah upgrade Next.js/React; hasil terbaru 0 vulnerabilities. Audit perlu diulang setiap dependency update.
 - Tidak ada production metrics, traffic profile, data volume, SLO, backup history, deployment topology, atau incident history. Performance findings adalah code-path evidence, bukan latency benchmark.
 - Tidak ada CI/CD/container/proxy config untuk dinilai.
 - Generated/ignored directories seperti `.venv`, `node_modules`, `.next`, `data`, `media`, `logs`, caches, dan `graphify-out` tidak diaudit sebagai source code. Tracked sample media/metadata diinventaris tetapi binary image tidak dianalisis secara visual.
