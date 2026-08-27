@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from .base import BaseAdapter, ResolvedMedia
+from .base import BaseAdapter, ResolvedMedia, extract_username
 from ..engines import gdl_download, gdl_first_item
 
 
@@ -19,7 +19,7 @@ class RedditAdapter(BaseAdapter):
             return ResolvedMedia(
                 platform=self.platform,
                 source_url=url,
-                username=kv.get("author"),
+                username=extract_username(kv, "author", "user", "username", "uploader"),
                 caption=kv.get("title") or kv.get("description"),
                 posted_at=str(kv.get("date")) if kv.get("date") else None,
                 hashtags=[],

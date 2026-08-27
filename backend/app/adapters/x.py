@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 
-from .base import BaseAdapter, ResolvedMedia
+from .base import BaseAdapter, ResolvedMedia, extract_username
 from ..engines import gdl_download, gdl_first_item
 
 
@@ -16,11 +16,10 @@ class XAdapter(BaseAdapter):
 
     def resolve(self, url: str) -> ResolvedMedia:
         kv = gdl_first_item(url)
-        author = kv.get("author") or kv.get("user")
         return ResolvedMedia(
             platform=self.platform,
             source_url=url,
-            username=author.get("nick") if isinstance(author, dict) else (author or kv.get("uploader")),
+            username=extract_username(kv, "author", "user", "username", "uploader", "uploader_id"),
             caption=kv.get("content") or kv.get("description"),
             posted_at=str(kv.get("date")) if kv.get("date") else None,
             hashtags=[],

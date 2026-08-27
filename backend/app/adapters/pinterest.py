@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from .base import BaseAdapter, ResolvedMedia
+from .base import BaseAdapter, ResolvedMedia, extract_username
 from ..engines import gdl_download, gdl_first_item
 
 
@@ -16,10 +16,11 @@ class PinterestAdapter(BaseAdapter):
     def resolve(self, url: str) -> ResolvedMedia:
         try:
             kv = gdl_first_item(url)
+            username = extract_username(kv, "pinner", "native_creator", "creator", "owner", "user", "username", "uploader")
             return ResolvedMedia(
                 platform=self.platform,
                 source_url=url,
-                username=kv.get("author") or kv.get("uploader"),
+                username=username,
                 caption=kv.get("title") or kv.get("description"),
                 posted_at=None,
                 hashtags=[],
