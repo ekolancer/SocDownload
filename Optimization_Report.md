@@ -6,7 +6,7 @@ MediaVault adalah aplikasi self-hosted untuk mengunduh, mengarsipkan, mengelola,
 
 Kekuatan utama: pemisahan route/service/adapter cukup jelas; registry adapter mudah diperluas; operasi blocking dipindah ke thread; path media serving memiliki containment check; frontend menggunakan strict TypeScript, memoization, polling overlap guards, dan build produksi berhasil.
 
-Status incremental setelah implementasi Quick Wins dan P0:
+Status incremental setelah implementasi Quick Wins, P0, dan P1/P2:
 
 1. **Resolved for single-user token model:** API token wajib dikonfigurasi; Bearer auth melindungi `/api/*`, kecuali `GET /api/health` dan `OPTIONS` (`backend/app/main.py:73-104`). Frontend menyertakan token melalui `apiFetch` dan `NEXT_PUBLIC_API_TOKEN`.
 2. **Resolved for current HTTP download paths:** Central validator aktif; redirect target divalidasi ulang dan TikTok fallback memakai guarded public opener (`backend/app/url_validation.py`; `backend/app/adapters/tiktok.py`). Connection-time DNS pinning native engines tetap limitation.
@@ -56,7 +56,7 @@ Baseline audit dilakukan pada commit yang sama. Implementasi belum di-commit. Va
 | Package management | pip/PEP 621, npm lockfile v3 | N/A | `pyproject.toml`; `frontend/package-lock.json:1-6` | High |
 | Testing | pytest + unittest-style tests | pytest `>=8.0` declared | `pyproject.toml:23-25`; `tests/test_engines.py`; `backend/tests/test_autosync.py` | High |
 | Local runtime | PowerShell/Bash scripts | N/A | `run-local.ps1`, `run-local.sh` | High |
-| CI/CD | Tidak ditemukan | N/A | Tidak ada tracked workflow CI pada `git ls-files` | High |
+| CI/CD | GitHub Actions | N/A | `.github/workflows/ci.yml` | High |
 | Containers | Tidak ditemukan | N/A | Tidak ada Dockerfile/Compose/.dockerignore pada tracked files | High |
 
 ## 4. Architecture Overview
@@ -358,12 +358,12 @@ Command evidence:
 
 ### P2 — Medium
 
-- **RM-015:** Resolve saved/liked/multi-platform autosync semantics. Requires Business Confirmation. Effort Medium, risk Low.
-- **RM-016:** Add structured logs, readiness, metrics, correlation IDs. Effort Medium, risk Low.
-- **RM-017:** CI with isolated backend tests, frontend typecheck/build/tests, secret/dependency scanning. Effort Medium, risk Low.
-- **RM-018:** Split frontend route orchestration and remove/revive dead UI. Requires Business Confirmation for deletion. Effort Medium, risk Medium.
-- **RM-019:** UTC timestamp normalization and migration assessment. Effort Medium, risk Medium.
-- **RM-020:** Reconcile PowerShell/Bash scripts and production deployment path. Effort Medium, risk Low.
+- **RM-015: Partially Resolved:** autosync contract saved-only; unsupported platform sync rejected explicitly. Multi-platform saved sync requires business confirmation. Validation: `pytest` 20 passed.
+- **RM-016: Partially Resolved:** JSON logging, request IDs, readiness, and basic request metrics added (`backend/app/observability.py`). Tracing/production metrics backend remain open. Validation: `pytest` 20 passed; frontend lint/typecheck/build passed.
+- **RM-017: Partially Resolved:** CI workflow added for pytest, lint, typecheck, build, audit. CI audit remains blocked by 3 high dependency advisories. Validation: local checks passed except audit.
+- **RM-018: Still Open:** no safe frontend split/dead UI removal performed; requires dedicated UI scope.
+- **RM-019: Partially Resolved:** runtime timestamps normalized to UTC; migration of existing persisted timestamps remains open. Validation: `pytest` 20 passed.
+- **RM-020: Resolved for current local path:** PowerShell/Bash launchers use consistent module/startup path. Production deployment contract remains undefined.
 
 ### P3 — Low
 

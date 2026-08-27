@@ -31,9 +31,9 @@ def _format_config_response(config: Any) -> dict[str, Any]:
     if config.last_sync_at:
         dt = config.last_sync_at
         if getattr(dt, "tzinfo", None) is None:
-            from ..db import WIB
-            dt = dt.replace(tzinfo=WIB)
-        last_sync_iso = dt.isoformat()
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        last_sync_iso = dt.astimezone(timezone.utc).isoformat()
 
     return {
         "platform": config.platform,

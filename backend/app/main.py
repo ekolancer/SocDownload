@@ -5,7 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from secrets import compare_digest
+from typing import Any
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from .observability import configure_logging, request_metrics_middleware
 
 from .adapters.facebook import FacebookAdapter
 from .adapters.instagram import InstagramAdapter
@@ -20,6 +23,7 @@ from .config import get_settings
 from .db import init_db, Job, JobStatus, MediaItem, get_session_factory, utcnow
 from sqlalchemy import update
 from .routes import adapters, albums, autosync, health, importer, jobs, media
+from . import observability
 from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue
 from .worker import Worker
@@ -79,6 +83,8 @@ def create_app() -> FastAPI:
         raise RuntimeError("API_TOKEN must be configured with a non-placeholder value")
 
     app = FastAPI(title="MediaVault", lifespan=lifespan)
+    configure_logging()
+    app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware(app))
 
     @app.middleware("http")
     async def api_auth(request: Request, call_next: Any):
@@ -98,6 +104,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(observability.router)
     app.include_router(importer.router)
     app.include_router(jobs.router)
     app.include_router(media.router)

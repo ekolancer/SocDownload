@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
 
-WIB = timezone(timedelta(hours=7), name="WIB")
+UTC = timezone.utc
+WIB = UTC
 
 
 def now_wib() -> datetime:
-    """Return current timestamp in GMT+7 (Asia/Jakarta / WIB)."""
-    return datetime.now(WIB)
-
-
-# Keep utcnow as alias to now_wib so existing defaults produce GMT+7
-utcnow = now_wib
+    return datetime.now(UTC)
 
 from sqlalchemy import (
     Boolean,

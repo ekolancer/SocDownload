@@ -125,9 +125,11 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
         try:
             collected_urls: list[str] = []
             # Fetch Saved posts
-            if hasattr(adapter, "list_saved"):
+            if config.sync_saved and hasattr(adapter, "list_saved"):
                 saved_urls = adapter.list_saved(limit=100)
                 collected_urls.extend(saved_urls)
+            if config.sync_saved and not hasattr(adapter, "list_saved"):
+                raise RuntimeError(f"Saved-item sync unsupported for {platform}")
 
 
             # Deduplicate within this fetch
