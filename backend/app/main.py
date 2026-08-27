@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import logging
+import pickle
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -39,7 +41,10 @@ async def lifespan(app: FastAPI):
         import os
 
         if os.path.isfile(settings.instagram_session_file):
-            instagram.load_session(settings.instagram_session_file, settings.instagram_username)
+            try:
+                instagram.load_session(settings.instagram_session_file, settings.instagram_username)
+            except (OSError, ValueError, EOFError, UnicodeError, pickle.UnpicklingError) as exc:
+                logging.getLogger(__name__).warning("Instagram session could not be loaded: %s", type(exc).__name__)
     registry.register(instagram)
     registry.register(XAdapter())
     registry.register(ThreadsAdapter())

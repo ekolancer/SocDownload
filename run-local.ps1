@@ -27,10 +27,28 @@ foreach ($PortNumber in 3000, 8000) {
     }
 }
 
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    throw "Python 3.11+ not found in PATH."
+}
+
 if (-not (Test-Path -LiteralPath (Join-Path $Root ".env"))) {
     Copy-Item -LiteralPath (Join-Path $Root ".env.example") -Destination (Join-Path $Root ".env")
-    Write-Host ".env created from .env.example. Review VAULT_KEY before production use."
+    $ApiToken = & python -c "import secrets; print(secrets.token_urlsafe(32))"
+    $VaultKey = & python -c "import secrets; print(secrets.token_urlsafe(32))"
+    $EnvPath = Join-Path $Root ".env"
+    (Get-Content -LiteralPath $EnvPath) -replace "^API_TOKEN=.*$", "API_TOKEN=$ApiToken" -replace "^VAULT_KEY=.*$", "VAULT_KEY=$VaultKey" | Set-Content -LiteralPath $EnvPath
+    Write-Host ".env created with generated credentials."
 }
+
+$EnvPath = Join-Path $Root ".env"
+if ((Get-Content -LiteralPath $EnvPath -Raw) -match "(?m)^API_TOKEN=(?:$|generate-a-long-random-token|change-me.*)$") {
+    $ApiToken = & python -c "import secrets; print(secrets.token_urlsafe(32))"
+    (Get-Content -LiteralPath $EnvPath) -replace "^API_TOKEN=.*$", "API_TOKEN=$ApiToken" | Set-Content -LiteralPath $EnvPath
+}
+
+$FrontendEnvPath = Join-Path $Frontend ".env.local"
+$ApiToken = ((Get-Content -LiteralPath $EnvPath | Where-Object { $_ -match '^API_TOKEN=' }) -replace '^API_TOKEN=', '')
+Set-Content -LiteralPath $FrontendEnvPath -Value "NEXT_PUBLIC_API_TOKEN=$ApiToken"
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
     throw "Python 3.11+ not found in PATH."

@@ -239,6 +239,8 @@ def _sync_process_job(job_id: int) -> None:
         if existing:
             job.status = JobStatus.DUP.value
             job.finished_at = now_wib()
+            job.lease_until = None
+            job.lease_token = None
             session.commit()
             return
 
@@ -266,6 +268,8 @@ def _sync_process_job(job_id: int) -> None:
             if first_hash and existing_by_sha256(first_hash):
                 job.status = JobStatus.DUP.value
                 job.finished_at = now_wib()
+                job.lease_until = None
+                job.lease_token = None
                 session.commit()
                 return
 

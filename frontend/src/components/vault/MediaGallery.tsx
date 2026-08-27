@@ -182,7 +182,7 @@ export function MediaGallery({
           const isSelected = selectedIds.includes(item.id);
           const firstFile = item.files?.[0];
           const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
-          const fileUrl = firstFile ? `/api/media/files/${firstFile.id}` : '';
+          const fileUrl = firstFile ? `/media-file/${firstFile.id}` : '';
           const badge = getPlatformBadge(item.platform);
 
           return (

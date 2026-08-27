@@ -73,7 +73,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
 
   const currentFile = item.files?.[activeFileIndex];
   const isVideo = currentFile?.kind === 'video' || Boolean(currentFile?.path?.endsWith('.mp4'));
-  const fileUrl = currentFile ? `/api/media/files/${currentFile.id}` : '';
+  const fileUrl = currentFile ? `/media-file/${currentFile.id}` : '';
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(item.source_url);

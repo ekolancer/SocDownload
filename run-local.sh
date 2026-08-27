@@ -15,13 +15,17 @@ if [ ! -f "$ROOT/.env" ]; then
     echo "Creating .env from .env.example..."
     cp "$ROOT/.env.example" "$ROOT/.env"
     GENERATED_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))" 2>/dev/null || echo "default-mediavault-secret-key-32chars")
+    API_TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/change-me-generate-via-keygen/$GENERATED_KEY/" "$ROOT/.env"
+        sed -i '' "s/change-me-generate-via-keygen/$GENERATED_KEY/; s/generate-a-long-random-token/$API_TOKEN/" "$ROOT/.env"
     else
-        sed -i "s/change-me-generate-via-keygen/$GENERATED_KEY/" "$ROOT/.env"
+        sed -i "s/change-me-generate-via-keygen/$GENERATED_KEY/; s/generate-a-long-random-token/$API_TOKEN/" "$ROOT/.env"
     fi
     echo ".env created with generated VAULT_KEY."
 fi
+
+API_TOKEN=$(sed -n 's/^API_TOKEN=//p' "$ROOT/.env")
+printf 'NEXT_PUBLIC_API_TOKEN=%s\n' "$API_TOKEN" > "$FRONTEND/.env.local"
 
 # 2. Check and prepare virtualenv
 if [ ! -d "$VENV" ]; then

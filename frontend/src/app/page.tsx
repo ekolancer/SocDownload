@@ -56,7 +56,7 @@ export default function StudioPage() {
         apiFetch(`${API}/health`, { signal: AbortSignal.timeout(4000) }),
         apiFetch(`${API}/media?limit=8`, { signal: AbortSignal.timeout(6000) }),
         apiFetch(`${API}/jobs/stats`, { signal: AbortSignal.timeout(4000) }),
-        apiFetch(`${API}/jobs?status=active&limit=100`, { signal: AbortSignal.timeout(6000) }),
+        apiFetch(`${API}/jobs?limit=100`, { signal: AbortSignal.timeout(6000) }),
       ]);
 
       // 1. Health check
@@ -326,7 +326,7 @@ export default function StudioPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {recentMedia.slice(0, 4).map((item) => {
                 const firstFile = item.files?.[0];
-                const previewUrl = firstFile ? `/api/media/files/${firstFile.id}` : '';
+                const previewUrl = firstFile ? `/media-file/${firstFile.id}` : '';
                 const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
 
                 return (

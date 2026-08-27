@@ -261,7 +261,7 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
                             className="relative aspect-square rounded-lg bg-slate-950 overflow-hidden border border-white/5"
                           >
                             <img
-                              src={`/api/media/files/${fileId}`}
+                              src={`/media-file/${fileId}`}
                               alt={creator.username}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               loading="lazy"

@@ -20,13 +20,16 @@ _job_durations: list[float] = []
 
 class RequestFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        return self._style._fmt.replace("%(request_id)s", _request_id.get()) % {
-            **record.__dict__, "request_id": _request_id.get()
-        }
+        record.request_id = _request_id.get()
+        return super().format(record)
 
 
 def configure_logging() -> None:
-    logging.basicConfig(level=logging.INFO, format='{"level":"%(levelname)s","message":"%(message)s","request_id":"%(request_id)s"}')
+    logging.basicConfig(level=logging.INFO)
+    formatter = RequestFormatter('{"level":"%(levelname)s","message":"%(message)s","request_id":"%(request_id)s"}')
+    root = logging.getLogger()
+    for handler in root.handlers:
+        handler.setFormatter(formatter)
 
 
 @router.get("/health")
@@ -79,6 +82,6 @@ def request_metrics_middleware(app):
             response.headers["X-Request-ID"] = request_id
             return response
         finally:
-            _request_id.reset(token)
             logging.getLogger(__name__).info("request completed in %.3fs", time.perf_counter() - started)
+            _request_id.reset(token)
     return middleware

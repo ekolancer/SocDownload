@@ -1,0 +1,370 @@
+# MediaVault Documentation Portal
+
+> Document Type: Portal  
+> Status: Draft  
+> Owner: [TBD — confirm with team]  
+> Last Updated: 2026-08-27
+
+MediaVault is a self-hosted media downloader and vault. This portal maps current source code to requirements, architecture, operations, and API references.
+
+## Start here
+
+1. [Glossary](docs/glossary.md)
+2. [Requirements index](docs/01-requirements/README.md)
+3. [Architecture index](docs/02-architecture/README.md)
+4. [Technical index](docs/03-technical/README.md)
+
+## Source-of-truth notes
+
+Documentation reconstructed from `backend/`, `frontend/`, `pyproject.toml`, `frontend/package.json`, `.env.example`, migrations in `backend/app/db.py`, CI, and launch scripts. Business goals, stakeholders, retention, and production topology are `[TBD — confirm with team]`.
+
+## Local setup
+
+### Requirements
+
+- Python 3.11–3.14
+- Node.js 20.9–24
+- npm
+- Git
+
+### Windows
+
+PowerShell dari root project:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\run-local.ps1
+```
+
+Launcher membuat `.env`, menghasilkan `API_TOKEN` dan `VAULT_KEY`, membuat virtual environment, memasang backend/frontend dependencies, menginisialisasi database, lalu menjalankan backend di `http://127.0.0.1:8000` dan frontend di `http://127.0.0.1:3000`.
+
+### Linux/macOS
+
+```bash
+chmod +x run-local.sh
+./run-local.sh
+```
+
+Untuk install ulang dependencies:
+
+```bash
+./run-local.sh --install
+```
+
+### Manual local setup
+
+```bash
+python -m venv .venv
+.venv\\Scripts\\activate
+python -m pip install -e ".[engines,test]"
+python -m backend.init_db
+```
+
+Windows:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Terminal kedua:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Jika `.env` sudah ada, pastikan `API_TOKEN` bukan placeholder. Launcher menyinkronkan token backend ke `frontend/.env.local`; restart launcher setelah token berubah. Jangan commit `.env`, `frontend/.env.local`, cookie, atau session files.
+
+### Local adapter setup
+
+#### 1. Configure base environment
+
+Edit `.env` di root project:
+
+```env
+API_TOKEN=<strong-random-token>
+VAULT_KEY=<valid-Fernet-key>
+COOKIES_FILE=config/cookies.txt
+INSTAGRAM_SESSION_FILE=
+INSTAGRAM_USERNAME=
+```
+
+Generate values when needed:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+.\.venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Linux/macOS:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Do not paste secrets into Git, chat, or logs. Keep cookie/session files under `config/`; these paths are ignored by Git.
+
+#### 2. Setup Netscape cookies
+
+`COOKIES_FILE` is used by `yt-dlp` and `gallery-dl`. It must be a Netscape-format cookie export, not a browser SQLite database and not an Instaloader session.
+
+Options:
+
+1. Export cookies from browser using a trusted Netscape cookie-export extension.
+2. Save export as `config/cookies.txt`.
+3. Set `COOKIES_FILE=config/cookies.txt` in `.env`.
+4. Restart backend after changing `.env`.
+
+For platform-specific exports, use separate files only when adapter configuration supports them; current global setting accepts one cookie file. Cookies must contain only domains needed by your own accounts. Rotate them after exposure.
+
+#### 3. Setup Instaloader session
+
+A cookies file cannot be assigned to `INSTAGRAM_SESSION_FILE`. Instaloader requires its own serialized session file.
+
+Windows:
+
+```powershell
+.\.venv\Scripts\instaloader.exe --login=YOUR_INSTAGRAM_USERNAME
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/instaloader --login=YOUR_INSTAGRAM_USERNAME
+```
+
+Enter password and 2FA when prompted. Instaloader normally saves session under the user configuration directory. Locate it without printing its contents:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\.config\instaloader" -Filter "session-*"
+```
+
+```bash
+find "$HOME/.config/instaloader" -maxdepth 1 -type f -name 'session-*'
+```
+
+Set `.env` using the resulting path:
+
+```env
+INSTAGRAM_USERNAME=YOUR_INSTAGRAM_USERNAME
+INSTAGRAM_SESSION_FILE=C:/Users/YOUR_USER/.config/instaloader/session-YOUR_INSTAGRAM_USERNAME
+```
+
+Use forward slashes in Windows paths or escape backslashes. Leave both values empty when downloading public content only. Invalid session files cause Instagram autosync to be skipped; they do not replace `COOKIES_FILE`.
+
+#### 4. Adapter readiness
+
+| Adapter | Public download | Authenticated setup | Notes |
+|---|---|---|---|
+| Instagram | Usually | Instaloader session and/or Netscape cookies | Saved/private autosync requires valid Instaloader session. |
+| X/Twitter | Depends on engine | Netscape cookies if required | Platform access changes over time. |
+| Threads | Depends on engine | Netscape cookies if required | Test with a public URL first. |
+| YouTube | Yes for public URLs | Netscape cookies if required | Uses `yt-dlp`. |
+| Reddit | Usually | Netscape cookies if required | Uses `gallery-dl`. |
+| Pinterest | Usually | Netscape cookies if required | Uses `gallery-dl`. |
+| TikTok | Depends on engine | Netscape cookies optional | Fallback may send URL to TikWM. |
+| Facebook | No current registration | Not available | Adapter exists but is disabled in `backend/app/main.py`. |
+
+#### 5. Test all registered adapters
+
+Run local services, then submit one approved HTTPS URL per registered adapter in Studio:
+
+```text
+Instagram: https://www.instagram.com/p/<post-id>/
+X:         https://x.com/<user>/status/<status-id>
+Threads:   https://www.threads.net/@<user>/post/<post-id>
+YouTube:   https://www.youtube.com/watch?v=<video-id>
+Reddit:    https://www.reddit.com/r/<subreddit>/comments/<post-id>/
+Pinterest: https://www.pinterest.com/pin/<pin-id>/
+TikTok:    https://www.tiktok.com/@<user>/video/<video-id>
+```
+
+Replace placeholders with real URLs. The URL validator accepts only HTTPS and approved hosts. Check active jobs, then confirm output in Vault. If an adapter requires login, add cookies, restart backend, and retry.
+
+### Local verification
+
+```bash
+curl http://127.0.0.1:8000/api/health
+curl -H "Authorization: Bearer $API_TOKEN" "http://127.0.0.1:8000/api/jobs?status=active&limit=20"
+```
+
+Buka `http://127.0.0.1:3000`, masukkan URL, lalu pantau antrean dan Vault.
+
+## Production deployment guide
+
+Production deployment requires Linux server, reverse proxy, TLS, process manager, firewall, backups, and secret management. Repository has no Dockerfile or Nginx configuration; commands below provide a minimal Ubuntu + Nginx layout.
+
+### 1. Prepare server
+
+```bash
+sudo apt update
+sudo apt install -y python3.11 python3.11-venv python3-pip nodejs npm nginx
+sudo adduser --system --group --home /opt/mediavault mediavault
+sudo mkdir -p /opt/mediavault
+sudo chown -R mediavault:mediavault /opt/mediavault
+```
+
+Copy repository to `/opt/mediavault`, then install dependencies:
+
+```bash
+sudo -u mediavault bash -lc 'cd /opt/mediavault && python3.11 -m venv .venv && .venv/bin/pip install -e ".[engines]"'
+sudo -u mediavault bash -lc 'cd /opt/mediavault/frontend && npm ci && npm run build'
+```
+
+### 2. Create production secrets
+
+Generate strong values locally or on server:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Create `/opt/mediavault/.env` with restricted permissions:
+
+```env
+API_TOKEN=<unique-long-token>
+VAULT_KEY=<valid-Fernet-key>
+DATABASE_URL=sqlite:////opt/mediavault/data/mediavault.db
+MEDIA_ROOT=/opt/mediavault/media
+COOKIES_FILE=/opt/mediavault/config/www.instagram.com_cookies.txt
+INSTAGRAM_SESSION_FILE=
+INSTAGRAM_USERNAME=
+```
+
+Generate a valid Fernet key:
+
+```bash
+sudo -u mediavault /opt/mediavault/.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+sudo chmod 600 /opt/mediavault/.env
+sudo chown mediavault:mediavault /opt/mediavault/.env
+```
+
+Never commit `.env`, cookie files, or session files.
+
+### 3. Configure Instagram access
+
+`COOKIES_FILE` accepts Netscape-format cookies for `yt-dlp`/`gallery-dl`. It does not replace an Instaloader session.
+
+For Instagram saved/private autosync, create an Instaloader session interactively as the `mediavault` user:
+
+```bash
+sudo -u mediavault bash -lc 'cd /opt/mediavault && .venv/bin/instaloader --login=INSTAGRAM_USERNAME'
+```
+
+Set resulting session path in `.env`:
+
+```env
+INSTAGRAM_USERNAME=your_username
+INSTAGRAM_SESSION_FILE=/home/mediavault/.config/instaloader/session-your_username
+```
+
+Use a valid Instaloader pickle session file. Do not point `INSTAGRAM_SESSION_FILE` to `cookies.txt`.
+
+### 4. Initialize and test backend
+
+```bash
+sudo -u mediavault bash -lc 'cd /opt/mediavault && .venv/bin/python -m backend.init_db'
+sudo -u mediavault bash -lc 'cd /opt/mediavault && .venv/bin/python -m pytest'
+sudo -u mediavault bash -lc 'cd /opt/mediavault && .venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000'
+```
+
+Verify `http://127.0.0.1:8000/api/health` locally. Protected API calls require `Authorization: Bearer <API_TOKEN>`.
+
+### 5. Run services with systemd
+
+Create `/etc/systemd/system/mediavault-backend.service`:
+
+```ini
+[Unit]
+Description=MediaVault FastAPI backend
+After=network.target
+
+[Service]
+User=mediavault
+Group=mediavault
+WorkingDirectory=/opt/mediavault
+EnvironmentFile=/opt/mediavault/.env
+ExecStart=/opt/mediavault/.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Run frontend production server:
+
+```bash
+sudo -u mediavault bash -lc 'cd /opt/mediavault/frontend && NEXT_PUBLIC_API_TOKEN=$(sed -n "s/^API_TOKEN=//p" ../.env) npm run start -- -H 127.0.0.1 -p 3000'
+```
+
+Use a systemd unit for this command in production; do not use `npm run dev`.
+
+### 6. Configure Nginx and TLS
+
+Proxy public HTTPS traffic to frontend only. Keep FastAPI bound to `127.0.0.1`.
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable site and TLS with Certbot:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/mediavault /etc/nginx/sites-enabled/mediavault
+sudo nginx -t
+sudo systemctl reload nginx
+sudo certbot --nginx -d example.com
+```
+
+Replace `example.com` with real domain. Do not expose port 8000 publicly. Add firewall rules allowing only SSH and HTTPS.
+
+### 7. Configure frontend token
+
+Because browser requests need the API token, set `NEXT_PUBLIC_API_TOKEN` in frontend service environment before `npm run build`/`npm run start`. Rebuild after token rotation. Treat this single-user token as a credential; multi-user authorization is not implemented.
+
+### 8. Verify adapters
+
+Current registered adapters: Instagram, X/Twitter, Threads, YouTube, Reddit, Pinterest, and TikTok. Facebook adapter exists but is disabled in `backend/app/main.py`.
+
+Test one approved HTTPS URL per platform through Studio. Authentication is platform-specific:
+
+- Public content: adapter engine may work without account session.
+- Instagram private/saved content: valid Instaloader session required.
+- `yt-dlp`/`gallery-dl` authenticated content: provide matching Netscape cookies through `COOKIES_FILE`.
+- TikTok fallback may send URL to TikWM; confirm privacy/compliance before enabling production use.
+- X, Threads, YouTube, Reddit, and Pinterest availability depends on current engine/platform behavior.
+
+Check health and jobs:
+
+```bash
+curl https://example.com/api/health
+curl -H "Authorization: Bearer $API_TOKEN" https://example.com/api/jobs?status=active\&limit=20
+```
+
+### 9. Operations checklist
+
+- Rotate `API_TOKEN`, `VAULT_KEY`, cookies, and Instaloader session after compromise.
+- Back up `data/mediavault.db` and `media/`; test restore.
+- Monitor `logs/backend.log`, `logs/backend-error.log`, readiness, queue depth, and failed jobs.
+- Keep port 8000 private; require HTTPS externally.
+- Run `pytest`, `npm run lint`, `npm run typecheck`, `npm run build`, and `npm audit --omit=dev` before release.
+- Configure retention, alerting, uptime, and recovery objectives with the team; values are `[TBD — confirm with team]`.
