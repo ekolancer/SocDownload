@@ -63,6 +63,11 @@ def enqueue(url: str) -> int:
 
     factory = get_session_factory()
     with factory() as session:
+        active = session.scalars(
+            select(Job).where(Job.url == url, Job.status.in_([JobStatus.QUEUED.value, JobStatus.RUNNING.value]))
+        ).first()
+        if active:
+            return active.id
         job = Job(platform=platform, url=url, status=JobStatus.QUEUED.value)
         session.add(job)
         session.commit()
@@ -105,7 +110,12 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
     with factory() as session:
         # Check existing URLs in jobs table (any status)
         existing_job_urls = set(
-            session.scalars(select(Job.url).where(Job.url.in_(urls))).all()
+            session.scalars(
+                select(Job.url).where(
+                    Job.url.in_(urls),
+                    Job.status.in_([JobStatus.QUEUED.value, JobStatus.RUNNING.value, JobStatus.DONE.value, JobStatus.DUP.value]),
+                )
+            ).all()
         )
         # Check existing URLs in media items table
         existing_media_urls = set(

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from secrets import compare_digest
 from fastapi.middleware.cors import CORSMiddleware
 
 from .adapters.facebook import FacebookAdapter
@@ -23,25 +25,28 @@ from .service import get_queue
 from .worker import Worker
 
 
-def cleanup_orphan_jobs() -> None:
-    """Wipe out all leftover queued and running jobs when server restarts so the queue is fresh."""
-    from sqlalchemy import delete
+def recover_jobs() -> None:
     factory = get_session_factory()
     with factory() as session:
-        session.execute(update(MediaItem).values(job_id=None))
         session.execute(
-            delete(Job).where(
-                Job.status.in_([JobStatus.RUNNING.value, JobStatus.QUEUED.value])
-            )
+            update(Job)
+            .where(Job.status == JobStatus.RUNNING.value)
+            .values(status=JobStatus.QUEUED.value, started_at=None, error="Recovered after restart")
         )
         session.commit()
+        jobs = session.scalars(
+            __import__("sqlalchemy").select(Job.id).where(Job.status == JobStatus.QUEUED.value)
+        ).all()
+    queue = get_queue()
+    for job_id in jobs:
+        queue.put_nowait(job_id)
 
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    cleanup_orphan_jobs()
+    recover_jobs()
     instagram = InstagramAdapter()
     settings = get_settings()
     if settings.instagram_session_file:
@@ -69,7 +74,21 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
+    if not settings.api_token or settings.api_token in {"change-me", "change-me-generate-via-keygen", "your-api-token"}:
+        raise RuntimeError("API_TOKEN must be configured with a non-placeholder value")
+
     app = FastAPI(title="MediaVault", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def api_auth(request: Request, call_next: Any):
+        if request.url.path == "/api/health" and request.method == "GET" or request.method == "OPTIONS" or not request.url.path.startswith("/api"):
+            return await call_next(request)
+        authorization = request.headers.get("authorization", "")
+        token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
+        if not compare_digest(token, settings.api_token):
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+        return await call_next(request)
 
     app.add_middleware(
         CORSMiddleware,

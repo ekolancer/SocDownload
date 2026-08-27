@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   IconInstagram,
   IconRefresh,
@@ -42,7 +43,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
   // Fetch initial config
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/autosync/config?platform=instagram');
+      const res = await apiFetch('/api/autosync/config?platform=instagram');
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
@@ -62,7 +63,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
   const updateConfig = async (patch: Partial<AutoSyncConfig>) => {
     if (!config) return;
     try {
-      const res = await fetch('/api/autosync/config', {
+      const res = await apiFetch('/api/autosync/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +87,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
     setSyncFeedback(null);
 
     try {
-      const res = await fetch('/api/autosync/trigger', {
+      const res = await apiFetch('/api/autosync/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform: 'instagram' }),

@@ -29,7 +29,7 @@ class BackendBoundsTestCase(unittest.TestCase):
             Settings(batch_ids_limit=0)
 
     def test_query_and_batch_validation(self):
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer test-token"})
         self.assertEqual(client.get("/api/jobs?limit=0").status_code, 422)
         self.assertEqual(client.get("/api/media?limit=0").status_code, 422)
         self.assertEqual(
@@ -38,7 +38,7 @@ class BackendBoundsTestCase(unittest.TestCase):
         )
 
     def test_import_upload_limit(self):
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer test-token"})
         settings = Settings(max_upload_bytes=4)
         with patch("backend.app.routes.importer.get_settings", return_value=settings):
             response = client.post(

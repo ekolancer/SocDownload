@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconClose,
@@ -75,7 +77,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/import/json', {
+      const res = await apiFetch('/api/import/json', {
         method: 'POST',
         body: formData,
       });
@@ -285,14 +287,14 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                 </button>
 
                 {result ? (
-                  <a
+                  <Link
                     href="/"
                     onClick={() => onClose()}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-white hover:bg-slate-100 active:scale-95 shadow-md shadow-white/10 transition-all cursor-pointer"
                   >
                     <span>Lihat Antrean di Studio</span>
                     <span>→</span>
-                  </a>
+                  </Link>
                 ) : (
                   <button
                     type="button"

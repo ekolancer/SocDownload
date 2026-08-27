@@ -6,17 +6,18 @@ MediaVault adalah aplikasi self-hosted untuk mengunduh, mengarsipkan, mengelola,
 
 Kekuatan utama: pemisahan route/service/adapter cukup jelas; registry adapter mudah diperluas; operasi blocking dipindah ke thread; path media serving memiliki containment check; frontend menggunakan strict TypeScript, memoization, polling overlap guards, dan build produksi berhasil.
 
-Status incremental setelah implementasi Quick Wins:
+Status incremental setelah implementasi Quick Wins dan P0:
 
-1. **Partially Resolved:** API masih tidak memiliki authentication/authorization, tetapi backend, frontend dev server, CORS origin, dan launcher kini bind ke `127.0.0.1` (`backend/app/main.py:73,96`; `frontend/package.json:6`; `run-local.ps1`; `run-local.sh`). Network exposure tetap dilarang sampai auth tersedia.
-2. **Partially Resolved:** Central URL validator kini mewajibkan HTTPS, approved host, port standar, tanpa credentials, dan public DNS (`backend/app/url_validation.py:8-51`), terintegrasi pada enqueue dan worker (`backend/app/service.py:59-60,80-104,162-171`). Redirect revalidation/DNS pinning di downloader engine masih open.
-3. **Still Open:** Next.js `14.2.35` dan PostCSS transitif masih memiliki advisori high severity berdasarkan `npm audit --omit=dev --json`.
-4. **Still Open:** Restart masih menghapus queued/running jobs dan queue belum durable (`backend/app/main.py:26-44`, `backend/app/service.py:23-41`).
-5. **Still Open:** Operasi file dan transaksi DB belum atomic (`backend/app/service.py`, `backend/app/routes/media.py`).
-6. **Partially Resolved:** Upload/list/batch/export sekarang memiliki cap dan ZIP memiliki byte cap, tetapi ZIP masih dibangun di RAM (`backend/app/config.py:15-22`; `backend/app/routes/importer.py:19-25`; `backend/app/routes/media.py`).
-7. **Resolved:** Test memakai temporary DB/media melalui `conftest.py:7-20`; test extra dapat dipasang; `pytest` menghasilkan 18 passed dan 5 subtests passed.
+1. **Resolved for single-user token model:** API token wajib dikonfigurasi; Bearer auth melindungi `/api/*`, kecuali `GET /api/health` dan `OPTIONS` (`backend/app/main.py:73-104`). Frontend menyertakan token melalui `apiFetch` dan `NEXT_PUBLIC_API_TOKEN`.
+2. **Resolved for current HTTP download paths:** Central validator aktif; redirect target divalidasi ulang dan TikTok fallback memakai guarded public opener (`backend/app/url_validation.py`; `backend/app/adapters/tiktok.py`). Connection-time DNS pinning native engines tetap limitation.
+3. **Partially Resolved:** Next.js upgraded to `15.5.21`; audit high advisories remain for transitive PostCSS/sharp, requiring Next.js 16/React 19 migration.
+4. **Partially Resolved:** Startup tidak lagi menghapus queued/running jobs; status dipulihkan ke queue in-process. Queue tetap non-durable saat process mati (`backend/app/main.py:28-56`).
+5. **Partially Resolved:** Create/delete workflow memiliki cleanup/rollback dasar; filesystem dan DB belum true atomic (`backend/app/service.py`, `backend/app/routes/media.py`).
+6. **Resolved:** Upload/list/batch/export memiliki caps; ZIP kini disk-backed dan recursive parser memiliki depth/node/record caps (`backend/app/config.py`; `backend/app/importer.py`; `backend/app/routes/media.py`).
+7. **Resolved:** Test memakai temporary DB/media melalui `conftest.py:7-20`; test extra dapat dipasang; auth regression tests ditambahkan; `pytest` menghasilkan 20 passed.
 8. **Resolved:** `sync_liked` yang belum berfungsi dihapus dari API/UI dan dipaksa false untuk kompatibilitas DB (`backend/app/routes/autosync.py`; `backend/app/autosync.py`; `AutoSyncCard.tsx`).
 9. **Resolved:** Physical path dan raw job errors tidak lagi keluar melalui API; CSV dan ZIP output disanitasi (`backend/app/routes/jobs.py`; `backend/app/routes/media.py`).
+10. **Partially Resolved:** P0 auth, URL redirect validation, Next.js upgrade, dan test isolation tervalidasi; tracked `config/cookies.bak` tetap perlu rotation/history cleanup.
 
 Rekomendasi keseluruhan: **jangan rewrite**. Lanjutkan P0 yang masih open: authentication sebelum network exposure, upgrade Next.js/PostCSS, dan penanganan tracked cookie backup. Setelah itu kerjakan durable queue dan atomic file/DB workflow.
 
@@ -291,9 +292,9 @@ Command evidence:
 **Validation:** Backend direct run, CORS, Next dev server, PowerShell, dan Bash launcher memakai `127.0.0.1`. Frontend build passed.
 
 ### QW-002 — Central strict URL validator
-**Status:** Partially Resolved  
+**Status:** Resolved for HTTP fallback paths; native engine DNS pinning remains open  
 **Validation:** `backend/app/url_validation.py` memvalidasi HTTPS, approved exact host, credentials, port, dan public DNS. Endpoint invalid URL mengembalikan 422. Unit tests validator passed.  
-**Remaining:** Redirect target dan connection-time DNS perlu divalidasi/pinned oleh transport/downloader untuk menutup DNS rebinding sepenuhnya.
+**Validation:** Redirect targets revalidated by `open_public_url`; TikTok API/image/video fallback uses guarded opener. Native yt-dlp/gallery-dl transport DNS pinning remains limitation.
 
 ### QW-003 — Isolate test DB and media root
 **Status:** Resolved  
@@ -314,8 +315,8 @@ Command evidence:
 
 ### QW-007 — Add canonical quality scripts
 **Status:** Partially Resolved  
-**Validation:** Python test extra dan pytest testpaths bekerja; frontend `typecheck` script ditambahkan; typecheck/build passed.  
-**Remaining:** Frontend lint dan test runner belum ditambahkan karena tidak ada dependency yang sudah terpasang; Python lock masih open.
+**Validation:** Python test extra dan pytest testpaths bekerja; frontend `lint`, `typecheck`, dan build scripts passed; `pytest` 20 passed. Lint reports 6 existing warnings.  
+**Remaining:** Frontend test runner dan Python lock masih open.
 
 ### QW-008 — Sanitize CSV and ZIP output names
 **Status:** Resolved  
@@ -337,23 +338,23 @@ Command evidence:
 
 ### P0 — Critical
 
-- **RM-001: Add authentication/authorization before network exposure. Partially Resolved:** loopback containment selesai; identity/permission layer masih open. Impact High, Effort Medium, regression risk Medium.
-- **RM-002: Complete SSRF defense. Partially Resolved:** central preflight validator selesai; redirect/connection-time DNS controls masih open. Impact High, Effort Medium, regression risk Medium.
-- **RM-003: Upgrade Next.js/PostCSS to patched supported versions.** Impact: DoS/SSRF/request handling advisories. Effort: Medium. Dependency: Node/React migration decision. Regression risk: Medium-High. Outcome: zero known high production advisories from npm audit.
-- **RM-004: Handle tracked `config/cookies.bak`.** Impact: potential account session compromise. Effort: Low-Medium. Dependency: secret/history review and rotation. Regression risk: Low. Outcome: no credential backup in repository/history.
-- **RM-005: Make tests impossible to run against active DB. Resolved:** disposable test DB/media fixture implemented and validated.
+- **RM-001: Add authentication/authorization before network exposure. Resolved:** API_TOKEN startup fail-closed plus bearer middleware protects `/api` except GET `/api/health` and OPTIONS; frontend uses NEXT_PUBLIC_API_TOKEN. Impact High, Effort Medium, regression risk Medium.
+- **RM-002: Complete SSRF defense. Resolved for HTTP fallback paths:** redirect targets revalidated and public DNS enforced; native engine DNS pinning remains limitation.
+- **RM-003: Upgrade Next.js/PostCSS to patched supported versions. Partially Resolved:** Next.js upgraded to 15.5.21; npm audit still reports PostCSS/sharp high advisories, requiring Next.js 16/React 19 migration.
+- **RM-004: Handle tracked `config/cookies.bak`. Partially Resolved:** `config/*.bak` ignored; tracked backup remains and requires index removal, history review, and credential rotation.
+- **RM-005: Make tests impossible to run against active DB. Resolved:** disposable DB/media fixture and auth tests validated; `pytest` 20 passed.
 
 ### P1 — High
 
-- **RM-006:** Durable/recoverable queue; stop startup deletion. Impact High, Effort Medium-High, depends on queue semantics, regression risk High.
-- **RM-007:** Recoverable DB/filesystem create/delete workflow. Impact High, Effort Medium, depends on failure-state design, regression risk Medium.
-- **RM-008:** Bounds implemented; disk-backed/streaming ZIP and recursive parser complexity cap remain. Impact Medium-High, Effort Medium, regression risk Low.
-- **RM-009:** Versioned migrations, FK enforcement, indexes. Impact High, Effort Medium, depends on backup/migration plan, regression risk Medium.
-- **RM-010:** Remove N+1 queries. Impact High, Effort Medium, depends on query/integration tests, regression risk Low.
-- **RM-011:** Correct job dedup/retry/idempotency semantics. Impact High, Effort Medium, depends on retry policy, regression risk Medium.
-- **RM-012:** Replace whole-dataset polling with paginated API and active-job polling. Impact High, Effort Medium, depends on backend contract, regression risk Medium.
-- **RM-013:** Add accessible modal/card/live-region behavior. Impact High for accessibility, Effort Medium, no backend dependency, regression risk Low-Medium.
-- **RM-014:** Standardize mutation error UX and public API errors. Impact Medium-High, Effort Medium, regression risk Low.
+- **RM-006: Partially Resolved:** startup recovery implemented; durable external queue remains open. Validation: `pytest` 20 passed.
+- **RM-007: Partially Resolved:** compensating cleanup/rollback added; true atomic boundary remains open. Validation: `pytest` 20 passed.
+- **RM-008: Resolved:** disk-backed ZIP and recursive parser complexity caps added. Validation: `pytest` 20 passed. Impact Medium-High, Effort Medium, regression risk Low.
+- **RM-009: Partially Resolved:** SQLite FK enforcement and indexes added; versioned migrations remain open. Validation: `pytest` 20 passed.
+- **RM-010: Partially Resolved:** obvious route N+1 paths reduced; query-count benchmark remains open. Validation: `pytest` 20 passed.
+- **RM-011: Partially Resolved:** failed-job retry and active dedupe semantics improved; race-proof DB idempotency remains open. Validation: `pytest` 20 passed.
+- **RM-012: Resolved for current list flows:** offset pagination and active/recent polling added. Validation: typecheck/build passed.
+- **RM-013: Partially Resolved:** lightbox dialog semantics and focusable controls added; full modal/card/live-region audit remains open. Validation: lint/typecheck/build passed.
+- **RM-014: Partially Resolved:** shared API error helper and mutation feedback added; full typed error envelope remains open. Validation: lint/typecheck/build passed.
 
 ### P2 — Medium
 

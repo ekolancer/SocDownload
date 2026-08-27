@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconClose,
@@ -44,6 +44,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [copiedLink, setCopiedLink] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Reset file index when opening a new item
   useEffect(() => {
@@ -54,6 +55,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
   // Esc and arrow keys listener
   useEffect(() => {
     if (!item) return;
+    closeButtonRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight' && activeFileIndex < item.files.length - 1) {
@@ -101,7 +103,7 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden" role="dialog" aria-modal="true" aria-label="Media preview">
         
         {/* Backdrop */}
         <motion.div
@@ -125,7 +127,8 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
           {/* Close Button Top Right */}
           <button
             type="button"
-            onClick={onClose}
+             ref={closeButtonRef}
+             onClick={onClose}
             className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 shadow-md backdrop-blur-sm flex items-center justify-center shrink-0 aspect-square transition-all cursor-pointer"
             aria-label="Close Modal"
             title="Close Modal"

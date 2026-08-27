@@ -103,7 +103,7 @@ class AutoSyncTestCase(unittest.TestCase):
         self.assertGreaterEqual(cfg.items_synced_total, 2)
 
     def test_autosync_api_routes(self):
-        client = TestClient(app)
+        client = TestClient(app, headers={"Authorization": "Bearer test-token"})
 
         # 1. GET /api/autosync/config
         res = client.get("/api/autosync/config?platform=instagram")

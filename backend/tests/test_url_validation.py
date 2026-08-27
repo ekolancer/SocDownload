@@ -55,7 +55,7 @@ class UrlValidationTestCase(unittest.TestCase):
 
     @patch("backend.app.service.enqueue", side_effect=ValueError("unsupported URL host"))
     def test_job_endpoint_returns_validation_error(self, enqueue):
-        response = TestClient(app).post(
+        response = TestClient(app, headers={"Authorization": "Bearer test-token"}).post(
             "/api/jobs",
             json={"url": "https://example.invalid/post"},
         )

@@ -16,6 +16,7 @@ utcnow = now_wib
 
 from sqlalchemy import (
     Boolean,
+    Index,
     DateTime,
     ForeignKey,
     Integer,
@@ -86,7 +87,13 @@ class MediaItem(Base):
 
     __table_args__ = (
         UniqueConstraint("source_url", "sha256", name="uq_source_sha256"),
+        Index("ix_media_items_source_url", "source_url"),
+        Index("ix_media_items_sha256", "sha256"),
     )
+
+
+Index("ix_jobs_status", Job.status)
+Index("ix_jobs_url", Job.url)
 
 
 class MediaFile(Base):
@@ -160,6 +167,13 @@ _engine = None
 _session_factory = None
 
 
+def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+    if dbapi_connection.__class__.__module__.startswith("sqlite3"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+
 def get_engine():
     global _engine
     if _engine is None:
@@ -172,6 +186,8 @@ def get_engine():
             url,
             connect_args={"check_same_thread": False},
         )
+        from sqlalchemy import event
+        event.listen(_engine, "connect", _enable_sqlite_foreign_keys)
     return _engine
 
 
@@ -185,6 +201,12 @@ def get_session_factory():
 def init_db() -> None:
     eng = get_engine()
     Base.metadata.create_all(eng)
+
+    with eng.begin() as conn:
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_status ON jobs (status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_url ON jobs (url)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_items_source_url ON media_items (source_url)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_media_items_sha256 ON media_items (sha256)"))
 
     # Safe migration for existing sqlite database: ensure is_favorite exists in media_items
     with eng.connect() as conn:

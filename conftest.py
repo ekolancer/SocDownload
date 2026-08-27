@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 _test_root = Path(tempfile.mkdtemp(prefix="mediavault-tests-"))
+os.environ["API_TOKEN"] = "test-token"
 os.environ["DATABASE_URL"] = f"sqlite:///{(_test_root / 'test.db').as_posix()}"
 os.environ["MEDIA_ROOT"] = str(_test_root / "media")
 

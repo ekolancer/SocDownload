@@ -10,6 +10,7 @@ import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
 import Link from 'next/link';
+import { apiError, apiFetch } from '@/lib/api';
 import {
   IconVideoCamera,
   IconLayers,
@@ -52,10 +53,10 @@ export default function StudioPage() {
     try {
       // Parallel fetch with individual timeouts
       const [healthResult, mediaResult, statsResult, jobsResult] = await Promise.allSettled([
-        fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) }),
-        fetch(`${API}/media?limit=8`, { signal: AbortSignal.timeout(6000) }),
-        fetch(`${API}/jobs/stats`, { signal: AbortSignal.timeout(4000) }),
-        fetch(`${API}/jobs?limit=1000`, { signal: AbortSignal.timeout(6000) }),
+        apiFetch(`${API}/health`, { signal: AbortSignal.timeout(4000) }),
+        apiFetch(`${API}/media?limit=8`, { signal: AbortSignal.timeout(6000) }),
+        apiFetch(`${API}/jobs/stats`, { signal: AbortSignal.timeout(4000) }),
+        apiFetch(`${API}/jobs?status=active&limit=100`, { signal: AbortSignal.timeout(6000) }),
       ]);
 
       // 1. Health check
@@ -153,7 +154,7 @@ export default function StudioPage() {
   const handleQueueDownload = async (url: string, platform?: string): Promise<{ success: boolean; jobId?: number }> => {
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API}/jobs`, {
+      const res = await apiFetch(`${API}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, platform }),
@@ -161,7 +162,7 @@ export default function StudioPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.detail || 'Download request failed');
+        alert(errData.detail || `Download request failed (${res.status})`);
         return { success: false };
       }
 
@@ -180,36 +181,42 @@ export default function StudioPage() {
   // Handle Cancel & Stop Active Queue
   const handleCancelQueue = async () => {
     try {
-      const res = await fetch(`${API}/jobs/cancel-all`, { method: 'POST' });
+      const res = await apiFetch(`${API}/jobs/cancel-all`, { method: 'POST' });
       if (res.ok) {
         await refreshData(true);
+      } else {
+        alert(await apiError(res, 'Cancel queue failed'));
       }
     } catch (err) {
-      console.error('Cancel queue error:', err);
+      alert('Could not connect to backend service');
     }
   };
 
   // Handle Delete Single Job
   const handleDeleteJob = async (jobId: number) => {
     try {
-      const res = await fetch(`${API}/jobs/${jobId}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API}/jobs/${jobId}`, { method: 'DELETE' });
       if (res.ok) {
         await refreshData(true);
+      } else {
+        alert(await apiError(res, 'Delete job failed'));
       }
     } catch (err) {
-      console.error('Delete job error:', err);
+      alert('Could not connect to backend service');
     }
   };
 
   // Handle Clear Finished Jobs
   const handleClearJobs = async () => {
     try {
-      const res = await fetch(`${API}/jobs`, { method: 'DELETE' });
+      const res = await apiFetch(`${API}/jobs`, { method: 'DELETE' });
       if (res.ok) {
         await refreshData(true);
+      } else {
+        alert(await apiError(res, 'Clear jobs failed'));
       }
     } catch (err) {
-      console.error('Clear jobs error:', err);
+      alert('Could not connect to backend service');
     }
   };
 

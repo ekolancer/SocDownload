@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   IconClose,
   IconShieldCheck,
@@ -37,7 +38,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/adapters');
+      const res = await apiFetch('/api/adapters');
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
       setAdapters(data);

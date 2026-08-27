@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
+    api_token: str = ""
     vault_key: str = "change-me-generate-via-keygen"
     database_url: str = "sqlite:///./data/mediavault.db"
     media_root: str = "./media"
@@ -21,6 +22,8 @@ class Settings(BaseSettings):
     batch_ids_limit: int = Field(default=500, ge=1, le=5_000)
     export_items_limit: int = Field(default=500, ge=1, le=5_000)
     export_bytes_limit: int = Field(default=500 * 1024 * 1024, ge=1, le=5 * 1024 * 1024 * 1024)
+    parser_depth_limit: int = Field(default=32, ge=1, le=128)
+    parser_url_limit: int = Field(default=10_000, ge=1, le=100_000)
 
     class Config:
         env_file = ROOT / ".env"

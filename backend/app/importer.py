@@ -4,6 +4,8 @@ import json
 import re
 from typing import List
 
+from .config import get_settings
+
 # Comprehensive regex pattern matching any supported social media post URL
 SOCIAL_URL_REGEX = re.compile(
     r'https?://(?:www\.)?(?:'
@@ -41,7 +43,9 @@ def parse_archive_json(data: dict | list) -> List[str]:
     """Parse Instagram, X, or TikTok archive JSON data and return a list of URLs."""
     urls: set[str] = set()
 
-    def extract_urls(obj):
+    def extract_urls(obj, depth=0):
+        if depth > get_settings().parser_depth_limit or len(urls) >= get_settings().parser_url_limit:
+            return
         if isinstance(obj, dict):
             for k, v in obj.items():
                 if isinstance(v, str):
@@ -49,10 +53,12 @@ def parse_archive_json(data: dict | list) -> List[str]:
                     for u in found:
                         urls.add(u)
                 else:
-                    extract_urls(v)
+                    extract_urls(v, depth + 1)
         elif isinstance(obj, list):
             for item in obj:
-                extract_urls(item)
+                extract_urls(item, depth + 1)
+                if len(urls) >= get_settings().parser_url_limit:
+                    break
 
     extract_urls(data)
     return list(urls)

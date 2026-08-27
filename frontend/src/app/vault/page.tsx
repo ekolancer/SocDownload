@@ -13,6 +13,7 @@ import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { JobRow, JobStats } from '@/components/studio/JobPipeline';
 import { AlbumSummary } from '@/components/vault/VaultSidebar';
+import { apiFetch } from '@/lib/api';
 import {
   IconLayers,
   IconFolderPlus,
@@ -98,7 +99,7 @@ export default function VaultPage() {
 
     try {
       // 1. Health check
-      const healthRes = await fetch(`${API}/health`).catch(() => null);
+      const healthRes = await apiFetch(`${API}/health`).catch(() => null);
       if (healthRes && healthRes.ok) {
         setBackendStatus('ok');
       } else {
@@ -106,7 +107,7 @@ export default function VaultPage() {
       }
 
       // 2. Fetch Media Library
-      const mediaRes = await fetch(`${API}/media?limit=1500`).catch(() => null);
+      const mediaRes = await apiFetch(`${API}/media?limit=1500`).catch(() => null);
       if (mediaRes && mediaRes.ok) {
         const mediaData = await mediaRes.json();
         const mediaHash = JSON.stringify(mediaData.map((m: MediaItem) => `${m.id}:${m.is_favorite}:${m.created_at}`));
@@ -117,7 +118,7 @@ export default function VaultPage() {
       }
 
       // 3. Fetch Albums
-      const albumsRes = await fetch(`${API}/albums`).catch(() => null);
+      const albumsRes = await apiFetch(`${API}/albums`).catch(() => null);
       if (albumsRes && albumsRes.ok) {
         const albumsData = await albumsRes.json();
         const albumsHash = JSON.stringify(albumsData.map((a: AlbumSummary) => `${a.id}:${a.name}:${a.items_count}`));
@@ -128,7 +129,7 @@ export default function VaultPage() {
       }
 
       // 4. Fetch Creators Aggregation
-      const creatorsRes = await fetch(`${API}/media/creators`).catch(() => null);
+      const creatorsRes = await apiFetch(`${API}/media/creators`).catch(() => null);
       if (creatorsRes && creatorsRes.ok) {
         const creatorsData = await creatorsRes.json();
         const creatorsHash = JSON.stringify(creatorsData);
@@ -139,14 +140,14 @@ export default function VaultPage() {
       }
 
       // 5. Fetch Job Stats
-      const statsRes = await fetch(`${API}/jobs/stats`).catch(() => null);
+      const statsRes = await apiFetch(`${API}/jobs/stats`).catch(() => null);
       if (statsRes && statsRes.ok) {
         const statsData: JobStats = await statsRes.json();
         setJobStats(statsData);
       }
 
       // 6. Fetch Active Jobs & trigger completion toast
-      const jobsRes = await fetch(`${API}/jobs?limit=20`).catch(() => null);
+      const jobsRes = await apiFetch(`${API}/jobs?limit=20`).catch(() => null);
       if (jobsRes && jobsRes.ok) {
         const jobsData: JobRow[] = await jobsRes.json();
 
@@ -172,7 +173,7 @@ export default function VaultPage() {
       }
 
       // 7. Fetch Storage Usage Stats
-      const storageRes = await fetch(`${API}/media/storage`).catch(() => null);
+      const storageRes = await apiFetch(`${API}/media/storage`).catch(() => null);
       if (storageRes && storageRes.ok) {
         const sData = await storageRes.json();
         setStorageStats(sData);
@@ -190,7 +191,7 @@ export default function VaultPage() {
   // Fetch single album items when viewing album details
   const fetchAlbumDetail = useCallback(async (albumId: number) => {
     try {
-      const res = await fetch(`${API}/albums/${albumId}`);
+      const res = await apiFetch(`${API}/albums/${albumId}`);
       if (res.ok) {
         const data = await res.json();
         setAlbumDetailItems(data.items || []);
@@ -290,7 +291,7 @@ export default function VaultPage() {
   // Single Item Handlers
   const handleDeleteItem = async (id: number) => {
     try {
-      const res = await fetch(`${API}/media/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API}/media/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setMedia((prev) => prev.filter((m) => m.id !== id));
         setSelectedIds((prev) => prev.filter((i) => i !== id));
@@ -304,7 +305,7 @@ export default function VaultPage() {
 
   const handleToggleFavorite = async (id: number) => {
     try {
-      const res = await fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' });
+      const res = await apiFetch(`${API}/media/${id}/favorite`, { method: 'PATCH' });
       if (res.ok) {
         const data = await res.json();
         setMedia((prev) =>
@@ -326,7 +327,7 @@ export default function VaultPage() {
 
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/media/batch/delete`, {
+      const res = await apiFetch(`${API}/media/batch/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
@@ -347,7 +348,7 @@ export default function VaultPage() {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/media/batch/download-zip`, {
+      const res = await apiFetch(`${API}/media/batch/download-zip`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
@@ -376,7 +377,7 @@ export default function VaultPage() {
     try {
       await Promise.all(
         selectedIds.map((id) =>
-          fetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
+          apiFetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
         )
       );
       refreshData(false);
@@ -391,7 +392,7 @@ export default function VaultPage() {
     if (!selectedAlbum || selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      const res = await fetch(`${API}/albums/${selectedAlbum.id}/items`, {
+      const res = await apiFetch(`${API}/albums/${selectedAlbum.id}/items`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
@@ -421,7 +422,7 @@ export default function VaultPage() {
 
   const handleCreateAlbum = async (name: string, description?: string): Promise<number | null> => {
     try {
-      const res = await fetch(`${API}/albums`, {
+      const res = await apiFetch(`${API}/albums`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description }),
@@ -439,7 +440,7 @@ export default function VaultPage() {
 
   const handleUpdateAlbum = async (albumId: number, name: string, description?: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${API}/albums/${albumId}`, {
+      const res = await apiFetch(`${API}/albums/${albumId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description }),
@@ -456,7 +457,7 @@ export default function VaultPage() {
 
   const handleAddItemsToAlbum = async (albumId: number, mediaIds: number[]): Promise<boolean> => {
     try {
-      const res = await fetch(`${API}/albums/${albumId}/items`, {
+      const res = await apiFetch(`${API}/albums/${albumId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: mediaIds }),
@@ -476,7 +477,7 @@ export default function VaultPage() {
     e.stopPropagation();
     if (!confirm('Hapus album ini? (Media di dalamnya tetap tersimpan di Vault)')) return;
     try {
-      const res = await fetch(`${API}/albums/${albumId}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API}/albums/${albumId}`, { method: 'DELETE' });
       if (res.ok) {
         if (selectedAlbum?.id === albumId) setSelectedAlbum(null);
         refreshData(false);

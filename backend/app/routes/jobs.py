@@ -101,7 +101,8 @@ def _format_dt(dt):
 
 @router.get("/jobs")
 def list_jobs(
-    limit: int = Query(default=1000, ge=1),
+    limit: int = Query(default=100, ge=1),
+    offset: int = Query(default=0, ge=0),
     status: str | None = None,
 ):
     limit = min(limit, get_settings().list_limit)
@@ -124,7 +125,7 @@ def list_jobs(
             else:
                 query = query.where(Job.status == status)
 
-        query = query.order_by(status_priority, Job.finished_at.desc().nullslast(), Job.id.asc()).limit(limit)
+        query = query.order_by(status_priority, Job.finished_at.desc().nullslast(), Job.id.asc()).offset(offset).limit(limit)
         jobs = session.scalars(query).all()
         return [
             {

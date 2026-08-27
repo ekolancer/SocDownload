@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import tempfile
 import os
 import re
 import zipfile
@@ -61,12 +62,13 @@ def list_media(
     platform: str | None = None,
     creator: str | None = None,
     is_favorite: bool | None = None,
-    limit: int = Query(default=500, ge=1, le=10_000),
+    limit: int = Query(default=100, ge=1, le=10_000),
+    offset: int = Query(default=0, ge=0),
 ):
     limit = min(limit, get_settings().list_limit)
     factory = get_session_factory()
     with factory() as session:
-        stmt = select(MediaItem).order_by(MediaItem.created_at.desc()).limit(limit)
+        stmt = select(MediaItem).order_by(MediaItem.created_at.desc()).offset(offset).limit(limit)
         if platform and platform != "all":
             stmt = stmt.where(MediaItem.platform == platform)
         if creator:
@@ -510,8 +512,8 @@ def export_media_zip(
                     item_files.append((media_file, path))
             export_files.append((item, item_files))
 
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zip_file = tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b")
+        with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zf:
             metadata_items = []
             csv_rows = [
                 ["ID", "Platform", "Username", "Source URL", "Caption", "Hashtags", "Posted At", "Archived At", "Files"]
@@ -565,12 +567,12 @@ def export_media_zip(
             writer.writerows(csv_rows)
             zf.writestr("metadata.csv", csv_buf.getvalue().encode("utf-8-sig"))
 
-        zip_buffer.seek(0)
+        zip_file.seek(0)
         prefix = f"mediavault_{username}" if username else "mediavault_vault"
         filename = f"{prefix}_{now_wib().strftime('%Y%m%d_%H%M%S')}.zip"
 
         return StreamingResponse(
-            zip_buffer,
+            zip_file,
             media_type="application/zip",
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
