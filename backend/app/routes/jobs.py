@@ -1,10 +1,20 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
+
+from ..config import get_settings
 from sqlalchemy import delete, select, update, func, case
 
 from ..db import Job, JobStatus, MediaItem, get_session_factory
 
 router = APIRouter(prefix="/api", tags=["jobs"])
+
+
+def _public_job_error(job: Job) -> str | None:
+    if not job.error:
+        return None
+    if job.status == JobStatus.FAILED.value:
+        return "Job failed"
+    return job.error if job.error in {"no_files_downloaded"} else None
 
 
 class JobCreate(BaseModel):
@@ -15,7 +25,10 @@ class JobCreate(BaseModel):
 def create_job(body: JobCreate):
     from ..service import enqueue
 
-    job_id = enqueue(body.url)
+    try:
+        job_id = enqueue(body.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"id": job_id, "status": "queued"}
 
 
@@ -87,7 +100,11 @@ def _format_dt(dt):
 
 
 @router.get("/jobs")
-def list_jobs(limit: int = 1000, status: str | None = None):
+def list_jobs(
+    limit: int = Query(default=1000, ge=1),
+    status: str | None = None,
+):
+    limit = min(limit, get_settings().list_limit)
     factory = get_session_factory()
     with factory() as session:
         status_priority = case(
@@ -115,7 +132,7 @@ def list_jobs(limit: int = 1000, status: str | None = None):
                 "platform": j.platform,
                 "url": j.url,
                 "status": j.status,
-                "error": j.error,
+                "error": _public_job_error(j),
                 "created_at": _format_dt(j.created_at),
                 "started_at": _format_dt(j.started_at),
                 "finished_at": _format_dt(j.finished_at),
@@ -181,7 +198,7 @@ def get_job(job_id: int):
             "platform": job.platform,
             "url": job.url,
             "status": job.status,
-            "error": job.error,
+            "error": _public_job_error(job),
             "created_at": job.created_at,
             "started_at": job.started_at,
             "finished_at": job.finished_at,

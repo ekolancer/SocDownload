@@ -16,11 +16,14 @@ async def import_archive(file: UploadFile = File(...)):
             detail="Supported archive formats: .json, .html, .htm, .txt",
         )
     
-    content = await file.read()
+    settings = get_settings()
+    content = await file.read(settings.max_upload_bytes + 1)
+    if len(content) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail="Uploaded file is too large")
     try:
         urls = parse_archive_file(content, file.filename or "")
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Failed to process archive: {exc}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Failed to process archive")
 
     if not urls:
         raise HTTPException(
@@ -28,7 +31,6 @@ async def import_archive(file: UploadFile = File(...)):
             detail="No valid social media URLs (Instagram, TikTok, Threads, X, YouTube, etc.) found in the uploaded file.",
         )
 
-    settings = get_settings()
     result = await asyncio.to_thread(bulk_enqueue, urls, settings.import_url_limit)
 
     return {
@@ -36,11 +38,13 @@ async def import_archive(file: UploadFile = File(...)):
         "imported_count": len(result["enqueued"]),
         "skipped_dup_count": len(result["skipped_dup"]),
         "skipped_limit_count": len(result["skipped_limit"]),
+        "skipped_invalid_count": len(result["skipped_invalid"]),
         "limit": settings.import_url_limit,
         "job_ids": result["job_ids"],
         "urls": result["enqueued"],
         "skipped_dup": result["skipped_dup"][:20],
         "skipped_limit": result["skipped_limit"][:20],
+        "skipped_invalid": result["skipped_invalid"][:20],
     }
 
 

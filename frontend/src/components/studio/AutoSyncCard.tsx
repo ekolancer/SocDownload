@@ -14,7 +14,6 @@ interface AutoSyncConfig {
   platform: string;
   enabled: boolean;
   sync_saved: boolean;
-  sync_liked: boolean;
   interval_minutes: number;
   last_sync_at: string | null;
   last_sync_status: string | null;
@@ -243,7 +242,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
               type="button"
               role="switch"
               aria-checked={isEnabled}
-              onClick={() => updateConfig({ enabled: !isEnabled, sync_saved: true, sync_liked: false })}
+              onClick={() => updateConfig({ enabled: !isEnabled, sync_saved: true })}
               className={`relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
                 isEnabled ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-slate-800'
               }`}

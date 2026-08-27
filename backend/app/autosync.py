@@ -43,7 +43,6 @@ def update_autosync_config(
     platform: str = "instagram",
     enabled: bool | None = None,
     sync_saved: bool | None = None,
-    sync_liked: bool | None = None,
     interval_minutes: int | None = None,
 ) -> AutoSyncConfig:
     """Update auto-sync settings for a platform."""
@@ -60,8 +59,7 @@ def update_autosync_config(
             config.enabled = enabled
         if sync_saved is not None:
             config.sync_saved = sync_saved
-        if sync_liked is not None:
-            config.sync_liked = sync_liked
+        config.sync_liked = False
         if interval_minutes is not None:
             config.interval_minutes = max(1, interval_minutes)
 

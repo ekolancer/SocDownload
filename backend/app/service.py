@@ -11,6 +11,7 @@ from sqlalchemy import select
 from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
 from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
+from .url_validation import validate_url
 
 from .downloader import (
     compute_hashes,
@@ -56,6 +57,7 @@ def purge_queue() -> int:
 
 
 def enqueue(url: str) -> int:
+    url = validate_url(url)
     adapter = detect_platform(url)
     platform = adapter.platform if adapter else "unknown"
 
@@ -87,9 +89,18 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
             "enqueued": [],
             "skipped_dup": [],
             "skipped_limit": [],
+            "skipped_invalid": [],
             "job_ids": [],
         }
 
+    valid_urls: list[str] = []
+    skipped_invalid: list[str] = []
+    for url in urls:
+        try:
+            valid_urls.append(validate_url(url))
+        except ValueError:
+            skipped_invalid.append(url)
+    urls = valid_urls
     factory = get_session_factory()
     with factory() as session:
         # Check existing URLs in jobs table (any status)
@@ -119,6 +130,7 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
             "enqueued": [],
             "skipped_dup": skipped_dup,
             "skipped_limit": skipped_limit,
+            "skipped_invalid": skipped_invalid,
             "job_ids": [],
         }
 
@@ -144,6 +156,7 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
         "enqueued": to_enqueue,
         "skipped_dup": skipped_dup,
         "skipped_limit": skipped_limit,
+        "skipped_invalid": skipped_invalid,
         "job_ids": job_ids,
     }
 
@@ -154,6 +167,15 @@ def _sync_process_job(job_id: int) -> None:
     with factory() as session:
         job = session.get(Job, job_id)
         if not job:
+            return
+
+        try:
+            job.url = validate_url(job.url)
+        except ValueError as exc:
+            job.status = JobStatus.FAILED.value
+            job.error = str(exc)
+            job.finished_at = now_wib()
+            session.commit()
             return
 
         adapter = detect_platform(job.url)

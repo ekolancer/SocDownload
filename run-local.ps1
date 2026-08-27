@@ -128,12 +128,12 @@ try {
         throw "Frontend failed to listen on port 3000. Read logs\frontend.log and logs\frontend-error.log."
     }
 
-    Write-Host "MediaVault running: http://localhost:3000"
+    Write-Host "MediaVault running: http://127.0.0.1:3000"
     Write-Host "API running: http://127.0.0.1:8000/docs"
     Write-Host "Logs: logs\backend.log and logs\frontend.log"
 
     if (-not $NoBrowser) {
-        Start-Process "http://localhost:3000"
+        Start-Process "http://127.0.0.1:3000"
     }
 
     Write-Host "Press Ctrl+C to stop."

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..autosync import (
     get_or_create_autosync_config,
@@ -14,10 +14,11 @@ router = APIRouter(prefix="/api/autosync", tags=["autosync"])
 
 
 class AutoSyncConfigUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     platform: str = "instagram"
     enabled: bool | None = None
     sync_saved: bool | None = None
-    sync_liked: bool | None = None
     interval_minutes: int | None = Field(default=None, ge=1, le=1440)
 
 
@@ -38,7 +39,6 @@ def _format_config_response(config: Any) -> dict[str, Any]:
         "platform": config.platform,
         "enabled": config.enabled,
         "sync_saved": config.sync_saved,
-        "sync_liked": config.sync_liked,
         "interval_minutes": config.interval_minutes,
         "last_sync_at": last_sync_iso,
         "last_sync_status": config.last_sync_status,
@@ -66,7 +66,6 @@ def update_config(payload: AutoSyncConfigUpdate):
         platform=payload.platform,
         enabled=payload.enabled,
         sync_saved=payload.sync_saved,
-        sync_liked=payload.sync_liked,
         interval_minutes=payload.interval_minutes,
     )
     return _format_config_response(config)

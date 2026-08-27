@@ -34,15 +34,20 @@ class AutoSyncTestCase(unittest.TestCase):
         self.assertEqual(config.interval_minutes, 15)
 
         # 2. Test update
+        factory = get_session_factory()
+        with factory() as session:
+            stored = session.query(AutoSyncConfig).filter_by(platform="instagram").one()
+            stored.sync_liked = True
+            session.commit()
+
         updated = update_autosync_config(
             platform="instagram",
             enabled=True,
             sync_saved=True,
-            sync_liked=True,
             interval_minutes=30,
         )
         self.assertTrue(updated.enabled)
-        self.assertTrue(updated.sync_liked)
+        self.assertFalse(updated.sync_liked)
         self.assertEqual(updated.interval_minutes, 30)
 
     def test_autosync_disabled_skip(self):
@@ -68,7 +73,7 @@ class AutoSyncTestCase(unittest.TestCase):
         self.assertEqual(cfg.last_error, "Session expired, please re-login and update cookie.")
 
     def test_autosync_success_and_deduplication(self):
-        update_autosync_config("instagram", enabled=True, sync_saved=True, sync_liked=True)
+        update_autosync_config("instagram", enabled=True, sync_saved=True)
 
         mock_adapter = MagicMock()
         mock_adapter.platform = "instagram"
@@ -76,9 +81,6 @@ class AutoSyncTestCase(unittest.TestCase):
         mock_adapter.list_saved.return_value = [
             "https://www.instagram.com/p/TEST_SAVED_1/",
             "https://www.instagram.com/p/TEST_SAVED_2/",
-        ]
-        mock_adapter.list_liked.return_value = [
-            "https://www.instagram.com/p/TEST_LIKED_1/",
         ]
 
         with patch("backend.app.autosync.registry.get", return_value=mock_adapter), \
@@ -109,19 +111,31 @@ class AutoSyncTestCase(unittest.TestCase):
         data = res.json()
         self.assertEqual(data["platform"], "instagram")
         self.assertIn("interval_minutes", data)
+        self.assertNotIn("sync_liked", data)
 
         # 2. PUT /api/autosync/config
         res = client.put("/api/autosync/config", json={
             "platform": "instagram",
             "enabled": True,
             "sync_saved": True,
-            "sync_liked": False,
             "interval_minutes": 10,
         })
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertTrue(data["enabled"])
         self.assertEqual(data["interval_minutes"], 10)
+        self.assertNotIn("sync_liked", data)
+        saved = get_or_create_autosync_config("instagram")
+        self.assertTrue(saved.enabled)
+        self.assertFalse(saved.sync_liked)
+        self.assertEqual(saved.interval_minutes, 10)
+
+        rejected = client.put("/api/autosync/config", json={
+            "platform": "instagram",
+            "sync_liked": True,
+        })
+        self.assertEqual(rejected.status_code, 422)
+        self.assertFalse(get_or_create_autosync_config("instagram").sync_liked)
 
         # 3. POST /api/autosync/trigger
         mock_adapter = MagicMock()

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 
 from ..config import ROOT, get_settings
@@ -23,8 +24,32 @@ from ..db import (
 router = APIRouter(prefix="/api/media", tags=["media"])
 
 
+def neutralize_csv_formula(value):
+    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
+
+def sanitize_zip_component(value: str | None, fallback: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", value or "").strip(" ._")
+    if sanitized in {"", ".", ".."}:
+        return fallback
+    return sanitized[:100]
+
+
+def _deduplicate_ids(ids: list[int]) -> list[int]:
+    return list(dict.fromkeys(ids))
+
+
+def _validate_batch_ids(ids: list[int]) -> list[int]:
+    ids = _deduplicate_ids(ids)
+    if len(ids) > get_settings().batch_ids_limit:
+        raise HTTPException(status_code=422, detail="Too many media IDs")
+    return ids
+
+
 class BatchMediaPayload(BaseModel):
-    media_ids: list[int]
+    media_ids: list[int] = Field(default_factory=list, max_length=5_000)
 
 
 class ToggleFavoritePayload(BaseModel):
@@ -36,8 +61,9 @@ def list_media(
     platform: str | None = None,
     creator: str | None = None,
     is_favorite: bool | None = None,
-    limit: int = 500,
+    limit: int = Query(default=500, ge=1, le=10_000),
 ):
+    limit = min(limit, get_settings().list_limit)
     factory = get_session_factory()
     with factory() as session:
         stmt = select(MediaItem).order_by(MediaItem.created_at.desc()).limit(limit)
@@ -59,7 +85,6 @@ def list_media(
                     "kind": f.kind,
                     "url": f"/api/media/files/{f.id}",
                     "name": Path(f.path).name,
-                    "path": f.path,
                 })
             results.append({
                 "id": i.id,
@@ -202,14 +227,15 @@ def delete_media_item(item_id: int):
 
 @router.post("/batch-delete")
 def batch_delete_media(payload: BatchMediaPayload):
-    if not payload.media_ids:
+    media_ids = _validate_batch_ids(payload.media_ids)
+    if not media_ids:
         return {"deleted_count": 0}
 
     deleted_count = 0
     factory = get_session_factory()
     with factory() as session:
         items = session.scalars(
-            select(MediaItem).where(MediaItem.id.in_(payload.media_ids))
+            select(MediaItem).where(MediaItem.id.in_(media_ids))
         ).all()
 
         parent_dirs: set[Path] = set()
@@ -313,11 +339,11 @@ def _get_filtered_media_items(
 
     if ids:
         try:
-            id_list = [int(i.strip()) for i in ids.split(",") if i.strip()]
-            if id_list:
-                query = query.where(MediaItem.id.in_(id_list))
+            id_list = _validate_batch_ids([int(i.strip()) for i in ids.split(",") if i.strip()])
         except ValueError:
-            pass
+            raise HTTPException(status_code=422, detail="Invalid media IDs")
+        if id_list:
+            query = query.where(MediaItem.id.in_(id_list))
 
     if album_id:
         query = query.join(AlbumMediaItem, AlbumMediaItem.media_item_id == MediaItem.id).where(
@@ -339,11 +365,12 @@ def export_metadata_csv(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
-    limit: int = 500,
+    limit: int = Query(default=500, ge=1, le=10_000),
 ):
     """Export metadata as a downloadable CSV file."""
     import csv
 
+    limit = min(limit, get_settings().export_items_limit)
     factory = get_session_factory()
     with factory() as session:
         items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
@@ -369,16 +396,19 @@ def export_metadata_csv(
             ) or 0
 
             writer.writerow([
-                item.id,
-                item.platform,
-                item.username or "",
-                item.source_url,
-                (item.caption or "").replace("\n", " "),
-                item.hashtags or "",
-                item.posted_at.isoformat() if item.posted_at else "",
-                item.created_at.isoformat() if item.created_at else "",
-                files_count,
-                item.sha256 or "",
+                neutralize_csv_formula(value)
+                for value in [
+                    item.id,
+                    item.platform,
+                    item.username or "",
+                    item.source_url,
+                    (item.caption or "").replace("\n", " "),
+                    item.hashtags or "",
+                    item.posted_at.isoformat() if item.posted_at else "",
+                    item.created_at.isoformat() if item.created_at else "",
+                    files_count,
+                    item.sha256 or "",
+                ]
             ])
 
         output.seek(0)
@@ -397,11 +427,12 @@ def export_metadata_json(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
-    limit: int = 500,
+    limit: int = Query(default=500, ge=1, le=10_000),
 ):
     """Export full metadata as a downloadable JSON file."""
     import json
 
+    limit = min(limit, get_settings().export_items_limit)
     factory = get_session_factory()
     with factory() as session:
         items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
@@ -448,18 +479,36 @@ def export_media_zip(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
-    limit: int = 500,
+    limit: int = Query(default=500, ge=1, le=10_000),
 ):
     """Export structured ZIP package containing organized media files and metadata."""
     import json
     import csv
 
+    settings = get_settings()
+    limit = min(limit, settings.export_items_limit)
     factory = get_session_factory()
     with factory() as session:
         items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
 
         if not items:
             raise HTTPException(status_code=404, detail="No media items found for export")
+
+        export_files = []
+        total_bytes = 0
+        for item in items:
+            files = session.scalars(
+                select(MediaFile).where(MediaFile.media_item_id == item.id)
+            ).all()
+            item_files = []
+            for media_file in files:
+                path = Path(media_file.path)
+                if path.is_file():
+                    total_bytes += path.stat().st_size
+                    if total_bytes > settings.export_bytes_limit:
+                        raise HTTPException(status_code=413, detail="Export is too large")
+                    item_files.append((media_file, path))
+            export_files.append((item, item_files))
 
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -468,22 +517,17 @@ def export_media_zip(
                 ["ID", "Platform", "Username", "Source URL", "Caption", "Hashtags", "Posted At", "Archived At", "Files"]
             ]
 
-            for item in items:
-                u_dir = item.username or "unknown"
-                p_dir = item.platform or "general"
+            for item, files in export_files:
+                u_dir = sanitize_zip_component(item.username, "unknown")
+                p_dir = sanitize_zip_component(item.platform, "general")
                 folder_path = f"{p_dir}/{u_dir}"
 
-                files = session.scalars(
-                    select(MediaFile).where(MediaFile.media_item_id == item.id)
-                ).all()
-
                 item_files = []
-                for f in files:
-                    p = Path(f.path)
-                    if p.is_file():
-                        arcname = f"{folder_path}/{p.name}"
-                        zf.write(p, arcname=arcname)
-                        item_files.append(p.name)
+                for f, p in files:
+                    name = sanitize_zip_component(p.name, f"file_{f.id}")
+                    arcname = f"{folder_path}/{item.id}_{name}"
+                    zf.write(p, arcname=arcname)
+                    item_files.append(f"{item.id}_{name}")
 
                 meta_entry = {
                     "id": item.id,
@@ -498,15 +542,18 @@ def export_media_zip(
                 metadata_items.append(meta_entry)
 
                 csv_rows.append([
-                    item.id,
-                    item.platform,
-                    item.username or "",
-                    item.source_url,
-                    (item.caption or "").replace("\n", " "),
-                    item.hashtags or "",
-                    item.posted_at.isoformat() if item.posted_at else "",
-                    item.created_at.isoformat() if item.created_at else "",
-                    ", ".join(item_files),
+                    neutralize_csv_formula(value)
+                    for value in [
+                        item.id,
+                        item.platform,
+                        item.username or "",
+                        item.source_url,
+                        (item.caption or "").replace("\n", " "),
+                        item.hashtags or "",
+                        item.posted_at.isoformat() if item.posted_at else "",
+                        item.created_at.isoformat() if item.created_at else "",
+                        ", ".join(item_files),
+                    ]
                 ])
 
             # Write metadata.json at root of ZIP
@@ -531,9 +578,10 @@ def export_media_zip(
 
 @router.post("/batch-zip")
 def batch_zip_media(payload: BatchMediaPayload):
-    if not payload.media_ids:
+    media_ids = _validate_batch_ids(payload.media_ids)
+    if not media_ids:
         raise HTTPException(status_code=400, detail="No media IDs specified")
 
-    ids_str = ",".join(str(i) for i in payload.media_ids)
-    return export_media_zip(ids=ids_str)
+    ids_str = ",".join(str(i) for i in media_ids)
+    return export_media_zip(ids=ids_str, limit=get_settings().export_items_limit)
 

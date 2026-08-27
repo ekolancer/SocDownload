@@ -57,7 +57,7 @@ echo "Starting Backend API on http://127.0.0.1:8000..."
 BACKEND_PID=$!
 
 # 7. Start Frontend
-echo "Starting Frontend on http://localhost:3000..."
+echo "Starting Frontend on http://127.0.0.1:3000..."
 (cd "$FRONTEND" && npm run dev) > "$LOGS/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
@@ -94,7 +94,7 @@ fi
 
 echo "=================================================="
 echo "  MediaVault is live!"
-echo "  Frontend UI:  http://localhost:3000"
+echo "  Frontend UI:  http://127.0.0.1:3000"
 echo "  Backend API:  http://127.0.0.1:8000/docs"
 echo "  Logs:         $LOGS/backend.log and $LOGS/frontend.log"
 echo "=================================================="
@@ -102,7 +102,7 @@ echo "Press Ctrl+C to stop."
 
 # Open browser if on macOS
 if [[ "$OSTYPE" == "darwin"* ]] && [ "$1" != "--no-browser" ]; then
-    open "http://localhost:3000" || true
+    open "http://127.0.0.1:3000" || true
 fi
 
 # Keep script running
