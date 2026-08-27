@@ -9,6 +9,7 @@ import yt_dlp
 
 from .base import BaseAdapter, ResolvedMedia
 from ..engines import ydl_opts
+from ..url_validation import open_public_url
 
 
 class TikTokAdapter(BaseAdapter):
@@ -34,7 +35,7 @@ class TikTokAdapter(BaseAdapter):
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             },
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with open_public_url(api_url, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         if data.get("code") != 0:
             raise RuntimeError(f"TikTok API returned: {data.get('msg', 'unknown error')}")
@@ -100,11 +101,13 @@ class TikTokAdapter(BaseAdapter):
         if images:
             for idx, img_url in enumerate(images):
                 dest_file = os.path.join(dest_dir, f"slide_{idx+1}.jpg")
-                urllib.request.urlretrieve(img_url, dest_file)
+                with open_public_url(img_url) as response, open(dest_file, "wb") as output:
+                    output.write(response.read())
                 downloaded.append(dest_file)
         elif video_url:
             dest_file = os.path.join(dest_dir, f"video_{d.get('id', 'tiktok')}.mp4")
-            urllib.request.urlretrieve(video_url, dest_file)
+            with open_public_url(video_url) as response, open(dest_file, "wb") as output:
+                output.write(response.read())
             downloaded.append(dest_file)
 
         if not downloaded:

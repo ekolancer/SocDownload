@@ -3,6 +3,41 @@ from __future__ import annotations
 import ipaddress
 import socket
 from urllib.parse import urlsplit, urlunsplit
+from urllib.request import Request, build_opener
+
+
+def validate_public_url(url: str) -> str:
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("invalid URL") from exc
+    if parsed.scheme.lower() not in {"http", "https"} or parsed.username is not None or parsed.password is not None:
+        raise ValueError("unsafe URL")
+    hostname = (parsed.hostname or "").lower()
+    if not hostname or port not in (None, 80, 443):
+        raise ValueError("unsafe URL")
+    try:
+        addresses = {item[4][0] for item in socket.getaddrinfo(hostname, port or 443, type=socket.SOCK_STREAM)}
+    except socket.gaierror as exc:
+        raise ValueError("URL host could not be resolved") from exc
+    if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("URL host resolves to a non-public address")
+    return urlunsplit((parsed.scheme.lower(), hostname, parsed.path or "/", parsed.query, ""))
+
+
+from urllib.request import HTTPRedirectHandler
+
+
+class _PublicRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return super().redirect_request(req, fp, code, msg, headers, validate_public_url(newurl))
+
+
+def open_public_url(url: str, timeout: float = 15):
+    request = Request(validate_public_url(url), headers={"User-Agent": "MediaVault"})
+    opener = build_opener(_PublicRedirectHandler)
+    return opener.open(request, timeout=timeout)
 
 
 PLATFORM_HOSTS = {
