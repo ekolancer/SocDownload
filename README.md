@@ -3,7 +3,7 @@
 > Document Type: Portal  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27
+> Last Updated: 2026-08-28
 
 MediaVault is a self-hosted media downloader and vault. This portal maps current source code to requirements, architecture, operations, and API references.
 
@@ -199,6 +199,63 @@ curl -H "Authorization: Bearer $API_TOKEN" "http://127.0.0.1:8000/api/jobs?statu
 Buka `http://127.0.0.1:3000`, masukkan URL, lalu pantau antrean dan Vault.
 
 ## Production deployment guide
+
+### Windows local production
+
+Use this mode for one Windows PC without IIS. It runs compiled Next.js, Uvicorn without reload, Caddy on loopback, and restarts child processes after crashes.
+
+Requirements:
+
+- Python 3.11–3.14
+- Node.js 20.9–24 and npm
+- Valid root `.env`
+- `caddy\caddy.exe` downloaded from the official Caddy release
+- `caddy\Caddyfile` already included
+- Administrator PowerShell for Task Scheduler and hosts-file changes
+
+Prepare local domain once by editing `C:\Windows\System32\drivers\etc\hosts` as Administrator:
+
+```text
+127.0.0.1 mediavault.local
+```
+
+Install and start hidden Task Scheduler task:
+
+```powershell
+Set-Location C:\laragon\www\Scrapper
+Set-ExecutionPolicy -Scope Process Bypass
+.\run-production.ps1 -InstallTask
+```
+
+This command installs dependencies, runs DB initialization/migrations, synchronizes `API_TOKEN` to `frontend\.env.local`, builds frontend, registers hidden task `MediaVault Production`, and starts it. Open `http://mediavault.local`.
+
+Manage task:
+
+```powershell
+Start-ScheduledTask -TaskName "MediaVault Production"
+Stop-ScheduledTask -TaskName "MediaVault Production"
+Get-ScheduledTaskInfo -TaskName "MediaVault Production"
+
+Get-ScheduledTask -TaskName "MediaVault Production" | Select-Object TaskName, State
+Get-ScheduledTaskInfo -TaskName "MediaVault Production" | Select-Object LastRunTime, NextRunTime, LastTaskResult, NumberOfMissedRuns
+Get-Process python,node,caddy -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime
+Get-NetTCPConnection -LocalPort 80,3000,8000 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess, State
+
+.\run-production.ps1 -UninstallTask
+```
+
+After code, dependency, or `.env` changes, stop task, then rebuild and restart hidden task:
+
+```powershell
+Stop-ScheduledTask -TaskName "MediaVault Production"
+.\run-production.ps1 -SkipInstall -InstallTask
+```
+
+`run-production.ps1` starts backend, frontend, and Caddy hidden with separate logs: `logs\backend-production.log`, `logs\frontend-production.log`, and `logs\caddy-production.log`. It uses ports 8000, 3000, and 80 bound to loopback. Port 80 must be free. Do not run duplicate manual services at the same time.
+
+Remove Caddy or use `http://127.0.0.1:3000` only if local domain is unnecessary. Caddy does not change internet routing; it only proxies local port 80 to local port 3000.
+
+### Production Linux
 
 Production deployment requires Linux server, reverse proxy, TLS, process manager, firewall, backups, and secret management. Repository has no Dockerfile or Nginx configuration; commands below provide a minimal Ubuntu + Nginx layout.
 
