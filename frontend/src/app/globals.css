@@ -1,5 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
+
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/publicsans/v18/ijwRs572Xtc6ZYQws9YVwnNGfJ4.woff2') format('woff2');
+}
 
 @theme {
   --font-sans: 'Public Sans', sans-serif;

@@ -383,12 +383,6 @@ export default function StudioPage() {
               })}
             </div>
 
-            {/* Carousel Dots */}
-            <div className="flex justify-center mt-2 gap-1.5">
-              <div className="w-5 h-1 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50"></div>
-              <div className="w-1.5 h-1 rounded-full bg-slate-700"></div>
-              <div className="w-1.5 h-1 rounded-full bg-slate-700"></div>
-            </div>
           </section>
         )}
 
@@ -409,12 +403,6 @@ export default function StudioPage() {
           <div className="font-medium text-xs tracking-wider text-slate-600 uppercase">
             © 2024 MediaVault Studio. All rights reserved.
           </div>
-          <nav className="flex gap-6">
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">API Docs</a>
-            <a className="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors" href="#">Help Center</a>
-          </nav>
         </div>
       </footer>
 

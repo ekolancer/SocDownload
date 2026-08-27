@@ -51,7 +51,7 @@ export function Navbar({
         </Link>
 
         {/* Center: Absolute Centered Premium Navigation Dock */}
-        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center p-1 bg-slate-900/80 backdrop-blur-xl border border-white/[0.08] rounded-full shadow-[0_2px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] select-none">
+        <nav className="absolute left-1/2 -translate-x-1/2 flex items-center p-1 max-w-[calc(100vw-8rem)] overflow-x-auto no-scrollbar bg-slate-900/80 backdrop-blur-xl border border-white/[0.08] rounded-full shadow-[0_2px_16px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] select-none">
           <Link
             href="/"
             className={`relative px-5 sm:px-6 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors duration-200 cursor-pointer ${

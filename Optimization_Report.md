@@ -6,7 +6,7 @@ MediaVault adalah aplikasi self-hosted untuk mengunduh, mengarsipkan, mengelola,
 
 Kekuatan utama: pemisahan route/service/adapter cukup jelas; registry adapter mudah diperluas; operasi blocking dipindah ke thread; path media serving memiliki containment check; frontend menggunakan strict TypeScript, memoization, polling overlap guards, dan build produksi berhasil.
 
-Status incremental setelah implementasi Quick Wins, P0, dan P1/P2:
+Status incremental setelah implementasi Quick Wins, P0, P1/P2, dan P3:
 
 1. **Resolved for single-user token model:** API token wajib dikonfigurasi; Bearer auth melindungi `/api/*`, kecuali `GET /api/health` dan `OPTIONS` (`backend/app/main.py:73-104`). Frontend menyertakan token melalui `apiFetch` dan `NEXT_PUBLIC_API_TOKEN`.
 2. **Resolved for current HTTP download paths:** Central validator aktif; redirect target divalidasi ulang dan TikTok fallback memakai guarded public opener (`backend/app/url_validation.py`; `backend/app/adapters/tiktok.py`). Connection-time DNS pinning native engines tetap limitation.
@@ -123,7 +123,7 @@ Batas modul cukup baik di backend, tetapi route frontend dan beberapa backend ro
 | GAP-004 | UI sidebar Google Photos/Vault tidak dipakai | Tidak ada runtime import; hanya type `AlbumSummary` diimpor dari `VaultSidebar` | Confirmed | Sekitar 960 LOC menambah beban maintenance | P2 |
 | GAP-005 | Account DB dan vault encryption tidak terhubung ke adapter runtime | `backend/app/db.py:49-56`; `backend/app/vault.py`; session dibaca file pada `backend/app/main.py:45-52` | Likely | Model keamanan sesi belum selesai atau sudah obsolete | P2 |
 | GAP-006 | Facebook adapter tersedia tetapi registration disabled | `backend/app/adapters/facebook.py`; `backend/app/main.py:58` | Requires Business Confirmation | Cakupan platform berbeda dari PRD | P3 |
-| GAP-007 | Footer link dan carousel dot bersifat placeholder | `frontend/src/app/page.tsx:379-409` | Confirmed | Affordance menyesatkan | P3 |
+| GAP-007 | Footer link dan carousel dot bersifat placeholder | **Resolved:** misleading controls removed (`frontend/src/app/page.tsx`) | Confirmed | Affordance menyesatkan | Closed |
 | GAP-008 | Docker portability dijanjikan tetapi artefak deployment tidak ada | `PRD_MediaVault_Personal_Downloader.md:107-127`; tidak ada Dockerfile/Compose | Requires Business Confirmation | Deployment production tidak reproducible | P2 |
 | GAP-009 | Tidak ada authentication/user/tenant model | Semua router tanpa dependency auth `backend/app/main.py:81-87` | Confirmed technical absence; requirement exposure Requires Business Confirmation | Aman hanya jika loopback-only | P0 |
 
@@ -206,7 +206,8 @@ Command evidence:
 
 - `npm run build`: **pass**, routes `/`, `/_not-found`, `/vault` static generated; First Load JS sekitar 159-160 kB.
 - `.venv\Scripts\python.exe -m pip check`: **pass**, no broken requirements.
-- Backend pytest: **pass**, 18 tests + 5 subtests; 2 deprecation warnings dicatat.
+- Backend pytest: **pass**, 20 tests; 2 deprecation warnings dicatat.
+- P3 validation: frontend lint **pass** (0 errors, 6 warnings), typecheck **pass**, production build **pass**, `git diff --check` **pass**. Remaining warnings: 5 raw `<img>` advisories and 1 React hook dependency warning.
 
 ## 12. Dependency Audit
 
@@ -367,9 +368,9 @@ Command evidence:
 
 ### P3 — Low
 
-- **RM-021:** Dedupe platform/pagination helpers, clean dead imports, modernize TS target after compatibility confirmation. Effort Low, risk Low.
-- **RM-022:** Remove fake carousel controls/footer placeholders or implement destinations. Requires Business Confirmation. Effort Low, risk Low.
-- **RM-023:** Optimize media dimensions/posters/fonts and mobile navbar. Effort Low-Medium, risk Low-Medium.
+- **RM-021: Partially Resolved:** shared pagination helper added; TS target modernized to `es2017`; obvious duplicate pagination code removed. Platform icon deduplication/dead-import audit remains open. Validation: lint/typecheck/build passed.
+- **RM-022: Resolved:** misleading carousel dots and fake footer links removed. Validation: typecheck/build passed.
+- **RM-023: Partially Resolved:** mobile navbar overflow handling and font loading improved; media intrinsic dimensions/poster optimization remains open. Validation: lint/typecheck/build passed.
 
 ## 20. Recommended Next Actions
 
