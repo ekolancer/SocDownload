@@ -82,6 +82,8 @@ def list_media(
             files = session.scalars(select(MediaFile).where(MediaFile.media_item_id == i.id)).all()
             file_list = []
             for f in files:
+                if f.kind == "audio" or Path(f.path).suffix.lower() in {".m4a", ".mp3", ".wav", ".aac", ".flac", ".ogg"}:
+                    continue
                 file_list.append({
                     "id": f.id,
                     "kind": f.kind,

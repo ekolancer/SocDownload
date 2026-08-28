@@ -99,7 +99,7 @@ Batas modul cukup baik di backend, tetapi route frontend dan beberapa backend ro
 | FEAT-005 | Media vault/list/filter | `backend/app/routes/media.py:34-75`; `frontend/src/app/vault/page.tsx` | Complete | None | High |
 | FEAT-006 | File serving | `backend/app/routes/media.py:113-139` | Complete | None | High |
 | FEAT-007 | Favorite media | `backend/app/routes/media.py:142-157`; vault UI | Complete, batch semantics ambiguous | None | Medium |
-| FEAT-008 | Media deletion/batch deletion | `backend/app/routes/media.py:159-243` | Complete, non-atomic | None | High |
+| FEAT-008 | Media deletion/batch deletion | `backend/app/routes/media.py:159-260`; `frontend/src/app/vault/page.tsx:324-345` | Complete, batch endpoint corrected; filesystem/DB reconciliation partial | Backend coverage partial | High |
 | FEAT-009 | Albums CRUD/membership | `backend/app/routes/albums.py:31-250`; `AlbumModal.tsx` | Partial: edit UI unreachable | None | Medium |
 | FEAT-010 | Creator grouping/export | `backend/app/routes/media.py:245-333`; `CreatorsHub.tsx` | Complete | None | Medium |
 | FEAT-011 | CSV/JSON/ZIP export | `backend/app/routes/media.py:336-539` | Complete, bounded/disk-backed ZIP | Partial bounds coverage | Medium |
@@ -208,7 +208,8 @@ Command evidence:
 - `.venv\Scripts\python.exe -m pip check`: **pass**, no broken requirements.
 - Backend pytest: **pass**, 21 tests + 5 subtests; 7 warnings (dependency/runtime deprecations) dicatat.
 - P3 validation: frontend lint **pass**, typecheck **pass**, production build **pass**, `git diff --check` **pass`.
-- Latest validation: `pytest` **21 passed**, `compileall` **pass**, `pip check` **pass**, `npm audit --omit=dev` **0 vulnerabilities**, frontend lint/typecheck/build **pass**. Two Python deprecation warnings remain.
+- Latest validation: `pytest` **22 passed**, `compileall` **pass**, `pip check` **pass**, `npm audit --omit=dev` **0 vulnerabilities**, frontend lint/typecheck/build **pass**. Seven Python/runtime deprecation warnings remain.
+- Bug-fix validation: batch delete route corrected to `/api/media/batch-delete`; audio files excluded from media API responses; Pinterest author fallback added.
 
 ## 12. Dependency Audit
 
@@ -356,7 +357,7 @@ Command evidence:
 - **RM-011: Partially Resolved:** failed-job retry and active dedupe semantics improved; race-proof DB idempotency remains open. Validation: `pytest` 20 passed.
 - **RM-012: Resolved for current list flows:** offset pagination and active/recent polling added. Validation: typecheck/build passed.
 - **RM-013: Partially Resolved:** lightbox dialog semantics and focusable controls added; full modal/card/live-region audit remains open. Validation: lint/typecheck/build passed.
-- **RM-014: Partially Resolved:** shared API error helper and mutation feedback added; full typed error envelope remains open. Validation: lint/typecheck/build passed.
+- **RM-014: Partially Resolved:** shared API error helper and mutation feedback added; batch-delete endpoint contract corrected and validated by frontend build. Full typed error envelope remains open. Validation: lint/typecheck/build passed.
 
 ### P2 — Medium
 

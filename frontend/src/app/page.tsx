@@ -70,11 +70,17 @@ export default function StudioPage() {
       if (mediaResult.status === 'fulfilled' && mediaResult.value.ok) {
         const mediaData = await mediaResult.value.json().catch(() => null);
         if (Array.isArray(mediaData)) {
-          const mediaHash = JSON.stringify(mediaData.map((m: MediaItem) => `${m.id}:${m.is_favorite}`));
+          const mediaItems = mediaData
+            .map((item: MediaItem) => ({
+              ...item,
+              files: (item.files || []).filter((file) => !/\.(m4a|mp3|wav|aac|flac|ogg)$/i.test(file.name || file.path || '')),
+            }))
+            .filter((item: MediaItem) => item.files.length > 0);
+          const mediaHash = JSON.stringify(mediaItems.map((m: MediaItem) => `${m.id}:${m.is_favorite}`));
           if (mediaHash !== lastMediaHashRef.current) {
             lastMediaHashRef.current = mediaHash;
-            setRecentMedia(mediaData);
-            setMediaCount(mediaData.length);
+            setRecentMedia(mediaItems);
+            setMediaCount(mediaItems.length);
           }
         }
       }

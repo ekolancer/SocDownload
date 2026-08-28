@@ -251,9 +251,9 @@ export function MediaGallery({
 
                 {/* Top-Right: Platform Refraction Pill */}
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border shadow-xs backdrop-blur-md ${badge.bg}`}>
-                    {badge.icon}
-                  </span>
+<span className={`w-7 h-7 rounded-lg text-[10px] font-bold flex items-center justify-center border shadow-xs backdrop-blur-md ${badge.bg}`}>
+                     {badge.icon}
+                   </span>
                 </div>
 
                 {/* Bottom Overlay Gradient with Creator and Video Badge */}
@@ -294,7 +294,7 @@ export function MediaGallery({
                       e.stopPropagation();
                       onToggleFavorite(item.id);
                     }}
-                    className={`absolute bottom-2 right-2 z-20 p-1.5 rounded-full backdrop-blur-md transition-all cursor-pointer ${
+                    className={`absolute bottom-2 right-2 z-20 w-7 h-7 rounded-lg flex items-center justify-center backdrop-blur-md transition-all cursor-pointer ${
                       item.is_favorite
                         ? 'bg-amber-500 text-slate-950 shadow-md'
                         : 'bg-black/60 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 border border-white/10'

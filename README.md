@@ -300,16 +300,51 @@ This command installs dependencies, runs DB initialization/migrations, synchroni
 
 Manage task:
 
+Start task manually jika aplikasi belum berjalan:
+
 ```powershell
 Start-ScheduledTask -TaskName "MediaVault Production"
+```
+
+Menghentikan task dan proses yang dikelolanya:
+
+```powershell
 Stop-ScheduledTask -TaskName "MediaVault Production"
+```
+
+Menampilkan informasi eksekusi task, termasuk waktu mulai, jadwal berikutnya, dan exit code terakhir:
+
+```powershell
 Get-ScheduledTaskInfo -TaskName "MediaVault Production"
+```
 
+Menampilkan status task, misalnya `Running`, `Ready`, atau `Disabled`:
+
+```powershell
 Get-ScheduledTask -TaskName "MediaVault Production" | Select-Object TaskName, State
-Get-ScheduledTaskInfo -TaskName "MediaVault Production" | Select-Object LastRunTime, NextRunTime, LastTaskResult, NumberOfMissedRuns
-Get-Process python,node,caddy -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime
-Get-NetTCPConnection -LocalPort 80,3000,8000 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess, State
+```
 
+Menampilkan riwayat eksekusi penting: waktu eksekusi terakhir, jadwal berikutnya, hasil eksekusi, dan jumlah eksekusi yang terlewat:
+
+```powershell
+Get-ScheduledTaskInfo -TaskName "MediaVault Production" | Select-Object LastRunTime, NextRunTime, LastTaskResult, NumberOfMissedRuns
+```
+
+Memeriksa proses backend, frontend, dan Caddy yang sedang berjalan:
+
+```powershell
+Get-Process python,node,caddy -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime
+```
+
+Memeriksa apakah port Caddy `80`, frontend `3000`, dan backend `8000` sedang listen:
+
+```powershell
+Get-NetTCPConnection -LocalPort 80,3000,8000 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess, State
+```
+
+Menghapus task dari Task Scheduler. Gunakan jika tidak ingin auto-start lagi:
+
+```powershell
 .\run-production.ps1 -UninstallTask
 ```
 

@@ -17,6 +17,9 @@ class PinterestAdapter(BaseAdapter):
         try:
             kv = gdl_first_item(url)
             username = extract_username(kv, "pinner", "native_creator", "creator", "owner", "user", "username", "uploader")
+            if not username:
+                match = re.search(r"pinterest\.com/([^/?#]+)/pin/", url, re.IGNORECASE)
+                username = match.group(1) if match else None
             return ResolvedMedia(
                 platform=self.platform,
                 source_url=url,

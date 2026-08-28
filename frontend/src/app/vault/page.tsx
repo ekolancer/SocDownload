@@ -13,7 +13,7 @@ import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { JobRow, JobStats } from '@/components/studio/JobPipeline';
 import { AlbumSummary } from '@/components/vault/VaultSidebar';
-import { apiFetch } from '@/lib/api';
+import { apiError, apiFetch } from '@/lib/api';
 import {
   IconLayers,
   IconFolderPlus,
@@ -327,19 +327,22 @@ export default function VaultPage() {
 
     setIsBatchProcessing(true);
     try {
-      const res = await apiFetch(`${API}/media/batch/delete`, {
+      const res = await apiFetch(`${API}/media/batch-delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ media_ids: selectedIds }),
       });
-      if (res.ok) {
-        setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
+       if (!res.ok) {
+         throw new Error(await apiError(res, 'Batch delete failed'));
+       }
+       if (res.ok) {
+         setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
         setSelectedIds([]);
         refreshData(false);
       }
-    } catch (err) {
-      console.error('Batch delete failed:', err);
-    } finally {
+     } catch (err) {
+       alert(err instanceof Error ? err.message : 'Batch delete failed');
+     } finally {
       setIsBatchProcessing(false);
     }
   };
