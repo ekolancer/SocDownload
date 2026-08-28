@@ -51,6 +51,36 @@ const PLATFORMS = [
   { id: 'threads', label: 'Threads', icon: IconThreads },
 ];
 
+function AnimatedNumber({ value }: { value: number }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const previousValue = useRef(value);
+
+  useEffect(() => {
+    const startValue = previousValue.current;
+    previousValue.current = value;
+
+    if (startValue === value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(value);
+      return;
+    }
+
+    let frameId = 0;
+    const startedAt = performance.now();
+    const duration = 1400;
+    const animate = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4);
+      setDisplayValue(Math.round(startValue + (value - startValue) * eased));
+      if (progress < 1) frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [value]);
+
+  return <>{displayValue.toLocaleString()}</>;
+}
+
 export default function VaultPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -210,7 +240,7 @@ export default function VaultPage() {
   // Initial load & background polling
   useEffect(() => {
     refreshData(false);
-    const interval = setInterval(() => refreshData(false), 5000);
+    const interval = setInterval(() => refreshData(false), 10000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -502,7 +532,7 @@ export default function VaultPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="linear-dark-bg min-h-screen text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
+    <div className="linear-dark-bg min-h-screen text-white flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
       
       {/* 1. Top Application Header (Shared Navbar) */}
       <Navbar
@@ -578,7 +608,7 @@ export default function VaultPage() {
               </div>
               <div className="mt-3">
                 <span className="text-3xl font-bold font-mono tracking-tight text-white">
-                  {media.length}
+                  <AnimatedNumber value={media.length} />
                 </span>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-400">
                   <span>{photoCount} Foto</span>
@@ -604,6 +634,9 @@ export default function VaultPage() {
                 <span className="text-3xl font-bold font-mono tracking-tight text-white">
                   {storageStats?.human_size || '0 MB'}
                 </span>
+                <div className="text-[11px] font-mono text-slate-400 mt-1">
+                  <AnimatedNumber value={storageStats?.total_files || 0} /> file
+                </div>
                 <div className="w-full h-1.5 rounded-full bg-slate-900 border border-white/5 overflow-hidden shadow-inner mt-2">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-400 rounded-full shadow-xs"
@@ -644,7 +677,7 @@ export default function VaultPage() {
               </div>
               <div className="mt-3">
                 <span className="text-3xl font-bold font-mono tracking-tight text-white">
-                  {creatorsList.length}
+                  <AnimatedNumber value={creatorsList.length} />
                 </span>
                 <span className="text-[11px] font-bold text-emerald-400 block mt-1 group-hover:underline">
                   Jelajahi Profil Kreator →
@@ -672,7 +705,7 @@ export default function VaultPage() {
               <div className="mt-3 flex items-end justify-between">
                 <div>
                   <span className="text-3xl font-bold font-mono tracking-tight text-white">
-                    {albums.length}
+                    <AnimatedNumber value={albums.length} />
                   </span>
                   <span className="text-[11px] font-mono text-slate-400 block mt-1">
                     Koleksi Album
@@ -974,7 +1007,7 @@ export default function VaultPage() {
                         <button
                           type="button"
                           onClick={(e) => handleDeleteAlbum(album.id, e)}
-                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1 rounded-lg text-rose-200 hover:text-white hover:bg-rose-950/40 transition-colors opacity-0 group-hover:opacity-100"
                           title="Hapus album"
                         >
                           <IconTrash className="w-3.5 h-3.5" />

@@ -217,6 +217,7 @@ export function MediaGallery({
                       alt={item.caption || item.username || 'Media'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      decoding="async"
                     />
                   )
                 ) : (
@@ -239,7 +240,7 @@ export function MediaGallery({
                     type="button"
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer shadow-md ${
                       isSelected
-                        ? 'bg-emerald-500 border-white text-slate-950 scale-110 font-bold'
+                        ? 'bg-emerald-500 border-white text-black scale-110 font-bold'
                         : 'bg-black/60 border-white/60 text-white hover:bg-black/80 backdrop-blur-xs'
                     }`}
                     aria-label="Pilih item"
@@ -251,7 +252,7 @@ export function MediaGallery({
 
                 {/* Top-Right: Platform Refraction Pill */}
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-<span className={`w-7 h-7 rounded-lg text-[10px] font-bold flex items-center justify-center border shadow-xs backdrop-blur-md ${badge.bg}`}>
+                  <span className={`w-7 h-7 rounded-lg text-[10px] font-bold flex items-center justify-center border shadow-xs backdrop-blur-md ${badge.bg}`}>
                      {badge.icon}
                    </span>
                 </div>
@@ -296,7 +297,7 @@ export function MediaGallery({
                     }}
                     className={`absolute bottom-2 right-2 z-20 w-7 h-7 rounded-lg flex items-center justify-center backdrop-blur-md transition-all cursor-pointer ${
                       item.is_favorite
-                        ? 'bg-amber-500 text-slate-950 shadow-md'
+                        ? 'bg-amber-500 text-black shadow-md'
                         : 'bg-black/60 text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 border border-white/10'
                     }`}
                     title={item.is_favorite ? 'Hapus dari Favorit' : 'Tandai Favorit'}

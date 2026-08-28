@@ -485,7 +485,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   <button
                     type="button"
                     onClick={() => onDeleteJob(job.id)}
-                    className="text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 p-1.5 rounded-lg transition-all active:scale-95 cursor-pointer"
+                    className="text-rose-200 hover:text-white hover:bg-rose-950/40 p-1.5 rounded-lg transition-all active:scale-95 cursor-pointer"
                     title="Remove task"
                   >
                     <IconClose className="w-4 h-4" />

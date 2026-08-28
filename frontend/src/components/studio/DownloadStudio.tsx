@@ -222,9 +222,9 @@ export function DownloadStudio({
           {/* Premium High-End Slogan */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none mb-3 selection:bg-emerald-500/20">
             <span className="text-white drop-shadow-xs font-black">Paste </span>
-            <span className="relative inline-block bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent drop-shadow-sm font-black">
+            <span className="relative inline-block text-emerald-400 font-black">
               it !
-              <span className="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-indigo-400 rounded-full opacity-70 blur-[0.5px]" />
+              <span className="absolute -bottom-1 left-0 right-0 h-1 bg-emerald-400 rounded-full opacity-70" />
             </span>
           </h1>
 

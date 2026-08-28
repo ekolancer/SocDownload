@@ -39,7 +39,7 @@ export function Navbar({
         
         {/* Left: Brand Identity */}
         <Link href="/" className="flex items-center gap-2.5 group cursor-pointer shrink-0 select-none">
-          <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-indigo-500/25 transition-transform duration-300 group-hover:scale-105 group-active:scale-95 border border-white/20">
+          <div className="relative w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-black font-black text-base shadow-md shadow-emerald-500/25 transition-transform duration-300 group-hover:scale-105 group-active:scale-95 border border-emerald-300/30">
             <span className="drop-shadow-xs">M</span>
             <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
@@ -83,7 +83,7 @@ export function Navbar({
             )}
             <span className="relative z-10 flex items-center gap-1.5">
               <span>Vault</span>
-              {mediaCount > 0 && (
+              {/* {mediaCount > 0 && (
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold transition-colors ${
                     isVaultPage
@@ -93,7 +93,7 @@ export function Navbar({
                 >
                   {mediaCount}
                 </span>
-              )}
+              )} */}
             </span>
           </Link>
         </nav>

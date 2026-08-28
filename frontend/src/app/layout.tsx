@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="bg-[#071221] text-slate-100 font-sans antialiased selection:bg-emerald-500/30 selection:text-white min-h-[100dvh]">
+      <body className="bg-[#071221] text-white font-sans antialiased selection:bg-emerald-500/30 selection:text-white min-h-[100dvh]">
         {children}
       </body>
     </html>

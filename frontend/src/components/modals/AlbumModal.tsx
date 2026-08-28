@@ -187,7 +187,7 @@ export function AlbumModal({
                         </div>
                       </div>
                       {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 aspect-square font-bold">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 text-black flex items-center justify-center shrink-0 aspect-square font-bold">
                           <IconCheck className="w-3 h-3 stroke-[3]" />
                         </div>
                       )}

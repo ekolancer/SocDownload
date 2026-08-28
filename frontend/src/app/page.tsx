@@ -152,7 +152,7 @@ export default function StudioPage() {
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(() => refreshData(false), 3000);
+    const interval = setInterval(() => refreshData(false), 5000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
@@ -229,7 +229,7 @@ export default function StudioPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="linear-dark-bg min-h-[100dvh] text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
+    <div className="linear-dark-bg min-h-[100dvh] text-white flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
       
       {/* Top App Header (Stitch Comp) */}
       <Navbar

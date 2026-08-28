@@ -61,7 +61,7 @@ export function BatchActionBar({
               <IconClose className="w-3.5 h-3.5" />
             </button>
             <div className="flex items-center gap-1.5">
-              <span className="min-w-[22px] h-5.5 px-2 rounded-full bg-emerald-500 text-slate-950 text-xs font-mono font-bold flex items-center justify-center shadow-xs">
+              <span className="min-w-[22px] h-5.5 px-2 rounded-full bg-emerald-500 text-black text-xs font-mono font-bold flex items-center justify-center shadow-xs">
                 {count}
               </span>
               <span className="text-xs font-bold text-slate-200 hidden sm:inline">
