@@ -198,6 +198,75 @@ curl -H "Authorization: Bearer $API_TOKEN" "http://127.0.0.1:8000/api/jobs?statu
 
 Buka `http://127.0.0.1:3000`, masukkan URL, lalu pantau antrean dan Vault.
 
+## Migrasi media ke lokasi baru
+
+`data/mediavault.db` menyimpan metadata dan path fisik pada tabel `media_files`. `media/` menyimpan file aktual. Jika folder media dipindahkan, path database juga harus diperbarui.
+
+`migrate_media_paths.py` mencari seluruh path berdasarkan folder platform (`instagram`, `x`, `threads`, `youtube`, `reddit`, `pinterest`, `tiktok`, `facebook`). Script tidak bergantung pada satu `OLD_ROOT`, tidak memindahkan file fisik, dan mempertahankan struktur mulai dari folder platform.
+
+### Prasyarat Windows
+
+Stop aplikasi dan pastikan port bebas:
+
+```powershell
+Stop-ScheduledTask -TaskName "MediaVault Production" -ErrorAction SilentlyContinue
+Get-Process python,node,caddy -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-NetTCPConnection -LocalPort 80,3000,8000 -State Listen -ErrorAction SilentlyContinue
+```
+
+Copy seluruh isi media lama ke target:
+
+```powershell
+robocopy `
+  "C:\lokasi\media-lama" `
+  "D:\NAS\Docker\Mediavault\Media" `
+  /E /COPY:DAT /R:2 /W:2
+```
+
+### Preview wajib
+
+Default hanya preview dan tidak mengubah database:
+
+```powershell
+Set-Location C:\laragon\www\Scrapper
+.\.venv\Scripts\python.exe migrate_media_paths.py `
+  --target-root "D:\NAS\Docker\Mediavault\Media"
+```
+
+Lanjut hanya jika output menunjukkan `missing=0`. `skipped` berarti path sudah berada di target atau tidak memiliki folder platform yang dikenal; periksa jika jumlahnya tidak sesuai.
+
+### Apply aman
+
+```powershell
+.\.venv\Scripts\python.exe migrate_media_paths.py `
+  --target-root "D:\NAS\Docker\Mediavault\Media" `
+  --apply
+```
+
+`--apply` membuat backup timestamped, memvalidasi semua file tujuan, mengubah hanya `media_files.path`, menjalankan transaksi SQLite dan `PRAGMA integrity_check`, lalu memulihkan backup bila gagal. Script tidak mengubah file fisik, album, favorite, `VAULT_KEY`, cookies, atau session.
+
+Set `.env`:
+
+```env
+MEDIA_ROOT=D:/NAS/Docker/Mediavault/Media
+DATABASE_URL=sqlite:///./data/mediavault.db
+```
+
+Verifikasi:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from backend.app.db import get_session_factory,MediaFile; from sqlalchemy import select; import os; s=get_session_factory()(); rows=s.scalars(select(MediaFile)).all(); root=os.path.normcase('D:\\NAS\\Docker\\Mediavault\\Media'); print('total=',len(rows),'outside_target=',sum(not os.path.normcase(f.path).startswith(root) for f in rows),'missing=',sum(not os.path.isfile(f.path) for f in rows)); s.close()"
+```
+
+Hasil ideal: `outside_target=0` dan `missing=0`. Start ulang lalu cek Vault, Recent Download, preview, album, dan favorite:
+
+```powershell
+Start-ScheduledTask -TaskName "MediaVault Production"
+Get-ScheduledTaskInfo -TaskName "MediaVault Production" | Select-Object LastRunTime,LastTaskResult
+```
+
+Simpan backup database dan media lama sampai verifikasi selesai.
+
 ## Production deployment guide
 
 ### Windows local production
