@@ -1,9 +1,9 @@
-const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN;
-
-export function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const headers = new Headers(init.headers);
-  if (API_TOKEN) headers.set('Authorization', `Bearer ${API_TOKEN}`);
-  return fetch(input, { ...init, headers });
+export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const response = await fetch(input, { ...init, headers: new Headers(init.headers), credentials: 'include' });
+  if (response.status === 401 && typeof window !== 'undefined' && window.location.pathname !== '/login' && !String(input).includes('/api/settings/instagram/login')) {
+    window.open('/login', '_self');
+  }
+  return response;
 }
 
 export async function apiError(response: Response, fallback: string) {

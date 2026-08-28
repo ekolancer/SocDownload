@@ -24,7 +24,7 @@ from .adapters.youtube import YouTubeAdapter
 from .config import get_settings
 from .db import init_db, Job, JobStatus, MediaItem, get_session_factory, utcnow
 from sqlalchemy import update
-from .routes import adapters, albums, autosync, health, importer, jobs, media
+from .routes import adapters, albums, auth, autosync, health, importer, jobs, media, settings as settings_route
 from . import observability
 from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue, recover_jobs
@@ -66,8 +66,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    if not settings.api_token or settings.api_token in {"change-me", "change-me-generate-via-keygen", "your-api-token"}:
-        raise RuntimeError("API_TOKEN must be configured with a non-placeholder value")
+    if (not settings.api_token or settings.api_token in {"change-me", "change-me-generate-via-keygen", "your-api-token"}) and not (settings.auth_password_hash and settings.auth_session_secret):
+        raise RuntimeError("API_TOKEN or password authentication must be configured")
 
     app = FastAPI(title="MediaVault", lifespan=lifespan)
     configure_logging()
@@ -75,11 +75,12 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def api_auth(request: Request, call_next: Any):
-        if request.url.path == "/api/health" and request.method == "GET" or request.method == "OPTIONS" or not request.url.path.startswith("/api"):
+        if request.url.path == "/api/health" and request.method == "GET" or request.url.path.startswith("/api/auth") or request.method == "OPTIONS" or not request.url.path.startswith("/api"):
             return await call_next(request)
         authorization = request.headers.get("authorization", "")
         token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
-        if not compare_digest(token, settings.api_token):
+        session_valid = auth.valid_session(request)
+        if not session_valid and not compare_digest(token, settings.api_token):
             return JSONResponse({"detail": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
@@ -88,9 +89,11 @@ def create_app() -> FastAPI:
         allow_origins=["http://127.0.0.1:3000"],
         allow_methods=["*"],
         allow_headers=["*"],
+        allow_credentials=True,
     )
 
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(observability.router)
     app.include_router(importer.router)
     app.include_router(jobs.router)
@@ -98,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(albums.router)
     app.include_router(adapters.router)
     app.include_router(autosync.router)
+    app.include_router(settings_route.router)
     return app
 
 

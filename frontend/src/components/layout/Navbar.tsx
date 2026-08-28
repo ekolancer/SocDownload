@@ -2,9 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { IconAdapter } from '@/components/ui/Icons';
+import { IconAdapter, IconSettings, IconLogOut } from '@/components/ui/Icons';
 import { JobStats } from '@/components/studio/JobPipeline';
 
 type BackendStatus = 'loading' | 'ok' | 'offline';
@@ -31,6 +31,11 @@ export function Navbar({
   isRefreshing = false,
 }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    router.push('/login');
+  };
   const isVaultPage = pathname === '/vault';
 
   return (
@@ -83,23 +88,20 @@ export function Navbar({
             )}
             <span className="relative z-10 flex items-center gap-1.5">
               <span>Vault</span>
-              {/* {mediaCount > 0 && (
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold transition-colors ${
-                    isVaultPage
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-800 text-slate-300 border border-white/10'
-                  }`}
-                >
-                  {mediaCount}
-                </span>
-              )} */}
             </span>
           </Link>
         </nav>
 
         {/* Right: Actions (Adapters Drawer Trigger) */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <Link href="/settings" className="group flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-900/60 px-3 py-2 text-slate-300 shadow-2xs transition-all duration-300 hover:border-white/20 hover:bg-slate-800/80 hover:text-white hover:shadow-md">
+            <IconSettings className="h-4 w-4 text-slate-400 transition-colors group-hover:text-emerald-400" />
+            <span className="hidden text-xs font-bold md:inline">Settings</span>
+          </Link>
+          <button type="button" onClick={handleLogout} className="group flex items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-900/60 px-3 py-2 text-slate-300 shadow-2xs transition-all duration-300 hover:border-white/20 hover:bg-slate-800/80 hover:text-white hover:shadow-md" aria-label="Logout" title="Logout">
+            <IconLogOut className="h-4 w-4 text-slate-400 transition-colors group-hover:text-rose-400" />
+            <span className="hidden text-xs font-bold md:inline">Logout</span>
+          </button>
           <button
             type="button"
             onClick={onOpenAdapters}

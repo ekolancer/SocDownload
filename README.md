@@ -112,6 +112,61 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 
 Do not paste secrets into Git, chat, or logs. Keep cookie/session files under `config/`; these paths are ignored by Git.
 
+#### 1.1 Configure password authentication
+
+MediaVault supports single-user password authentication through a signed `HttpOnly` session cookie. Password authentication protects the API and dashboard without storing the original password. The application stores only a PBKDF2-HMAC password hash; `AUTH_SESSION_SECRET` signs session cookies and must remain private.
+
+Generate `AUTH_PASSWORD_HASH` using a password you choose. The command prompts for the password, so the password is not exposed in shell history:
+
+Linux/macOS:
+
+```bash
+.venv/bin/python -c "import base64,hashlib,secrets; p=input('Password: ').encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac('sha256',p,s.encode(),310000); print(f'pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}')"
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import base64,hashlib,secrets; p=input('Password: ').encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac('sha256',p,s.encode(),310000); print(f'pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}')"
+```
+
+Generate `AUTH_SESSION_SECRET` independently:
+
+```bash
+.venv/bin/python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(64))"
+```
+
+Add both generated values to root `.env`:
+
+```env
+AUTH_PASSWORD_HASH=pbkdf2_sha256$310000$...
+AUTH_SESSION_SECRET=...
+```
+
+Usage:
+
+1. Stop the backend before changing `.env`.
+2. Generate the password hash and session secret.
+3. Copy generated values into `.env`; never enter the original password into `.env`.
+4. Restart the backend and frontend.
+5. Open `/login`, enter the password you selected, and select `Continue`.
+6. Confirm dashboard access, then use `Logout` when finished if available.
+
+Security requirements:
+
+- Use a unique, strong password; do not reuse a social-media password.
+- Do not commit `.env`, paste either value into chat, or print secrets in logs.
+- `AUTH_SESSION_SECRET` invalidates existing sessions when rotated; users must log in again.
+- Keep `API_TOKEN` configured during migration if scripts or internal clients still use Bearer authentication.
+- Use HTTPS when accessing MediaVault beyond loopback; session cookies become `Secure` automatically on HTTPS requests.
+- Password authentication is single-user authentication, not multi-user authorization or tenant isolation.
+
 #### 2. Setup Netscape cookies
 
 `COOKIES_FILE` is used by `yt-dlp` and `gallery-dl`. It must be a Netscape-format cookie export, not a browser SQLite database and not an Instaloader session.

@@ -149,6 +149,9 @@ class InstagramAdapter(BaseAdapter):
     def save_session(self, session_file: str) -> None:
         self._loader.save_session_to_file(session_file)
 
+    def two_factor_login(self, code: str) -> None:
+        self._loader.two_factor_login(code)
+
     def check_session_valid(self) -> tuple[bool, str | None]:
         """Check whether the active session cookie or instaloader session is valid."""
         from ..engines import _cookies

@@ -727,6 +727,42 @@ export default function VaultPage() {
           </div>
         </section>
 
+        <section className="w-full max-w-7xl rounded-3xl border border-white/[0.08] bg-slate-950/55 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
+          <div className="rounded-[1.35rem] border border-white/[0.06] bg-slate-900/55 p-5 sm:p-6">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">Queue telemetry</p>
+                <h2 className="mt-2 text-xl font-bold tracking-tight text-white">Download activity</h2>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 font-mono text-[11px] font-bold text-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                {jobStats?.active_total || 0} active now
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {[
+                ['Queued', jobStats?.queued || 0, 'text-amber-300'],
+                ['Running', jobStats?.running || 0, 'text-cyan-300'],
+                ['Completed', jobStats?.completed_total || 0, 'text-emerald-300'],
+                ['Failed', jobStats?.failed || 0, 'text-rose-300'],
+                ['Skipped', jobStats?.dup || 0, 'text-slate-300'],
+              ].map(([label, value, tone]) => (
+                <div key={label} className="rounded-2xl border border-white/[0.07] bg-[#071221]/75 p-4">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                  <p className={`mt-2 font-mono text-2xl font-bold ${tone}`}><AnimatedNumber value={Number(value)} /></p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex items-center justify-between gap-3 font-mono text-[11px] text-slate-400">
+              <span>Overall progress</span>
+              <span className="text-white">{jobStats?.progress_percent || 0}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#071221]">
+              <div className="h-full rounded-full bg-emerald-400 transition-[width] duration-500" style={{ width: `${Math.min(100, Math.max(0, jobStats?.progress_percent || 0))}%` }} />
+            </div>
+          </div>
+        </section>
+
         {/* 4. Universal SaaS Command & Filter Island */}
         <section className="w-full max-w-7xl p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-2xl backdrop-blur-xl flex flex-col gap-3">
           <div className="p-3 sm:p-4 rounded-xl bg-slate-950/50 border border-white/[0.06] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">

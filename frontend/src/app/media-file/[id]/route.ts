@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const token = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
-  if (!token) return new Response('Server authentication is not configured', { status: 500 });
-
   const { id } = await context.params;
-  const headers = new Headers({ Authorization: `Bearer ${token}` });
+  const headers = new Headers(token ? { Authorization: `Bearer ${token}` } : {});
+  const cookie = request.headers.get('cookie');
+  if (cookie) headers.set('cookie', cookie);
   const range = request.headers.get('range');
   if (range) headers.set('Range', range);
 

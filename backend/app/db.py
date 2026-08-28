@@ -142,6 +142,17 @@ class PlatformAdapter(Base):
     health_ok: Mapped[bool | None] = mapped_column(nullable=True)
 
 
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cookies_file: Mapped[str | None] = mapped_column(Text, nullable=True)
+    instagram_session_file: Mapped[str | None] = mapped_column(Text, nullable=True)
+    instagram_username: Mapped[str] = mapped_column(String(255), default="")
+    job_cooldown_seconds: Mapped[int] = mapped_column(Integer, default=2)
+    default_engine: Mapped[str] = mapped_column(String(32), default="auto")
+
+
 class AutoSyncConfig(Base):
     __tablename__ = "auto_sync_config"
 
@@ -188,6 +199,14 @@ MIGRATIONS = {
     5: (
         "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
     ),
+    6: (
+         "CREATE TABLE IF NOT EXISTS app_settings (id INTEGER PRIMARY KEY, cookies_file TEXT, instagram_session_file TEXT, instagram_username VARCHAR(255) NOT NULL DEFAULT '', job_cooldown_seconds INTEGER NOT NULL DEFAULT 2, default_engine VARCHAR(32) NOT NULL DEFAULT 'auto')",
+     ),
+    7: (
+        "ALTER TABLE app_settings ADD COLUMN job_cooldown_seconds INTEGER NOT NULL DEFAULT 2",
+        "ALTER TABLE app_settings ADD COLUMN default_engine VARCHAR(32) NOT NULL DEFAULT 'auto'",
+    ),
+
 }
 
 

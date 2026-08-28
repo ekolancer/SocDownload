@@ -12,6 +12,15 @@ _gdl_lock = RLock()
 
 def _cookies() -> str | None:
     cf = get_settings().cookies_file
+    try:
+        from .db import AppSettings, get_session_factory
+        session = get_session_factory()()
+        item = session.get(AppSettings, 1)
+        if item and item.cookies_file:
+            cf = item.cookies_file
+        session.close()
+    except Exception:
+        pass
     if not cf:
         return None
     if os.path.isabs(cf) and os.path.isfile(cf):

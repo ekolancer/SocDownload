@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { apiFetch } from '@/lib/api';
 import {
   IconClose,
@@ -33,6 +34,7 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
   const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const reducedMotion = useReducedMotion();
 
   const fetchAdapters = async () => {
     setLoading(true);
@@ -55,7 +57,6 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
 
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -79,12 +80,25 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/80 backdrop-blur-sm">
-      {/* Backdrop Click */}
-      <div className="absolute inset-0" onClick={onClose} />
-
-      {/* Side Sheet Container */}
-      <div className="relative w-full max-w-md h-full bg-slate-950/95 backdrop-blur-2xl border-l border-white/[0.08] p-6 flex flex-col justify-between overflow-y-auto shadow-2xl">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/80 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={reducedMotion ? { duration: 0.01 } : { duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <button type="button" className="absolute inset-0 h-full w-full cursor-default" onClick={onClose} aria-label="Close adapter drawer" />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Platform adapters"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={reducedMotion ? { duration: 0.01 } : { duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="relative h-full w-full max-w-md overflow-y-auto border-l border-white/[0.08] bg-slate-950/95 p-6 shadow-2xl backdrop-blur-2xl">
         
         {/* Header */}
         <div className="flex flex-col gap-4">
@@ -177,8 +191,9 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
             <span>{loading ? 'Testing Adapters...' : 'Re-test All Adapters'}</span>
           </button>
         </div>
-
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

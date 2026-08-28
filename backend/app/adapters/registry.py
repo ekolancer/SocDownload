@@ -48,8 +48,20 @@ def init_default_adapters() -> None:
     if "instagram" not in registry._adapters:
         instagram = InstagramAdapter()
         settings = get_settings()
-        if settings.instagram_session_file and os.path.isfile(settings.instagram_session_file):
-            instagram.load_session(settings.instagram_session_file, settings.instagram_username)
+        session_file = settings.instagram_session_file
+        username = settings.instagram_username
+        try:
+            from ..db import AppSettings, get_session_factory
+            session = get_session_factory()()
+            stored = session.get(AppSettings, 1)
+            if stored:
+                session_file = stored.instagram_session_file or session_file
+                username = stored.instagram_username or username
+            session.close()
+        except Exception:
+            pass
+        if session_file and os.path.isfile(session_file):
+            instagram.load_session(session_file, username)
         registry.register(instagram)
 
     if "threads" not in registry._adapters:

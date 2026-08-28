@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class Settings(BaseSettings):
     api_token: str = ""
+    auth_password_hash: str = ""
+    auth_session_secret: str = ""
+    auth_session_ttl_seconds: int = Field(default=86400, ge=300, le=2592000)
+    auth_idle_timeout_seconds: int = Field(default=1800, ge=300, le=86400)
     vault_key: str = "change-me-generate-via-keygen"
     database_url: str = "sqlite:///./data/mediavault.db"
     media_root: str = "./media"
