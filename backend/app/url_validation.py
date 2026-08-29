@@ -48,6 +48,7 @@ PLATFORM_HOSTS = {
     "youtube.com": {"youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"},
     "reddit.com": {"reddit.com", "www.reddit.com", "old.reddit.com", "new.reddit.com", "redd.it"},
     "pinterest.com": {"pinterest.com", "www.pinterest.com", "pin.it"},
+    "vidara.to": {"vidara.to", "www.vidara.to", "kitchenstories.ink"},
 }
 APPROVED_HOSTS = frozenset(host for hosts in PLATFORM_HOSTS.values() for host in hosts)
 

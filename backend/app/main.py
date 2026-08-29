@@ -21,6 +21,7 @@ from .adapters.threads import ThreadsAdapter
 from .adapters.tiktok import TikTokAdapter
 from .adapters.x import XAdapter
 from .adapters.youtube import YouTubeAdapter
+from .adapters.vidara import VidaraAdapter
 from .config import get_settings
 from .db import init_db, Job, JobStatus, MediaItem, get_session_factory, utcnow
 from sqlalchemy import update
@@ -57,6 +58,7 @@ async def lifespan(app: FastAPI):
     registry.register(PinterestAdapter())
     # registry.register(FacebookAdapter())  # Temporarily disabled
     registry.register(TikTokAdapter())
+    registry.register(VidaraAdapter())
     check_adapters_health()
     start_scheduler()
     worker = Worker(get_queue(), n_workers=2, cooldown_seconds=settings.job_cooldown_seconds)

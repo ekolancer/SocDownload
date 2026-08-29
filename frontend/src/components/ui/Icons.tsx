@@ -68,6 +68,10 @@ export function IconReddit({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+export function IconVidara({ className = 'w-4 h-4' }: { className?: string }) {
+  return <span className={className}>V</span>;
+}
+
 export function IconPinterest({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg width="18" height="18" className={className} viewBox="0 0 24 24" fill="currentColor">

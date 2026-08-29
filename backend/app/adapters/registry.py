@@ -43,6 +43,7 @@ def init_default_adapters() -> None:
     from .youtube import YouTubeAdapter
     from .reddit import RedditAdapter
     from .pinterest import PinterestAdapter
+    from .vidara import VidaraAdapter
     if "instagram" not in registry._adapters:
         instagram = InstagramAdapter()
         session_file = ""
@@ -73,6 +74,8 @@ def init_default_adapters() -> None:
         registry.register(RedditAdapter())
     if "pinterest" not in registry._adapters:
         registry.register(PinterestAdapter())
+    if "vidara" not in registry._adapters:
+        registry.register(VidaraAdapter())
 
 
 def detect_platform(url: str) -> BaseAdapter | None:

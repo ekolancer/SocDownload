@@ -7,6 +7,8 @@
 
 MediaVault is a self-hosted media downloader and vault. This portal maps current source code to requirements, architecture, operations, and API references.
 
+Vidara support: public `https://vidara.to/v/{id}` URLs resolve through validated `kitchenstories.ink/e/{id}` embeds and `/api/stream`; direct MP4 downloads are byte-capped, while HLS requires an existing `yt-dlp` executable. DRM and missing streams fail clearly. No login or cookies used.
+
 ## Start here
 
 1. [Glossary](docs/glossary.md)

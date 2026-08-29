@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     export_bytes_limit: int = Field(default=500 * 1024 * 1024, ge=1, le=5 * 1024 * 1024 * 1024)
     parser_depth_limit: int = Field(default=32, ge=1, le=128)
     parser_url_limit: int = Field(default=10_000, ge=1, le=100_000)
+    vidara_max_download_bytes: int = Field(default=2 * 1024 * 1024 * 1024, ge=1, le=10 * 1024 * 1024 * 1024)
 
     class Config:
         env_file = ROOT / ".env"

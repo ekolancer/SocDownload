@@ -11,7 +11,9 @@ import {
   IconYouTube,
   IconX,
   IconReddit,
-  IconPinterest,
+   IconPinterest,
+   IconVidara,
+
   IconSparkles,
   IconAlertCircle,
   IconBookmark,
@@ -50,8 +52,11 @@ function getPlatformIcon(platform: string) {
       return <IconX className="w-3.5 h-3.5 text-slate-200" />;
     case 'reddit':
       return <IconReddit className="w-3.5 h-3.5 text-orange-400" />;
-    case 'pinterest':
-      return <IconPinterest className="w-3.5 h-3.5 text-red-400" />;
+     case 'pinterest':
+       return <IconPinterest className="w-3.5 h-3.5 text-red-400" />;
+     case 'vidara':
+       return <IconVidara className="w-3.5 h-3.5 text-emerald-400" />;
+
     default:
       return <IconSparkles className="w-3.5 h-3.5 text-emerald-400" />;
   }

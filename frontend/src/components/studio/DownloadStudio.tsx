@@ -13,6 +13,7 @@ import {
   IconCheckCircle,
   IconAlertCircle,
   IconBookmark,
+  IconVidara,
 } from '@/components/ui/Icons';
 import { JobRow } from '@/components/studio/JobPipeline';
 
@@ -30,6 +31,7 @@ const PLATFORM_CHIPS = [
   { id: 'threads', label: 'Threads', icon: IconThreads },
   { id: 'x', label: 'X (Twitter)', icon: IconX },
   { id: 'youtube', label: 'YouTube', icon: IconYouTube },
+  { id: 'vidara', label: 'Vidara', icon: IconVidara },
 ];
 
 function detectPlatform(rawUrl: string): string | null {
@@ -41,7 +43,9 @@ function detectPlatform(rawUrl: string): string | null {
   if (u.includes('twitter.com') || u.includes('x.com')) return 'x';
   if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
   if (u.includes('reddit.com') || u.includes('redd.it')) return 'reddit';
-  if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest';
+   if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest';
+   if (/vidara\.to\/v\/[a-z0-9_-]+/i.test(u)) return 'vidara';
+
   return null;
 }
 

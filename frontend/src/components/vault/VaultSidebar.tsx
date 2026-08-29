@@ -16,7 +16,9 @@ import {
   IconYouTube,
   IconX,
   IconReddit,
-  IconPinterest,
+   IconPinterest,
+   IconVidara,
+
   IconCheck,
   IconLayers,
 } from '@/components/ui/Icons';
@@ -52,6 +54,7 @@ export const SUPPORTED_PLATFORMS = [
   { id: 'x', label: 'X (Twitter)', icon: IconX, color: 'text-slate-900', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
   { id: 'reddit', label: 'Reddit', icon: IconReddit, color: 'text-orange-500', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
   { id: 'pinterest', label: 'Pinterest', icon: IconPinterest, color: 'text-red-600', bg: 'bg-red-50 text-red-700 border-red-200' },
+  { id: 'vidara', label: 'Vidara', icon: IconVidara, color: 'text-emerald-500', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 ];
 
 interface VaultSidebarProps {

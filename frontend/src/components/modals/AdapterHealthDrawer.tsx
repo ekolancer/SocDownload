@@ -14,7 +14,9 @@ import {
   IconTikTok,
   IconYouTube,
   IconReddit,
-  IconPinterest,
+   IconPinterest,
+   IconVidara,
+
 } from '@/components/ui/Icons';
 
 interface AdapterInfo {
@@ -72,8 +74,11 @@ export function AdapterHealthDrawer({ isOpen, onClose }: AdapterHealthDrawerProp
         return <IconYouTube className="w-5 h-5 text-red-400" />;
       case 'reddit':
         return <IconReddit className="w-5 h-5 text-orange-400" />;
-      case 'pinterest':
-        return <IconPinterest className="w-5 h-5 text-red-400" />;
+       case 'pinterest':
+         return <IconPinterest className="w-5 h-5 text-red-400" />;
+       case 'vidara':
+         return <IconVidara className="w-5 h-5 text-emerald-400" />;
+
       default:
         return <IconShieldCheck className="w-5 h-5 text-emerald-400" />;
     }

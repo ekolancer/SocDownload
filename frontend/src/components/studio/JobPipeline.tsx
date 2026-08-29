@@ -10,7 +10,9 @@ import {
   IconYouTube,
   IconX,
   IconReddit,
-  IconPinterest,
+   IconPinterest,
+   IconVidara,
+
   IconDownload,
   IconFilter,
   IconSearch,
@@ -80,8 +82,11 @@ function getPlatformIcon(platform: string) {
       return <IconX className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />;
     case 'reddit':
       return <IconReddit className="w-5 h-5 text-orange-500 group-hover:text-orange-400 transition-colors" />;
-    case 'pinterest':
-      return <IconPinterest className="w-5 h-5 text-red-500 group-hover:text-red-400 transition-colors" />;
+     case 'pinterest':
+       return <IconPinterest className="w-5 h-5 text-red-500 group-hover:text-red-400 transition-colors" />;
+     case 'vidara':
+       return <IconVidara className="w-5 h-5 text-emerald-500 group-hover:text-emerald-400 transition-colors" />;
+
     default:
       return <IconDownload className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />;
   }
