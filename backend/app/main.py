@@ -37,12 +37,16 @@ async def lifespan(app: FastAPI):
     recover_jobs()
     instagram = InstagramAdapter()
     settings = get_settings()
-    if settings.instagram_session_file:
+    from .db import AppSettings
+    with get_session_factory()() as session:
+        stored_settings = session.get(AppSettings, 1)
+    session_file = stored_settings.instagram_session_file if stored_settings else None
+    username = stored_settings.instagram_username if stored_settings else ""
+    if session_file and username:
         import os
-
-        if os.path.isfile(settings.instagram_session_file):
+        if os.path.isfile(session_file):
             try:
-                instagram.load_session(settings.instagram_session_file, settings.instagram_username)
+                instagram.load_session(session_file, username)
             except (OSError, ValueError, EOFError, UnicodeError, pickle.UnpicklingError) as exc:
                 logging.getLogger(__name__).warning("Instagram session could not be loaded: %s", type(exc).__name__)
     registry.register(instagram)

@@ -9,7 +9,7 @@ import instaloader
 
 from ..adapters.registry import registry
 from ..config import ROOT, get_settings
-from ..db import AppSettings, get_session_factory
+from ..db import AppSettings, AutoSyncConfig, get_session_factory
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 _STORAGE = ROOT / "config" / "uploads"
@@ -98,6 +98,10 @@ def instagram_login(payload: InstagramLogin):
         item = session.get(AppSettings, 1) or AppSettings(id=1)
         item.instagram_username = payload.username.strip()
         item.instagram_session_file = str(session_path)
+        sync_config = session.query(AutoSyncConfig).filter(AutoSyncConfig.platform == 'instagram').first()
+        if sync_config:
+            sync_config.last_sync_status = None
+            sync_config.last_error = None
         session.add(item)
         session.commit()
         return _response(item)

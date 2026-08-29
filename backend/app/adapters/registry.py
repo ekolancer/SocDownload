@@ -43,13 +43,10 @@ def init_default_adapters() -> None:
     from .youtube import YouTubeAdapter
     from .reddit import RedditAdapter
     from .pinterest import PinterestAdapter
-    from ..config import get_settings
-
     if "instagram" not in registry._adapters:
         instagram = InstagramAdapter()
-        settings = get_settings()
-        session_file = settings.instagram_session_file
-        username = settings.instagram_username
+        session_file = ""
+        username = ""
         try:
             from ..db import AppSettings, get_session_factory
             session = get_session_factory()()

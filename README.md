@@ -121,13 +121,13 @@ Generate `AUTH_PASSWORD_HASH` using a password you choose. The command prompts f
 Linux/macOS:
 
 ```bash
-.venv/bin/python -c "import base64,hashlib,secrets; p=input('Password: ').encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac('sha256',p,s.encode(),310000); print(f'pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}')"
+.venv/bin/python -c 'import base64,hashlib,secrets; p=input("Password: ").encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac("sha256",p,s.encode(),310000); print(f"pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}")'
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "import base64,hashlib,secrets; p=input('Password: ').encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac('sha256',p,s.encode(),310000); print(f'pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}')"
+.\.venv\Scripts\python.exe -c 'import base64,hashlib,secrets; p=input("Password: ").encode(); s=secrets.token_urlsafe(16); h=hashlib.pbkdf2_hmac("sha256",p,s.encode(),310000); print(f"pbkdf2_sha256$310000${s}${base64.urlsafe_b64encode(h).decode()}")'
 ```
 
 Generate `AUTH_SESSION_SECRET` independently:
@@ -182,7 +182,7 @@ For platform-specific exports, use separate files only when adapter configuratio
 
 #### 3. Setup Instaloader session
 
-A cookies file cannot be assigned to `INSTAGRAM_SESSION_FILE`. Instaloader requires its own serialized session file.
+Recommended: open Settings, enter Instagram username/password, complete 2FA if requested. MediaVault logs in through Instaloader and saves session automatically under protected local storage. Password is never stored. A cookies file cannot replace an Instaloader session.
 
 Windows:
 
@@ -206,14 +206,7 @@ Get-ChildItem "$env:USERPROFILE\.config\instaloader" -Filter "session-*"
 find "$HOME/.config/instaloader" -maxdepth 1 -type f -name 'session-*'
 ```
 
-Set `.env` using the resulting path:
-
-```env
-INSTAGRAM_USERNAME=YOUR_INSTAGRAM_USERNAME
-INSTAGRAM_SESSION_FILE=C:/Users/YOUR_USER/.config/instaloader/session-YOUR_INSTAGRAM_USERNAME
-```
-
-Use forward slashes in Windows paths or escape backslashes. Leave both values empty when downloading public content only. Invalid session files cause Instagram autosync to be skipped; they do not replace `COOKIES_FILE`.
+Manual CLI login remains available for recovery, but UI login is preferred. Session path is managed automatically; do not configure `INSTAGRAM_SESSION_FILE` or `INSTAGRAM_USERNAME` in `.env`. Invalid or expired sessions require reconnecting Instagram from Settings; they do not replace `COOKIES_FILE`.
 
 #### 4. Adapter readiness
 
