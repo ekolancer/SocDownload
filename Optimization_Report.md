@@ -210,6 +210,7 @@ Command evidence:
 - P3 validation: frontend lint **pass**, typecheck **pass**, production build **pass**, `git diff --check` **pass`.
 - Latest validation: `pytest` **22 passed**, `compileall` **pass**, `pip check` **pass**, `npm audit --omit=dev` **0 vulnerabilities**, frontend lint/typecheck/build **pass**. Seven Python/runtime deprecation warnings remain.
 - Bug-fix validation: batch delete route corrected to `/api/media/batch-delete`; audio files excluded from media API responses; Pinterest author fallback added.
+- `igfeaturefix` validation: Instagram classifier, secure login/2FA challenge, truthful session status, disconnect, CLI session import, Instagram-only engine preference, category-aware retry, and duplicate-queue protection implemented; `pytest` 25 passed + 5 subtests, compileall/pip check/lint/typecheck/build passed. Nine warnings remain.
 
 ## 12. Dependency Audit
 
@@ -354,14 +355,14 @@ Command evidence:
 - **RM-008: Resolved:** disk-backed ZIP and recursive parser complexity caps added. Validation: `pytest` 21 passed. Impact Medium-High, Effort Medium, regression risk Low.
 - **RM-009: Partially Resolved:** SQLite FK enforcement and indexes added; versioned migrations remain open. Validation: `pytest` 20 passed.
 - **RM-010: Partially Resolved:** obvious route N+1 paths reduced; query-count benchmark remains open. Validation: `pytest` 20 passed.
-- **RM-011: Partially Resolved:** failed-job retry and active dedupe semantics improved; race-proof DB idempotency remains open. Validation: `pytest` 20 passed.
+- **RM-011: Partially Resolved:** category-aware retry and network backoff added; DB atomic claim prevents concurrent processing. Cross-process idempotency stress test remains open. Validation: `pytest` 22 passed.
 - **RM-012: Resolved for current list flows:** offset pagination and active/recent polling added. Validation: typecheck/build passed.
 - **RM-013: Partially Resolved:** lightbox dialog semantics and focusable controls added; full modal/card/live-region audit remains open. Validation: lint/typecheck/build passed.
 - **RM-014: Partially Resolved:** shared API error helper and mutation feedback added; batch-delete endpoint contract corrected and validated by frontend build. Full typed error envelope remains open. Validation: lint/typecheck/build passed.
 
 ### P2 — Medium
 
-- **RM-015: Partially Resolved:** autosync contract saved-only; unsupported platform sync rejected explicitly. Multi-platform saved sync requires business confirmation. Validation: `pytest` 20 passed.
+- **RM-015: Partially Resolved:** autosync contract saved-only; Instagram login/session classifier and actionable statuses hardened. Multi-platform saved sync requires business confirmation. Validation: `pytest` 22 passed.
 - **RM-016: Partially Resolved:** JSON logging, request IDs, readiness, and basic request metrics added (`backend/app/observability.py`). Tracing/production metrics backend remain open. Validation: `pytest` 20 passed; frontend lint/typecheck/build passed.
 - **RM-017: Partially Resolved:** CI workflow added for pytest, lint, typecheck, build, audit. CI audit remains blocked by 3 high dependency advisories. Validation: local checks passed except audit.
 - **RM-018: Still Open:** no safe frontend split/dead UI removal performed; requires dedicated UI scope.

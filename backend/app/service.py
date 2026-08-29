@@ -164,10 +164,12 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
 
     new_urls: list[str] = []
     skipped_dup: list[str] = []
+    seen_urls: set[str] = set()
     for url in urls:
-        if url in all_existing:
+        if url in all_existing or url in seen_urls:
             skipped_dup.append(url)
         else:
+            seen_urls.add(url)
             new_urls.append(url)
 
     to_enqueue = new_urls[:limit]

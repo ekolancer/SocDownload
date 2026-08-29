@@ -475,10 +475,14 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
                   <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-950/60 border border-amber-500/30 text-amber-400 shadow-sm">
                     <span className="font-bold text-[10px] uppercase tracking-wider">Queued</span>
                   </div>
-                ) : isFailed ? (
-                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-950/60 border border-rose-500/30 text-rose-400 shadow-sm">
-                    <span className="font-bold text-[10px] uppercase tracking-wider">Failed</span>
-                  </div>
+                 ) : isFailed ? (
+                   <div
+                     className="flex items-center gap-2 px-3 py-1 rounded-lg bg-rose-950/60 border border-rose-500/30 text-rose-400 shadow-sm"
+                     title={job.error || 'Download failed. Check session, rate limits, or URL.'}
+                   >
+                     <span className="font-bold text-[10px] uppercase tracking-wider">{job.error?.replace(/^instagram_/, '').replaceAll('_', ' ') || 'Failed'}</span>
+                   </div>
+
                 ) : null}
 
                 {onDeleteJob && (

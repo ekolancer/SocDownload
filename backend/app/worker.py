@@ -82,14 +82,20 @@ class Worker:
                     job.status = status.value
                     if error:
                         job.error = error
-                    if status == JobStatus.FAILED and job.attempts < 3:
-                        job.status = JobStatus.QUEUED.value
-                        job.finished_at = None
-                        job.lease_until = None
-                        job.lease_token = None
-                        session.commit()
-                        get_queue().put_nowait(job_id)
-                        return
+                    if status == JobStatus.FAILED:
+                        from .instagram_errors import InstagramErrorCategory, classify_instagram_error
+
+                        category = classify_instagram_error(job.error or "")
+                        retryable = category == InstagramErrorCategory.NETWORK_ERROR
+                        if retryable and job.attempts < 3:
+                            job.status = JobStatus.QUEUED.value
+                            job.finished_at = None
+                            job.lease_until = None
+                            job.lease_token = None
+                            session.commit()
+                            delay = min(30, 2 ** max(0, job.attempts - 1))
+                            asyncio.get_running_loop().call_later(delay, get_queue().put_nowait, job_id)
+                            return
                     if status == JobStatus.RUNNING:
                         job.started_at = now_wib()
                     if status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.DUP):

@@ -16,6 +16,8 @@ def test_app_fails_closed_without_token(monkeypatch):
     from backend.app.config import get_settings
     get_settings.cache_clear()
     monkeypatch.setenv('API_TOKEN', '')
+    monkeypatch.setenv('AUTH_PASSWORD_HASH', '')
+    monkeypatch.setenv('AUTH_SESSION_SECRET', '')
     with pytest.raises(RuntimeError):
         create_app()
     monkeypatch.setenv('API_TOKEN', 'test-token')

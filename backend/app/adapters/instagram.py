@@ -7,6 +7,7 @@ import html as html_lib
 import instaloader
 
 from .base import BaseAdapter, ResolvedMedia
+from ..instagram_errors import classify_instagram_error, instagram_error
 from ..engines import gdl_download, gdl_first_item
 
 
@@ -19,6 +20,15 @@ class InstagramAdapter(BaseAdapter):
             fatal_status_codes=[401, 403, 429],
         )
         self._username: str | None = None
+
+    def _engine(self) -> str:
+        try:
+            from ..db import AppSettings, get_session_factory
+            with get_session_factory()() as session:
+                item = session.get(AppSettings, 1)
+                return item.default_engine if item and item.default_engine in {"auto", "gallery-dl", "instaloader"} else "auto"
+        except Exception:
+            return "auto"
 
     def detect(self, url: str) -> bool:
         return bool(re.search(r"(?i)(instagram\.com|instagr\.am)", url))
@@ -75,68 +85,57 @@ class InstagramAdapter(BaseAdapter):
             hashtags=tags if isinstance(tags, list) else [],
         )
 
-    @staticmethod
-    def _is_rate_limited(error: Exception) -> bool:
-        text = str(error).lower()
-        return "401 unauthorized" in text or "please wait a few minutes" in text
+    def _instaloader_resolve(self, url: str) -> ResolvedMedia:
+        p = self._post(url)
+        username = p.owner_username or (p.owner_profile.username if p.owner_profile else None) or self._extract_username_from_url(url)
+        return ResolvedMedia(
+            platform=self.platform,
+            source_url=url,
+            username=username,
+            caption=p.caption,
+            posted_at=p.date_utc.isoformat() if p.date_utc else None,
+            hashtags=list(p.caption_hashtags) if p.caption_hashtags else [],
+        )
 
     def resolve(self, url: str) -> ResolvedMedia:
+        engine = self._engine()
+        if engine == "instaloader":
+            return self._instaloader_resolve(url)
         try:
             return self._gallery_resolve(url)
         except Exception as gallery_error:
             try:
-                p = self._post(url)
-                username = p.owner_username or (p.owner_profile.username if p.owner_profile else None)
-                if not username:
-                    username = self._extract_username_from_url(url)
-
-                return ResolvedMedia(
-                    platform=self.platform,
-                    source_url=url,
-                    username=username,
-                    caption=p.caption,
-                    posted_at=p.date_utc.isoformat() if p.date_utc else None,
-                    hashtags=list(p.caption_hashtags) if p.caption_hashtags else [],
-                )
+                return self._instaloader_resolve(url)
             except Exception as instaloader_error:
-                # If both failed, attempt OpenGraph extraction before throwing
                 url_user = self._extract_username_from_url(url)
                 if url_user:
-                    return ResolvedMedia(
-                        platform=self.platform,
-                        source_url=url,
-                        username=url_user,
-                        caption="",
-                        posted_at=None,
-                        hashtags=[],
-                    )
+                    return ResolvedMedia(self.platform, url, url_user, "", None, [])
                 raise self._error(instaloader_error, gallery_error) from gallery_error
+
+    def _instaloader_download(self, url: str, dest_dir: str) -> list[str]:
+        post = self._post(url)
+        self._loader.download_post(post, target=dest_dir)
+        return [
+            os.path.join(dest_dir, name)
+            for name in os.listdir(dest_dir)
+            if os.path.isfile(os.path.join(dest_dir, name))
+        ]
 
     def download(self, url: str, dest_dir: str) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)
+        engine = self._engine()
+        if engine == "instaloader":
+            return self._instaloader_download(url, dest_dir)
         try:
             return gdl_download(url, dest_dir)
         except Exception as gallery_error:
             try:
-                post = self._post(url)
-                self._loader.download_post(post, target=dest_dir)
-                return [
-                    os.path.join(dest_dir, f)
-                    for f in os.listdir(dest_dir)
-                    if os.path.isfile(os.path.join(dest_dir, f))
-                ]
+                return self._instaloader_download(url, dest_dir)
             except Exception as instaloader_error:
                 raise self._error(instaloader_error, gallery_error) from gallery_error
 
     def _error(self, instaloader_error: Exception, gallery_error: Exception) -> RuntimeError:
-        if self._is_rate_limited(instaloader_error):
-            prefix = "instagram_rate_limited"
-        else:
-            prefix = "instagram_cookies_required"
-        return RuntimeError(
-            f"{prefix}: Configure COOKIES_FILE with valid Netscape cookies or retry later. "
-            f"gallery-dl: {gallery_error}; instaloader: {instaloader_error}"
-        )
+        return instagram_error(instaloader_error)
 
     def login(self, username: str, password: str) -> None:
         self._loader.login(username, password)
@@ -160,16 +159,12 @@ class InstagramAdapter(BaseAdapter):
         # If username is set in instaloader
         if self._username:
             try:
-                profile = instaloader.Profile.from_username(self._loader.context, self._username)
-                _ = profile.is_private
-                return True, None
+                logged_in_user = self._loader.test_login()
+                if logged_in_user and logged_in_user.lower() == self._username.lower():
+                    return True, None
+                return False, "session_expired"
             except Exception as e:
-                err_str = str(e).lower()
-                if "401" in err_str or "unauthorized" in err_str or "login" in err_str or "session" in err_str:
-                    return False, "session_expired"
-                if "429" in err_str or "rate" in err_str:
-                    return False, "rate_limited"
-                return False, str(e)
+                return False, classify_instagram_error(e).value
 
         # If cookies file is available
         if cookie_path and os.path.isfile(cookie_path):
@@ -195,9 +190,7 @@ class InstagramAdapter(BaseAdapter):
                     if len(urls) >= limit:
                         return urls
             except Exception as e:
-                err_str = str(e).lower()
-                if "401" in err_str or "login" in err_str or "session" in err_str:
-                    raise RuntimeError("session_expired")
+                raise instagram_error(e) from e
 
         # 2. Use gallery-dl with cookies (InstagramSavedExtractor)
         from ..engines import gdl_config
@@ -221,9 +214,9 @@ class InstagramAdapter(BaseAdapter):
                         if len(urls) >= limit:
                             break
         except Exception as e:
-            err_str = str(e).lower()
-            if "401" in err_str or "login" in err_str or "cookie" in err_str or "403" in err_str:
-                raise RuntimeError("session_expired")
+            category = classify_instagram_error(e)
+            if category.value in {"session_expired", "challenge_required", "rate_limited", "network_error", "invalid_credentials"}:
+                raise instagram_error(e) from e
 
         return urls
 

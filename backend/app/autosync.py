@@ -113,7 +113,7 @@ def run_autosync(platform: str = "instagram", force: bool = False) -> dict[str, 
             if not is_valid and reason in ("session_expired", "no_session_configured", "rate_limited"):
                 config.last_sync_status = reason
                 config.last_error = {
-                    "session_expired": "Session expired, please re-login.",
+                    "session_expired": "Session expired, please re-login and update cookie.",
                     "no_session_configured": "Instagram session not configured. Connect Instagram first.",
                     "rate_limited": "Instagram rate limit detected. Retry later.",
                 }[reason]

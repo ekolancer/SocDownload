@@ -396,11 +396,48 @@ Menghapus task dari Task Scheduler. Gunakan jika tidak ingin auto-start lagi:
 .\run-production.ps1 -UninstallTask
 ```
 
-After code, dependency, or `.env` changes, stop task, then rebuild and restart hidden task:
+### Menerapkan perubahan code atau `.env`
+
+Setelah perubahan backend, frontend, atau `.env`, jalankan dari PowerShell:
 
 ```powershell
-Stop-ScheduledTask -TaskName "MediaVault Production"
+Set-Location C:\laragon\www\Scrapper
+Set-ExecutionPolicy -Scope Process Bypass
+Stop-ScheduledTask -TaskName "MediaVault Production" -ErrorAction SilentlyContinue
 .\run-production.ps1 -SkipInstall -InstallTask
+```
+
+Penjelasan tiap command:
+
+- `Set-Location C:\laragon\www\Scrapper`: pindah ke root project agar script, `.env`, database, frontend, dan path relatif ditemukan dengan benar.
+- `Set-ExecutionPolicy -Scope Process Bypass`: mengizinkan script PowerShell pada sesi terminal saat ini saja. Setting kembali normal setelah terminal ditutup.
+- `Stop-ScheduledTask ...`: menghentikan task production lama sebelum build/restart, mencegah dua instance memakai port atau database yang sama.
+- `-SkipInstall`: melewati `pip install` dan `npm ci`. Gunakan ketika hanya code backend/frontend atau `.env` berubah dan dependency tidak berubah.
+- `-InstallTask`: mendaftarkan/update hidden Task Scheduler, menjalankan build frontend, lalu start task production kembali.
+
+Efek eksekusi:
+
+1. Backend lama dihentikan.
+2. Database initialization/migration dijalankan.
+3. `API_TOKEN` root `.env` disinkronkan ke `frontend/.env.local`.
+4. Frontend dibuild ulang memakai code dan environment terbaru.
+5. Task Scheduler hidden diperbarui.
+6. Backend, frontend, dan Caddy dijalankan kembali.
+7. Backend otomatis membaca code dan `.env` terbaru saat process baru start.
+
+Jika `pyproject.toml`, `package.json`, atau lockfile berubah, jangan gunakan `-SkipInstall`:
+
+```powershell
+Set-Location C:\laragon\www\Scrapper
+Set-ExecutionPolicy -Scope Process Bypass
+Stop-ScheduledTask -TaskName "MediaVault Production" -ErrorAction SilentlyContinue
+.\run-production.ps1 -InstallTask
+```
+
+Jika tidak ada perubahan code/dependency/`.env` dan hanya ingin menjalankan task yang sudah terpasang:
+
+```powershell
+Start-ScheduledTask -TaskName "MediaVault Production"
 ```
 
 `run-production.ps1` starts backend, frontend, and Caddy hidden with separate logs: `logs\backend-production.log`, `logs\frontend-production.log`, and `logs\caddy-production.log`. It uses ports 8000, 3000, and 80 bound to loopback. Port 80 must be free. Do not run duplicate manual services at the same time.
