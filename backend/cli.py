@@ -4,36 +4,48 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.db import MediaFile, get_session_factory
-from app.video import normalize, thumbnail
-from app.vault import decrypt, encrypt, gen_key
+from backend.app.db import MediaFile, get_session_factory
+from backend.app.video import classify_media, normalize, thumbnail
+from backend.app.vault import decrypt, encrypt, gen_key
 
 
-def generate_thumbnails(missing_only: bool, limit: int | None, dry_run: bool) -> dict[str, int]:
-    counts = {"processed": 0, "skipped": 0, "missing": 0, "failed": 0}
+def generate_thumbnails(missing_only: bool, limit: int | None, dry_run: bool, workers: int = 1) -> dict[str, int]:
+    if workers != 1:
+        raise ValueError("--workers supports only 1")
+    counts = {"processed": 0, "skipped": 0, "missing": 0, "failed": 0, "reclassified_audio": 0}
     with get_session_factory()() as session:
-        stmt = select(MediaFile).where(MediaFile.kind == "video").order_by(MediaFile.id)
+        stmt = select(MediaFile).order_by(MediaFile.id)
         if limit:
             stmt = stmt.limit(limit)
         for media_file in session.scalars(stmt):
-            if media_file.thumbnail_path and Path(media_file.thumbnail_path).is_file():
+            path = Path(media_file.path)
+            kind = classify_media(path)
+            if media_file.kind != kind:
+                if kind == "audio":
+                    counts["reclassified_audio"] += 1
+                if not dry_run:
+                    media_file.kind = kind
+            if kind == "audio":
+                continue
+            if missing_only and media_file.thumbnail_path and Path(media_file.thumbnail_path).is_file():
                 counts["skipped"] += 1
                 continue
-            path = Path(media_file.path)
             if not path.is_file():
                 counts["missing"] += 1
                 continue
+            if dry_run:
+                counts["processed"] += 1
+                continue
             try:
-                normalized = normalize(path)
-                thumb, metadata = thumbnail(normalized)
-                if not dry_run:
-                    media_file.path = normalized
-                    media_file.thumbnail_path = thumb
-                    media_file.width = metadata["width"]
-                    media_file.height = metadata["height"]
-                    media_file.duration = metadata["duration"]
-                    media_file.video_codec = metadata["video_codec"]
-                    media_file.audio_codec = metadata["audio_codec"]
+                target_path = path if kind == "image" else Path(normalize(path))
+                thumb, metadata = thumbnail(target_path)
+                media_file.path = str(target_path)
+                media_file.thumbnail_path = thumb
+                media_file.width = metadata["width"]
+                media_file.height = metadata["height"]
+                media_file.duration = metadata["duration"]
+                media_file.video_codec = metadata["video_codec"]
+                media_file.audio_codec = metadata["audio_codec"]
                 counts["processed"] += 1
             except (OSError, RuntimeError, ValueError):
                 counts["failed"] += 1
@@ -62,7 +74,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.cmd == "generate-thumbnails":
-        print(generate_thumbnails(args.missing_only, args.limit, args.dry_run))
+        print(generate_thumbnails(args.missing_only, args.limit, args.dry_run, args.workers))
     elif args.cmd == "generate":
         print(gen_key())
     elif args.cmd == "encrypt":

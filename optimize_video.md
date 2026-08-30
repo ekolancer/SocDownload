@@ -1,7 +1,7 @@
 # Plan optimizevideo
 
 > Plan Name: optimizevideo  
-> Status: In Progress — implementation partially complete  
+> Status: Implemented with remaining lifecycle/test limitations  
 > Owner: [TBD — confirm with team]  
 > Last Updated: 2026-08-29
 
@@ -214,12 +214,12 @@ Add mocked/unit/integration coverage for:
 
 - Phase 1: **Implemented** — FFmpeg/FFprobe settings and discovery in `backend/app/video.py`; processing limits in `backend/app/config.py`.
 - Phase 2: **Implemented** — video probing and MP4 normalization with `faststart`; Vidara HLS normalization integrated.
-- Phase 3: **Implemented** — WebP thumbnail generation with short-video offset handling and temporary output.
+- Phase 3: **Implemented** — WebP thumbnail generation for images and videos, preserving originals with `.thumb.webp` output.
 - Phase 4: **Implemented** — `media_files` thumbnail/video metadata migration in `backend/app/db.py`.
 - Phase 5: **Implemented** — authenticated thumbnail endpoint and `/media-thumbnail/{id}` frontend proxy; API exposes thumbnail metadata.
 - Phase 6: **Implemented** — gallery, Recent Download, and creator cards use lazy thumbnail images; grid no longer loads video tags.
 - Phase 7: **Implemented** — lightbox remains video playback boundary and releases video source on close.
-- Phase 8: **Implemented** — `python -m backend.cli generate-thumbnails` supports `--missing-only`, `--limit`, `--workers`, and `--dry-run`; current processing is sequential, so `--workers` is reserved for future parallelization.
+- Phase 8: **Implemented** — `python -m backend.cli generate-thumbnails` processes image/video records, reclassifies audio, supports `--missing-only`, `--limit`, and `--dry-run`; `--workers` currently accepts only `1` and rejects parallel values explicitly.
 - Phase 9: **Partial** — delete cleanup is implemented; migration/reconciliation and export thumbnail policy require further integration.
 - Phase 10: **Partial** — existing suite passes; dedicated FFmpeg subprocess and frontend behavior tests remain limited.
 
@@ -235,12 +235,12 @@ frontend production build: pass
 git diff --check: pass
 ```
 
-Live FFmpeg remux/thumbnail generation was not executed because local FFmpeg availability was not confirmed. Run backfill after installing FFmpeg and verify generated WebP files through Vault.
+Live backfill completed with FFmpeg/FFprobe `9.0.1`. Dry-run reported 2,627 visual candidates and 59 audio reclassifications. First batch processed 100 items with zero failures. Full run processed 2,526 remaining items, skipped 101 existing thumbnails, reclassified 59 audio files, and reported zero missing/failed files. Final state: 2,527 images, 100 videos, 59 audio files; all 2,627 visual records have valid thumbnail files. SQLite `PRAGMA integrity_check` returned `ok`.
 
 ## Risks and decisions
 
 - FFmpeg must be installed separately and licensed according to deployment policy.
 - Transcoding increases CPU, storage, and processing time; remux is preferred.
 - CDN/tokenized streams may expire before backfill completes.
-- Thumbnail retention and ZIP inclusion require `[TBD — confirm with team]`.
+- Thumbnail retention: thumbnails remain beside originals and participate in media backup. ZIP exports intentionally exclude thumbnails because they are regenerable presentation assets.
 - Video rights and download authorization remain user responsibility.

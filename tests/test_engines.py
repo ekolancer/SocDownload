@@ -7,6 +7,14 @@ import gallery_dl
 from backend.app import engines
 
 
+def test_media_classification() -> None:
+    from backend.app.video import classify_media
+
+    assert classify_media("track.mp3") == "audio"
+    assert classify_media("clip.MP4") == "video"
+    assert classify_media("photo.jpg") == "image"
+
+
 def test_gdl_download_uses_scoped_config(monkeypatch, tmp_path: Path) -> None:
     captured: dict = {}
 

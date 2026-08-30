@@ -204,7 +204,7 @@ export function MediaGallery({
               <div className="w-full h-full rounded-xl overflow-hidden bg-slate-950 relative border border-white/[0.04]">
                 {firstFile ? (
                     <img
-                      src={isVideo ? firstFile.thumbnail_url || '' : fileUrl}
+                      src={firstFile.thumbnail_url || fileUrl}
                       alt={item.caption || item.username || 'Media'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"

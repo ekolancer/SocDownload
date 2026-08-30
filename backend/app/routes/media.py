@@ -353,7 +353,7 @@ def list_creators():
                 if len(creator["sample_thumbnails"]) < 4:
                     if f.thumbnail_path:
                         creator["sample_thumbnails"].append({
-                            "url": f"/api/media/thumbnails/{f.id}",
+                            "url": f"/media-thumbnail/{f.id}",
                             "width": f.width,
                             "height": f.height,
                         })

@@ -14,7 +14,7 @@ from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
 from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
 from .url_validation import validate_url
-from .video import normalize, probe, thumbnail
+from .video import classify_media, normalize, probe, thumbnail
 
 from .downloader import (
     compute_hashes,
@@ -326,10 +326,10 @@ def _sync_process_job(job_id: int) -> None:
                 mf = MediaFile(
                     media_item_id=item.id,
                     path=path,
-                    kind="video" if path.endswith((".mp4", ".mkv", ".webm")) else "image",
+                    kind=classify_media(path),
                     sha256=hashes.get(f),
                 )
-                if mf.kind == "video":
+                if mf.kind in {"image", "video"}:
                     try:
                         thumb, metadata = thumbnail(path)
                         mf.thumbnail_path = thumb

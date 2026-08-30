@@ -333,7 +333,7 @@ export default function StudioPage() {
               {recentMedia.slice(0, 4).map((item) => {
                 const firstFile = item.files?.[0];
                 const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
-                const previewUrl = firstFile ? (isVideo ? firstFile.thumbnail_url || '' : `/media-file/${firstFile.id}`) : '';
+                const previewUrl = firstFile ? (firstFile.thumbnail_url || `/media-file/${firstFile.id}`) : '';
 
                 return (
                   <div
