@@ -332,8 +332,8 @@ export default function StudioPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {recentMedia.slice(0, 4).map((item) => {
                 const firstFile = item.files?.[0];
-                const previewUrl = firstFile ? `/media-file/${firstFile.id}` : '';
                 const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
+                const previewUrl = firstFile ? (isVideo ? firstFile.thumbnail_url || '' : `/media-file/${firstFile.id}`) : '';
 
                 return (
                   <div
@@ -347,8 +347,11 @@ export default function StudioPage() {
                           src={previewUrl}
                           alt={item.caption || 'Recent Media'}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
+                           loading="lazy"
+                           decoding="async"
+                           width={firstFile?.width || 480}
+                           height={firstFile?.height || 270}
+                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-slate-500 font-mono">
                           No preview

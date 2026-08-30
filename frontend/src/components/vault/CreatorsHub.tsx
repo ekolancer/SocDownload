@@ -23,7 +23,7 @@ export interface CreatorStats {
   image_count: number;
   first_posted_at: string | null;
   last_posted_at: string | null;
-  sample_thumbnails: number[];
+  sample_thumbnails: { url: string; width?: number | null; height?: number | null }[];
 }
 
 interface CreatorsHubProps {
@@ -255,16 +255,19 @@ export function CreatorsHub({ creators, loading, onSelectCreator }: CreatorsHubP
                     {/* Thumbnail Strip Preview */}
                     {creator.sample_thumbnails && creator.sample_thumbnails.length > 0 && (
                       <div className="grid grid-cols-4 gap-1.5 mt-3.5 p-1 rounded-xl bg-slate-900/60 border border-white/[0.06]">
-                        {creator.sample_thumbnails.slice(0, 4).map((fileId) => (
-                          <div
-                            key={fileId}
+{creator.sample_thumbnails.slice(0, 4).map((thumbnail) => (
+                           <div
+                             key={thumbnail.url}
                             className="relative aspect-square rounded-lg bg-slate-950 overflow-hidden border border-white/5"
                           >
                             <img
-                              src={`/media-file/${fileId}`}
-                              alt={creator.username}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              loading="lazy"
+                               src={thumbnail.url}
+                               alt={creator.username}
+                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                               loading="lazy"
+                               decoding="async"
+                               width={thumbnail.width || 480}
+                               height={thumbnail.height || 270}
                             />
                           </div>
                         ))}

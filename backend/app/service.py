@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
+from pathlib import Path
 import tempfile
 import uuid
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
 from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
 from .url_validation import validate_url
+from .video import normalize, probe, thumbnail
 
 from .downloader import (
     compute_hashes,
@@ -256,6 +258,12 @@ def _sync_process_job(job_id: int) -> None:
 
         try:
             downloaded = adapter.download(job.url, temp_dir)
+            normalized = []
+            for path in downloaded:
+                if Path(path).suffix.lower() in {".mp4", ".ts", ".m2ts"}:
+                    path = normalize(path)
+                normalized.append(path)
+            downloaded = normalized
             if not downloaded:
                 job.status = JobStatus.FAILED.value
                 job.error = "no_files_downloaded"
@@ -321,6 +329,17 @@ def _sync_process_job(job_id: int) -> None:
                     kind="video" if path.endswith((".mp4", ".mkv", ".webm")) else "image",
                     sha256=hashes.get(f),
                 )
+                if mf.kind == "video":
+                    try:
+                        thumb, metadata = thumbnail(path)
+                        mf.thumbnail_path = thumb
+                        mf.width = metadata["width"]
+                        mf.height = metadata["height"]
+                        mf.duration = metadata["duration"]
+                        mf.video_codec = metadata["video_codec"]
+                        mf.audio_codec = metadata["audio_codec"]
+                    except RuntimeError:
+                        pass
                 session.add(mf)
 
             job.status = JobStatus.DONE.value

@@ -88,6 +88,10 @@ def list_media(
                     "id": f.id,
                     "kind": f.kind,
                     "url": f"/api/media/files/{f.id}",
+                    "thumbnail_url": f"/media-thumbnail/{f.id}" if f.thumbnail_path else None,
+                    "width": f.width,
+                    "height": f.height,
+                    "duration_seconds": f.duration,
                     "name": Path(f.path).name,
                 })
             results.append({
@@ -137,6 +141,26 @@ def get_storage_stats():
         "total_files": total_files,
         "human_size": human_size,
     }
+
+
+@router.get("/thumbnails/{file_id}")
+def serve_thumbnail(file_id: int):
+    factory = get_session_factory()
+    with factory() as session:
+        mf = session.get(MediaFile, file_id)
+        if not mf or not mf.thumbnail_path:
+            raise HTTPException(status_code=404, detail="thumbnail not found")
+        root = Path(get_settings().media_root).resolve()
+        if not root.is_absolute():
+            root = (ROOT / root).resolve()
+        path = Path(mf.thumbnail_path).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="path traversal")
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="thumbnail missing")
+        return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
 
 
 @router.get("/files/{file_id}")
@@ -200,6 +224,9 @@ def delete_media_item(item_id: int):
         parent_dirs: set[Path] = set()
         for f in files:
             p = Path(f.path)
+            thumbnail = Path(f.thumbnail_path) if f.thumbnail_path else None
+            if thumbnail and thumbnail.is_file():
+                thumbnail.unlink(missing_ok=True)
             if p.is_file():
                 try:
                     parent_dirs.add(p.parent)
@@ -324,7 +351,18 @@ def list_creators():
                     creator["image_count"] += 1
 
                 if len(creator["sample_thumbnails"]) < 4:
-                    creator["sample_thumbnails"].append(f.id)
+                    if f.thumbnail_path:
+                        creator["sample_thumbnails"].append({
+                            "url": f"/api/media/thumbnails/{f.id}",
+                            "width": f.width,
+                            "height": f.height,
+                        })
+                    elif f.kind != "video":
+                        creator["sample_thumbnails"].append({
+                            "url": f"/api/media/files/{f.id}",
+                            "width": f.width,
+                            "height": f.height,
+                        })
 
         # Sort creators by media_count descending
         results = sorted(creators_map.values(), key=lambda c: c["media_count"], reverse=True)
@@ -461,7 +499,14 @@ def export_metadata_json(
                     {
                         "id": f.id,
                         "kind": f.kind,
-                        "name": Path(f.path).name,
+                    "name": Path(f.path).name,
+                    "thumbnail_url": f"/media-thumbnail/{f.id}" if f.thumbnail_path else None,
+                    "width": f.width,
+                    "height": f.height,
+                    "duration_seconds": f.duration,
+                    "video_codec": f.video_codec,
+                    "audio_codec": f.audio_codec,
+
                         "sha256": f.sha256,
                     }
                     for f in files

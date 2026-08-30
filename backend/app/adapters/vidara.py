@@ -12,6 +12,7 @@ import httpx
 
 from ..config import get_settings
 from ..url_validation import validate_public_url, validate_url
+from ..video import normalize
 from .base import BaseAdapter, ResolvedMedia
 
 
@@ -19,7 +20,7 @@ class VidaraAdapter(BaseAdapter):
     platform = "vidara"
     engine = "httpx + yt-dlp fallback"
     page_pattern = re.compile(r"^https://vidara\.to/v/([A-Za-z0-9_-]+)$")
-    iframe_pattern = re.compile(r"<iframe[^>]+src=[\"'](https://kitchenstories\.ink/e/[A-Za-z0-9_-]+)[\"']", re.I)
+    iframe_pattern = re.compile(r"<iframe\b[^>]*?\bsrc\s*=\s*[\"']([^\"']+)[\"'][^>]*>", re.I)
 
     def detect(self, url: str) -> bool:
         return self.page_pattern.fullmatch(url.strip()) is not None
@@ -92,6 +93,9 @@ class VidaraAdapter(BaseAdapter):
             result = subprocess.run([yt_dlp, "--no-playlist", "--max-filesize", str(get_settings().vidara_max_download_bytes), "-o", str(Path(dest_dir) / f"{filecode}.%(ext)s"), stream_url], check=False)
             if result.returncode:
                 raise RuntimeError("Vidara HLS download failed")
+            downloaded = next((path for path in Path(dest_dir).iterdir() if path.is_file()), None)
+            if downloaded:
+                normalize(downloaded)
         else:
             self._download_http(stream_url, str(Path(dest_dir) / f"{filecode}.mp4"))
         files = [str(path) for path in Path(dest_dir).iterdir() if path.is_file()]

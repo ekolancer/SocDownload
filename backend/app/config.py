@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     parser_depth_limit: int = Field(default=32, ge=1, le=128)
     parser_url_limit: int = Field(default=10_000, ge=1, le=100_000)
     vidara_max_download_bytes: int = Field(default=2 * 1024 * 1024 * 1024, ge=1, le=10 * 1024 * 1024 * 1024)
+    ffmpeg_path: str = "ffmpeg"
+    ffprobe_path: str = "ffprobe"
+    thumbnail_offset_seconds: float = Field(default=2, ge=0)
+    thumbnail_width: int = Field(default=480, ge=1, le=4096)
+    thumbnail_quality: int = Field(default=75, ge=1, le=100)
+    video_process_timeout_seconds: int = Field(default=300, ge=1, le=3600)
 
     class Config:
         env_file = ROOT / ".env"

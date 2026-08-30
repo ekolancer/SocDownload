@@ -18,6 +18,10 @@ export interface MediaFile {
   url: string;
   name: string;
   path?: string;
+  thumbnail_url?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration_seconds?: number | null;
 }
 
 export interface MediaItem {
@@ -45,6 +49,16 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
   const [copiedLink, setCopiedLink] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => () => {
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }
+  }, [item]);
 
   // Reset file index when opening a new item
   useEffect(() => {
@@ -140,9 +154,10 @@ export function MediaLightboxModal({ item, onClose, onDelete, onSelectCreator }:
           <div className="relative flex items-center justify-center bg-slate-950 p-2 sm:p-3 overflow-hidden select-none min-w-[260px] md:min-w-[320px] max-h-[60vh] md:max-h-[85vh]">
             {fileUrl ? (
               isVideo ? (
-                <video
-                  src={fileUrl}
-                  controls
+                  <video
+                   ref={videoRef}
+                   src={fileUrl}
+                   controls
                   autoPlay
                   playsInline
                   className="max-h-[55vh] md:max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-lg border border-white/5"

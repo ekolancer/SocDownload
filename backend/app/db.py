@@ -103,6 +103,12 @@ class MediaFile(Base):
     path: Mapped[str] = mapped_column(Text, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    thumbnail_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration: Mapped[float | None] = mapped_column(nullable=True)
+    video_codec: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    audio_codec: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class Album(Base):
@@ -205,6 +211,14 @@ MIGRATIONS = {
     7: (
         "ALTER TABLE app_settings ADD COLUMN job_cooldown_seconds INTEGER NOT NULL DEFAULT 2",
         "ALTER TABLE app_settings ADD COLUMN default_engine VARCHAR(32) NOT NULL DEFAULT 'auto'",
+    ),
+    8: (
+        "ALTER TABLE media_files ADD COLUMN thumbnail_path TEXT",
+        "ALTER TABLE media_files ADD COLUMN width INTEGER",
+        "ALTER TABLE media_files ADD COLUMN height INTEGER",
+        "ALTER TABLE media_files ADD COLUMN duration FLOAT",
+        "ALTER TABLE media_files ADD COLUMN video_codec VARCHAR(32)",
+        "ALTER TABLE media_files ADD COLUMN audio_codec VARCHAR(32)",
     ),
 
 }

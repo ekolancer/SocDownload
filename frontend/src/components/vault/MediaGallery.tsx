@@ -203,23 +203,15 @@ export function MediaGallery({
               {/* Inner Media Canvas */}
               <div className="w-full h-full rounded-xl overflow-hidden bg-slate-950 relative border border-white/[0.04]">
                 {firstFile ? (
-                  isVideo ? (
-                    <video
-                      src={`${fileUrl}#t=0.5`}
-                      preload="metadata"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      muted
-                      playsInline
-                    />
-                  ) : (
                     <img
-                      src={fileUrl}
+                      src={isVideo ? firstFile.thumbnail_url || '' : fileUrl}
                       alt={item.caption || item.username || 'Media'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                       decoding="async"
+                      width={firstFile.width || 480}
+                      height={firstFile.height || 270}
                     />
-                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-600">
                     <IconPhoto className="w-8 h-8" />
