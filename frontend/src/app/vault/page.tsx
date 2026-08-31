@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Navbar } from '@/components/layout/Navbar';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 import { MediaGallery } from '@/components/vault/MediaGallery';
 import { CreatorsHub, CreatorStats } from '@/components/vault/CreatorsHub';
 import { BatchActionBar } from '@/components/vault/BatchActionBar';
@@ -532,20 +532,7 @@ export default function VaultPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="linear-dark-bg min-h-screen text-white flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
-      
-      {/* 1. Top Application Header (Shared Navbar) */}
-      <Navbar
-        backendStatus={backendStatus}
-        mediaCount={media.length}
-        activeJobsCount={activeJobsCount}
-        queueStats={jobStats}
-        onOpenImport={() => setImportMode('archive')}
-        onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
-        onRefresh={() => refreshData(true)}
-        isRefreshing={isRefreshing}
-      />
-
+    <DashboardShell title="Vault" description="Manage archived media, albums, and exports.">
       {/* 2. Main Vault Dashboard Container */}
       <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
         
@@ -1162,6 +1149,6 @@ export default function VaultPage() {
         />
       )}
 
-    </div>
+    </DashboardShell>
   );
 }

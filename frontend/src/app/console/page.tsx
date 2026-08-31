@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 
 type LogEvent = Record<string, unknown> & {
   id?: string;
@@ -159,7 +160,8 @@ export default function ConsolePage() {
   const errors = filtered.filter((event) => ['ERROR', 'CRITICAL', 'FATAL'].includes(value(event, 'level', 'severity').toUpperCase())).length;
 
   return (
-    <main className="matrix-console min-h-screen bg-[#020704] font-mono text-[#8dffae]">
+    <DashboardShell title="Operations Console" description="Live structured events and diagnostics.">
+      <main className="matrix-console min-h-screen bg-[#020704] font-mono text-[#8dffae] rounded-2xl overflow-hidden">
       <header className="border-b border-emerald-500/30 bg-black/80 px-4 py-3 shadow-[0_0_30px_rgba(16,185,129,.08)]">
         <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4"><Link href="/" className="font-black tracking-[.2em] text-emerald-300">MATRIXCONSOLE</Link><span className="text-xs text-emerald-700">/console</span></div>
@@ -217,6 +219,7 @@ export default function ConsolePage() {
         .console-button:hover { background: rgb(6 95 70 / .35); }
         @media (prefers-reduced-motion: reduce) { .console-button, .console-input { transition: none; } .matrix-console::before { animation: none; } }
       `}</style>
-    </main>
+      </main>
+    </DashboardShell>
   );
 }
