@@ -18,6 +18,7 @@ from ..adapters.instagram import InstagramAdapter
 from ..adapters.registry import registry
 from ..config import ROOT, get_settings
 from ..db import AppSettings, AutoSyncConfig, get_session_factory
+from ..instagram_errors import instagram_status as build_instagram_status
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 _STORAGE = ROOT / "config" / "uploads"
@@ -185,8 +186,14 @@ def instagram_status():
     adapter = registry.get("instagram")
     if adapter is None:
         return {"connected": False, "configured": configured, "status": "unknown_error"}
-    valid, reason = adapter.check_session_valid()
-    return {"connected": valid, "configured": configured, "status": "connected" if valid else (reason or "unknown_error")}
+    try:
+        valid, reason = adapter.check_session_valid()
+        if valid:
+            return {"connected": True, "configured": configured, "status": "connected", "reason": None, "message": "Instagram session aktif.", "retryable": False}
+        detail = build_instagram_status(RuntimeError(reason or "unknown_error"))
+        return {"connected": False, "configured": configured, **detail} 
+    except Exception as exc:
+        return {"connected": False, "configured": configured, **build_instagram_status(exc)}
 
 
 @router.post("/instagram/check")

@@ -59,6 +59,21 @@ def test_instagram_session_upload_load_failure_keeps_existing(tmp_path):
         assert stored.instagram_session_file == str(old)
 
 
+def test_instagram_status_returns_detail_for_rate_limit(tmp_path):
+    factory = _factory(tmp_path)
+    with factory() as session:
+        session.add(AppSettings(id=1, instagram_username="user", instagram_session_file=str(tmp_path / "session")))
+        session.commit()
+    adapter = Mock()
+    adapter.check_session_valid.return_value = (False, "rate_limited")
+    with patch("backend.app.routes.settings.get_session_factory", return_value=factory), patch("backend.app.routes.settings.registry.get", return_value=adapter):
+        response = TestClient(app, headers={"Authorization": "Bearer test-token"}).get("/api/settings/instagram/status")
+    assert response.status_code == 200
+    assert response.json()["status"] == "rate_limited"
+    assert response.json()["reason"] == "adapter_status_rate_limited"
+    assert response.json()["retryable"] is True
+
+
 def test_instagram_session_upload_does_not_check_live_profile(tmp_path):
     factory = _factory(tmp_path)
     adapter = Mock()
