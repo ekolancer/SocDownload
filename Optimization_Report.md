@@ -12,7 +12,7 @@ Recommendation: no rewrite. Immediately remove the tracked session from the inde
 
 ## Vidara Implementation Status
 
-Implemented `backend/app/adapters/vidara.py`: strict Vidara URL detection, public HTTPS validation for page/embed/API/stream/redirect URLs, cookie-free GET/POST resolution, DRM rejection, missing-stream errors, streamed MP4 byte cap, and existing-`yt-dlp`-only HLS fallback. Registered in `backend/app/main.py` and `backend/app/adapters/registry.py`, allowlisted in `backend/app/url_validation.py`, exposed in frontend platform chips, filters, icons, badges, and health/job views. Mocked coverage added in `backend/tests/test_vidara.py`.
+Implemented `backend/app/adapters/vidara.py`: strict Vidara URL detection, public HTTPS validation for page/embed/API/stream/redirect URLs, cookie-free GET/POST resolution, DRM rejection, missing-stream errors, streamed MP4 byte cap, and existing-`yt-dlp`-only HLS fallback. Registered in `backend/app/main.py` and `backend/app/adapters/registry.py`, allowlisted in `backend/app/url_validation.py`, exposed in frontend platform chips, filters, icons, badges, and health/job views. Mocked coverage added in `backend/tests/test_vidara.py`. Vidara bulk TXT import is separated at `POST /api/import/vidara`, with one strict URL per line, UTF-8 validation, blank/comment handling, deduplication, limits, job IDs, and shared frontend bulk progress (`backend/tests/test_vidara_import.py`; `frontend/src/components/modals/ArchiveImportModal.tsx`). Latest validation: 35 tests passed + 5 subtests; compileall, pip check, lint, typecheck, build, and diff-check passed.
 
 ## 2. Audit Metadata
 
@@ -80,7 +80,7 @@ flowchart TD
 | FEAT-006 | Favorites and batch actions | `backend/app/routes/media.py:171-185`; `frontend/src/app/vault/page.tsx:338-418` | Partial: batch favorite toggles | None | Medium |
 | FEAT-007 | Albums CRUD/membership | `backend/app/routes/albums.py`; `frontend/src/components/modals/AlbumModal.tsx` | Partial: edit UI unreachable | None | Medium |
 | FEAT-008 | CSV/JSON/ZIP exports | `backend/app/routes/media.py:366-590` | Complete; bounded, disk-spooled ZIP | Bounds tests partial | Medium |
-| FEAT-009 | Archive import/parser | `backend/app/routes/importer.py:20-21`; `backend/app/importer.py`; `backend/app/config.py:24,29-30` | Complete; capped | Bounds tests partial | Medium |
+| FEAT-009 | Archive and Vidara TXT bulk import | `backend/app/routes/importer.py`; `backend/app/importer.py`; `backend/app/config.py:24,29-30` | Complete; separate strict Vidara endpoint, capped | Bounds + Vidara parser/route tests | Medium |
 | FEAT-010 | Instagram saved-post autosync | `backend/app/autosync.py`; `backend/app/scheduler.py` | Complete, Instagram-only | Partial | High |
 | FEAT-011 | Instagram session/settings workflow | `backend/app/routes/settings.py`; `frontend/src/app/settings/page.tsx` | Complete but secret hygiene regressed | Partial | Critical |
 | FEAT-012 | Observability/readiness | `backend/app/observability.py`; `backend/app/routes/health.py` | Partial | Limited | Medium |

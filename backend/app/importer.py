@@ -7,6 +7,9 @@ from typing import List
 from .config import get_settings
 
 # Comprehensive regex pattern matching any supported social media post URL
+VIDARA_URL_REGEX = re.compile(r"^https://(?:www\.)?vidara\.to/v/([A-Za-z0-9_-]+)$")
+
+
 SOCIAL_URL_REGEX = re.compile(
     r'https?://(?:www\.)?(?:'
     r'instagram\.com/(?:p|reel|reels|tv)/[A-Za-z0-9_-]+|'
@@ -22,6 +25,30 @@ SOCIAL_URL_REGEX = re.compile(
     r')',
     re.IGNORECASE,
 )
+
+
+def parse_vidara_txt(content_bytes: bytes) -> tuple[list[str], list[dict[str, object]]]:
+    try:
+        text = content_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("File must be valid UTF-8") from exc
+
+    urls: list[str] = []
+    invalid: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for line_number, raw_line in enumerate(text.splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        match = VIDARA_URL_REGEX.fullmatch(line)
+        if not match:
+            invalid.append({"line": line_number, "value": line})
+            continue
+        url = f"https://vidara.to/v/{match.group(1)}"
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
+    return urls, invalid
 
 
 def extract_urls_from_text(text: str) -> List[str]:

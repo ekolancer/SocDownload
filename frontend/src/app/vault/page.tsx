@@ -110,7 +110,7 @@ export default function VaultPage() {
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album' | 'edit'>('create_only');
   const [editingAlbum, setEditingAlbum] = useState<{ id: number; name: string; description?: string } | null>(null);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importMode, setImportMode] = useState<'archive' | 'vidara' | null>(null);
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
   const [completedNotice, setCompletedNotice] = useState<CompletedJobNotice | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -540,7 +540,7 @@ export default function VaultPage() {
         mediaCount={media.length}
         activeJobsCount={activeJobsCount}
         queueStats={jobStats}
-        onOpenImport={() => setIsImportModalOpen(true)}
+        onOpenImport={() => setImportMode('archive')}
         onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
         onRefresh={() => refreshData(true)}
         isRefreshing={isRefreshing}
@@ -574,11 +574,20 @@ export default function VaultPage() {
           <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={() => setIsImportModalOpen(true)}
+              onClick={() => setImportMode('archive')}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
             >
               <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
               <span>Import Archive</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setImportMode('vidara')}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
+            >
+              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Import Vidara</span>
             </button>
 
             <button
@@ -1133,9 +1142,10 @@ export default function VaultPage() {
 
       {/* 9. Archive Ingestion Modal */}
       <ArchiveImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
+        isOpen={importMode !== null}
+        onClose={() => setImportMode(null)}
         onSuccess={() => refreshData(true)}
+        mode={importMode || 'archive'}
       />
 
       {/* 10. Adapters & Health Drawer */}

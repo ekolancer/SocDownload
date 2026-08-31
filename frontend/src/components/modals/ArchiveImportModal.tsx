@@ -18,7 +18,8 @@ import {
 interface ArchiveImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (jobIds: number[]) => void;
+  mode?: 'archive' | 'vidara';
 }
 
 interface ImportResult {
@@ -28,9 +29,11 @@ interface ImportResult {
   skipped_limit_count: number;
   limit: number;
   urls: string[];
+  job_ids: number[];
 }
 
-export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImportModalProps) {
+export function ArchiveImportModal({ isOpen, onClose, onSuccess, mode = 'archive' }: ArchiveImportModalProps) {
+  const isVidara = mode === 'vidara';
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -77,21 +80,27 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
     formData.append('file', file);
 
     try {
-      const res = await apiFetch('/api/import/json', {
+      const res = await apiFetch(isVidara ? '/api/import/vidara' : '/api/import/json', {
         method: 'POST',
         body: formData,
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `Upload failed with status ${res.status}`);
+        const detail = errData.detail;
+        const message = typeof detail === 'string'
+          ? detail
+          : detail?.invalid?.length
+            ? `${detail.message}: ${detail.invalid.map((item: { line: number; value: string }) => `line ${item.line} (${item.value})`).join(', ')}`
+            : `Upload failed with status ${res.status}`;
+        throw new Error(message);
       }
 
       const data: ImportResult = await res.json();
       setResult(data);
-      onSuccess();
+      onSuccess(data.job_ids);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error processing archive file');
+      setError(e instanceof Error ? e.message : `Error processing ${isVidara ? 'Vidara TXT' : 'archive file'}`);
     } finally {
       setUploading(false);
     }
@@ -136,7 +145,7 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                       </span>
                     </div>
                     <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mt-0.5">
-                      Import Archive Metadata
+                      {isVidara ? 'Import Vidara URLs' : 'Import Archive Metadata'}
                     </h3>
                   </div>
                 </div>
@@ -172,8 +181,8 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                 <input
                   ref={fileInputRef}
                   type="file"
-                  aria-label="Choose archive file"
-                  accept=".json,.html,.htm,.txt"
+                  aria-label={isVidara ? 'Choose Vidara TXT file' : 'Choose archive file'}
+                  accept={isVidara ? '.txt,text/plain' : '.json,.html,.htm,.txt'}
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -199,10 +208,10 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                     </div>
                     <div className="flex flex-col items-center">
                       <span className="text-xs sm:text-sm font-bold text-slate-200">
-                        Drag and drop your export file here
+                        {isVidara ? 'Drag and drop Vidara TXT here' : 'Drag and drop your export file here'}
                       </span>
                       <span className="text-[11px] text-slate-400 mt-0.5">
-                        Supports <code className="font-mono font-bold text-slate-300">saved_posts.html</code>, <code className="font-mono font-bold text-slate-300">.json</code>, <code className="font-mono font-bold text-slate-300">.txt</code>
+                        {isVidara ? <>One <code className="font-mono font-bold text-slate-300">https://vidara.to/v/id</code> URL per line</> : <>Supports <code className="font-mono font-bold text-slate-300">saved_posts.html</code>, <code className="font-mono font-bold text-slate-300">.json</code>, <code className="font-mono font-bold text-slate-300">.txt</code></>}
                       </span>
                     </div>
                   </div>
@@ -305,12 +314,12 @@ export function ArchiveImportModal({ isOpen, onClose, onSuccess }: ArchiveImport
                     {uploading ? (
                       <span className="flex items-center gap-2 font-mono">
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-950/40 border-t-slate-950 animate-spin shrink-0" />
-                        <span>Mengekstrak Metadata...</span>
+                        <span>{isVidara ? 'Mengimpor Vidara...' : 'Mengekstrak Metadata...'}</span>
                       </span>
                     ) : (
                       <>
                         <IconSparkles className="w-3.5 h-3.5 text-slate-950" />
-                        <span>Proses File Metadata</span>
+                        <span>{isVidara ? 'Import Vidara TXT' : 'Proses File Metadata'}</span>
                       </>
                     )}
                   </button>
