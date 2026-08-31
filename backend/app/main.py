@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 import logging
 import pickle
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from secrets import compare_digest
 from typing import Any
@@ -24,8 +25,9 @@ from .adapters.youtube import YouTubeAdapter
 from .adapters.vidara import VidaraAdapter
 from .config import get_settings
 from .db import init_db, Job, JobStatus, MediaItem, get_session_factory, utcnow
+from .errors import AppError, error_envelope, map_exception
 from sqlalchemy import update
-from .routes import adapters, albums, auth, autosync, health, importer, jobs, media, settings as settings_route
+from .routes import adapters, albums, auth, autosync, console, health, importer, jobs, media, settings as settings_route
 from . import observability
 from .scheduler import check_adapters_health, start_scheduler
 from .service import get_queue, recover_jobs
@@ -77,6 +79,22 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="MediaVault", lifespan=lifespan)
     configure_logging()
+
+    @app.exception_handler(AppError)
+    @app.exception_handler(HTTPException)
+    @app.exception_handler(RequestValidationError)
+    async def handled_exception(request: Request, exc: Exception):
+        if isinstance(exc, RequestValidationError):
+            exc = AppError("invalid_request", operator_message="Request validation failed", context={"errors": exc.errors()})
+        info = map_exception(exc)
+        logging.getLogger("api").log(logging.WARNING if info.status < 500 else logging.ERROR, info.operator_message, extra={"event": {"code": info.code, "severity": info.severity, "path": request.url.path, "retryable": info.retryable}})
+        return JSONResponse(error_envelope(exc, request.headers.get("x-request-id", "-")), status_code=info.status)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception(request: Request, exc: Exception):
+        logging.getLogger(__name__).exception("unhandled request exception", extra={"event": {"code": "internal_error", "severity": "critical", "path": request.url.path}})
+        return JSONResponse(error_envelope(exc, request.headers.get("x-request-id", "-")), status_code=500)
+
     app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware(app))
 
     @app.middleware("http")
@@ -101,6 +119,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(observability.router)
+    app.include_router(console.router)
     app.include_router(importer.router)
     app.include_router(jobs.router)
     app.include_router(media.router)

@@ -3,13 +3,16 @@ from __future__ import annotations
 import logging
 import time
 from collections import Counter
+from pathlib import Path
 from contextvars import ContextVar
 from uuid import uuid4
 
 from fastapi import APIRouter, Request
 from sqlalchemy import text
 
+from .config import ROOT
 from .db import get_session_factory
+from .matrixconsole import configure_console_logging
 
 router = APIRouter(prefix="/api", tags=["health"])
 _request_id: ContextVar[str] = ContextVar("request_id", default="-")
@@ -30,6 +33,7 @@ def configure_logging() -> None:
     root = logging.getLogger()
     for handler in root.handlers:
         handler.setFormatter(formatter)
+    configure_console_logging(Path(ROOT) / "data" / "matrixconsole.jsonl")
 
 
 @router.get("/health")

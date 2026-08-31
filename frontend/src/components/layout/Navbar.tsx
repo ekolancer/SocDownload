@@ -37,6 +37,7 @@ export function Navbar({
     router.push('/login');
   };
   const isVaultPage = pathname === '/vault';
+  const isConsolePage = pathname === '/console';
 
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
@@ -60,10 +61,10 @@ export function Navbar({
           <Link
             href="/"
             className={`relative px-5 sm:px-6 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors duration-200 cursor-pointer ${
-              !isVaultPage ? 'text-slate-950' : 'text-slate-400 hover:text-white'
+              !isVaultPage && !isConsolePage ? 'text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
-            {!isVaultPage && (
+            {!isVaultPage && !isConsolePage && (
               <motion.div
                 layoutId="navbar-active-pill"
                 transition={{ type: 'spring', stiffness: 480, damping: 32 }}
@@ -89,6 +90,22 @@ export function Navbar({
             <span className="relative z-10 flex items-center gap-1.5">
               <span>Vault</span>
             </span>
+          </Link>
+
+          <Link
+            href="/console"
+            className={`relative px-5 sm:px-6 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors duration-200 cursor-pointer ${
+              isConsolePage ? 'text-slate-950' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {isConsolePage && (
+              <motion.div
+                layoutId="navbar-active-pill"
+                transition={{ type: 'spring', stiffness: 480, damping: 32 }}
+                className="absolute inset-0 rounded-full bg-white shadow-md shadow-white/10"
+              />
+            )}
+            <span className="relative z-10">Console</span>
           </Link>
         </nav>
 

@@ -52,7 +52,7 @@ class Worker:
                 self._has_processed_any = True
                 await self._process(job_id)
             except Exception as exc:  # noqa: BLE001
-                logger.exception("worker %s failed job %s: %s", idx, job_id, exc)
+                logger.exception("worker %s failed job %s: %s", idx, job_id, exc, extra={"event": {"code": "worker_job_failed", "severity": "error", "retryable": False, "job_id": job_id, "worker_id": idx, "operator_message": str(exc), "remediation": "Inspect job input and adapter health."}})
                 await self._set_status(job_id, JobStatus.FAILED, str(exc))
             finally:
                 record_job("completed", time.perf_counter() - started)

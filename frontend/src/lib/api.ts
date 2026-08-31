@@ -8,5 +8,6 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
 
 export async function apiError(response: Response, fallback: string) {
   const data = await response.json().catch(() => ({}));
-  return data.detail || data.message || `${fallback} (${response.status})`;
+  const detail = typeof data.detail === 'string' ? data.detail : data.error?.message || data.detail?.message;
+  return detail || data.message || `${fallback} (${response.status})`;
 }
