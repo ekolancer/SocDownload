@@ -113,6 +113,21 @@ class EventStore:
 store = EventStore()
 
 
+class ConsoleFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        event = getattr(record, "event", {})
+        return event.get("code") != "request_completed"
+
+
+class HumanFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        event = getattr(record, "event", {})
+        code = event.get("code", "log_event").upper().replace("_", " ")
+        details = " ".join(f"{key}={value}" for key, value in event.items() if key not in {"code", "severity"})
+        suffix = f" {details}" if details else ""
+        return f"[{datetime.fromtimestamp(record.created, timezone.utc).astimezone().strftime('%H:%M:%S')}] {code} {record.getMessage()}{suffix}"
+
+
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         event = {"timestamp": datetime.fromtimestamp(record.created, timezone.utc).isoformat(), "severity": record.levelname.lower(), "source": record.name, "message": record.getMessage()}
@@ -137,7 +152,9 @@ class ConsoleHandler(logging.Handler):
 def configure_console_logging(log_path: Path) -> None:
     root = logging.getLogger()
     if not any(isinstance(handler, ConsoleHandler) for handler in root.handlers):
-        root.addHandler(ConsoleHandler())
+        console_handler = ConsoleHandler()
+        console_handler.addFilter(ConsoleFilter())
+        root.addHandler(console_handler)
     resolved = log_path.resolve()
     if not any(isinstance(handler, RotatingFileHandler) and Path(handler.baseFilename) == resolved for handler in root.handlers):
         log_path.parent.mkdir(parents=True, exist_ok=True)

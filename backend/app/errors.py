@@ -37,6 +37,23 @@ class AppError(Exception):
         super().__init__(self.operator_message)
 
 
+def classify_download_error(exc: BaseException) -> tuple[str, str, bool]:
+    message = str(exc).lower()
+    if "no_files_downloaded" in message:
+        return "no_files_downloaded", "media tidak ditemukan", False
+    if any(value in message for value in ("timeout", "timed out", "connection", "network")):
+        return "network_error", "koneksi gagal", True
+    if any(value in message for value in ("rate limit", "too many requests", "429")):
+        return "rate_limited", "terkena batas permintaan", True
+    if any(value in message for value in ("unauthorized", "forbidden", "login", "session", "credential", "authentication")):
+        return "authentication_error", "session atau kredensial tidak valid", False
+    if any(value in message for value in ("unsupported", "format")):
+        return "unsupported_media", "format media tidak didukung", False
+    if any(value in message for value in ("no space", "disk full", "storage")):
+        return "storage_error", "penyimpanan tidak tersedia", False
+    return type(exc).__name__.lower(), "error sistem tidak dikenal", False
+
+
 def map_exception(exc: BaseException) -> ErrorInfo:
     if isinstance(exc, AppError):
         return exc.info

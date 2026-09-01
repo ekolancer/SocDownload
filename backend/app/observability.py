@@ -86,6 +86,13 @@ def request_metrics_middleware(app):
             response.headers["X-Request-ID"] = request_id
             return response
         finally:
-            logging.getLogger(__name__).info("request completed in %.3fs", time.perf_counter() - started)
+            duration = time.perf_counter() - started
+            logging.getLogger(__name__).info(
+                "%s %s selesai dalam %.3fs",
+                request.method,
+                request.url.path,
+                duration,
+                extra={"event": {"code": "request_completed", "method": request.method, "path": request.url.path, "status_code": getattr(locals().get("response"), "status_code", 500), "duration_ms": round(duration * 1000, 2), "request_id": request_id}},
+            )
             _request_id.reset(token)
     return middleware

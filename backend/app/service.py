@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -13,6 +14,7 @@ from sqlalchemy import select, update
 from .adapters.registry import detect_platform, registry
 from .config import ROOT, get_settings
 from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
+from .errors import classify_download_error
 from .url_validation import validate_url
 from .video import classify_media, normalize, probe, thumbnail
 
@@ -23,6 +25,13 @@ from .downloader import (
     organize,
     write_metadata,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def log_download(code: str, message: str, **event: object) -> None:
+    logger.info(message, extra={"event": {"code": code, "severity": "info", **event}})
+
 
 _queue: asyncio.Queue[int] | None = None
 
@@ -228,6 +237,7 @@ def _sync_process_job(job_id: int) -> None:
             job.error = str(exc)
             job.finished_at = now_wib()
             session.commit()
+            log_download("download_failed", "Download gagal: URL tidak valid", job_id=job_id, status="failed", error_code="invalid_url", retryable=False)
             return
 
         adapter = detect_platform(job.url)
@@ -249,6 +259,7 @@ def _sync_process_job(job_id: int) -> None:
             return
 
         # 2. Download to temp dir
+        log_download("download_started", f"Download media dari {adapter.platform} dimulai", job_id=job_id, status="running", platform=adapter.platform)
         settings = get_settings()
         media_root = str((ROOT / settings.media_root).resolve())
         temp_dir = tempfile.mkdtemp(prefix="mv_dl_")
@@ -269,6 +280,7 @@ def _sync_process_job(job_id: int) -> None:
                 job.error = "no_files_downloaded"
                 job.finished_at = now_wib()
                 session.commit()
+                log_download("download_failed", f"Download media dari {adapter.platform} gagal: tidak ada file", job_id=job_id, status="failed", error_code="no_files_downloaded", platform=adapter.platform)
                 return
 
             hashes = compute_hashes(downloaded)
@@ -347,6 +359,7 @@ def _sync_process_job(job_id: int) -> None:
             job.lease_until = None
             job.lease_token = None
             session.commit()
+            log_download("download_succeeded", f"Download media dari {adapter.platform} berhasil", job_id=job_id, status="done", platform=adapter.platform, files=len(final_files))
 
         except Exception as exc:
             for source, target in zip(downloaded, final_files):
@@ -364,6 +377,8 @@ def _sync_process_job(job_id: int) -> None:
             job.lease_until = None
             job.lease_token = None
             session.commit()
+            error_code, error_message, retryable = classify_download_error(exc)
+            log_download("download_failed", f"Download media dari {adapter.platform} gagal: {error_message}", job_id=job_id, status="failed", platform=adapter.platform, error_code=error_code, retryable=retryable)
             raise
 
         finally:
