@@ -161,64 +161,28 @@ export default function ConsolePage() {
 
   return (
     <DashboardShell title="Operations Console" description="Live structured events and diagnostics.">
-      <main className="matrix-console min-h-screen bg-[#020704] font-mono text-[#8dffae] rounded-2xl overflow-hidden">
-      <header className="border-b border-emerald-500/30 bg-black/80 px-4 py-3 shadow-[0_0_30px_rgba(16,185,129,.08)]">
-        <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4"><Link href="/" className="font-black tracking-[.2em] text-emerald-300">MATRIXCONSOLE</Link><span className="text-xs text-emerald-700">/console</span></div>
-          <div className="flex items-center gap-4 text-xs"><span className={connection === 'live' ? 'text-emerald-300' : connection === 'paused' ? 'text-amber-300' : 'text-rose-400'}>● {connection.toUpperCase()}</span><span>{filtered.length}/{events.length} EVENTS</span><span className="text-rose-400">{errors} ERRORS</span></div>
-        </div>
-      </header>
-
-      <section className="sticky top-0 z-10 border-b border-emerald-500/20 bg-[#020704]/95 p-3 backdrop-blur">
-        <div className="mx-auto grid max-w-[1800px] gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2fr_auto_auto_auto]">
-          <select aria-label="Source" value={source} onChange={(event) => setSource(event.target.value)} className="console-input"><option value="">ALL SOURCES</option>{sourceOptions.map((item) => <option key={item}>{item}</option>)}</select>
-          <select aria-label="Level" value={level} onChange={(event) => setLevel(event.target.value)} className="console-input"><option value="">ALL LEVELS</option>{levelOptions.map((item) => <option key={item}>{item}</option>)}</select>
-          <select aria-label="Code" value={code} onChange={(event) => setCode(event.target.value)} className="console-input"><option value="">ALL CODES</option>{codeOptions.map((item) => <option key={item}>{item}</option>)}</select>
-          <input aria-label="Search events" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="SEARCH PAYLOAD..." className="console-input" />
-          <button type="button" onClick={() => setPaused((current) => !current)} className="console-button">{paused ? 'RESUME' : 'PAUSE'}</button>
-          <button type="button" aria-pressed={follow} onClick={() => setFollow((current) => !current)} className="console-button">FOLLOW {follow ? 'ON' : 'OFF'}</button>
-          <button type="button" onClick={download} disabled={!filtered.length} className="console-button disabled:opacity-30">DOWNLOAD</button>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1800px] p-3">
-        {error && <div role="alert" className="mb-3 border border-rose-500/40 bg-rose-950/20 p-3 text-xs text-rose-300">{error}</div>}
-        <div className="overflow-hidden border border-emerald-500/20 bg-black/50">
-          {filtered.length === 0 && <div className="p-8 text-center text-xs text-emerald-800">NO MATCHING EVENTS</div>}
-          {filtered.map((event, index) => {
-            const timestamp = value(event, 'timestamp', 'time', 'created_at');
-            const eventLevel = value(event, 'level', 'severity').toUpperCase() || 'INFO';
-            const sourceName = value(event, 'source', 'logger') || '-';
-            const requestId = value(event, 'request_id', 'requestId');
-            const id = value(event, 'id', 'event_id');
-            return (
-              <details key={eventId(event, index)} className="group border-b border-emerald-500/10 open:bg-emerald-950/10">
-                <summary className="grid cursor-pointer list-none gap-2 px-3 py-2 text-xs hover:bg-emerald-950/20 sm:grid-cols-[12rem_6rem_10rem_1fr]">
-                  <time className="text-emerald-700">{timestamp ? new Date(timestamp).toLocaleString() : '--'}</time>
-                  <span className={eventLevel === 'ERROR' || eventLevel === 'FATAL' || eventLevel === 'CRITICAL' ? 'text-rose-400' : eventLevel === 'WARN' || eventLevel === 'WARNING' ? 'text-amber-300' : 'text-emerald-300'}>{eventLevel}</span>
-                  <span className="truncate text-cyan-400">{sourceName}</span>
-                  <span className="break-words text-emerald-100">{value(event, 'message') || JSON.stringify(event)}</span>
-                </summary>
-                <div className="border-t border-emerald-500/10 px-3 py-3 text-xs">
-                  <div className="mb-3 flex flex-wrap gap-2">{id && <button type="button" onClick={() => copy(id)} className="console-button">{copied === id ? 'COPIED' : `COPY EVENT ${id}`}</button>}{requestId && <button type="button" onClick={() => copy(requestId)} className="console-button">{copied === requestId ? 'COPIED' : `COPY REQUEST ${requestId}`}</button>}</div>
-                  <pre className="overflow-x-auto whitespace-pre-wrap break-all text-emerald-400">{JSON.stringify(event, null, 2)}</pre>
-                </div>
-              </details>
-            );
-          })}
-          <div ref={tailRef} />
-        </div>
-      </section>
-      <style jsx global>{`
-        .matrix-console { position: relative; isolation: isolate; }
-        .matrix-console::before { content: '01001101 01000101 01000100 01001001 01000001 01010110 01000001 01010101 01001100 01010100'; position: fixed; inset: 0; z-index: -1; overflow: hidden; color: rgb(16 185 129 / .035); font-size: 1.25rem; line-height: 2.5rem; letter-spacing: .8rem; word-break: break-all; pointer-events: none; animation: matrix-drift 24s linear infinite; }
-        @keyframes matrix-drift { from { transform: translateY(-3rem); } to { transform: translateY(3rem); } }
-        .console-input { min-width: 0; border: 1px solid rgb(16 185 129 / .25); background: #020704; padding: .55rem .7rem; color: #8dffae; font: inherit; font-size: .75rem; }
-        .console-input::placeholder { color: rgb(6 95 70); }
-        .console-button { border: 1px solid rgb(16 185 129 / .35); background: rgb(6 78 59 / .16); padding: .55rem .7rem; color: #8dffae; font: inherit; font-size: .7rem; white-space: nowrap; }
-        .console-button:hover { background: rgb(6 95 70 / .35); }
-        @media (prefers-reduced-motion: reduce) { .console-button, .console-input { transition: none; } .matrix-console::before { animation: none; } }
-      `}</style>
+      <main className="hynex-console min-h-screen overflow-hidden rounded-2xl font-mono text-slate-300">
+        <header className="hynex-header">
+          <div><Link href="/" className="hynex-brand">MATRIX<span>CONSOLE</span></Link><div className="hynex-route">/ operations / event stream</div></div>
+          <div className="hynex-metrics"><span className={connection === 'live' ? 'status-live' : connection === 'paused' ? 'status-paused' : 'status-offline'}>● {connection.toUpperCase()}</span><span><b>{filtered.length}</b> / {events.length} EVENTS</span><span className="metric-error">{errors} ERRORS</span></div>
+        </header>
+        <section className="hynex-toolbar">
+          <div className="hynex-filter-label">FILTERS <span>LIVE QUERY</span></div>
+          <div className="hynex-filters">
+            <select aria-label="Source" value={source} onChange={(event) => setSource(event.target.value)} className="console-input"><option value="">ALL SOURCES</option>{sourceOptions.map((item) => <option key={item}>{item}</option>)}</select>
+            <select aria-label="Level" value={level} onChange={(event) => setLevel(event.target.value)} className="console-input"><option value="">ALL LEVELS</option>{levelOptions.map((item) => <option key={item}>{item}</option>)}</select>
+            <select aria-label="Code" value={code} onChange={(event) => setCode(event.target.value)} className="console-input"><option value="">ALL CODES</option>{codeOptions.map((item) => <option key={item}>{item}</option>)}</select>
+            <input aria-label="Search events" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search payload..." className="console-input search-input" />
+            <button type="button" onClick={() => setPaused((current) => !current)} className="console-button">{paused ? 'RESUME' : 'PAUSE'}</button><button type="button" aria-pressed={follow} onClick={() => setFollow((current) => !current)} className="console-button">FOLLOW {follow ? 'ON' : 'OFF'}</button><button type="button" onClick={download} disabled={!filtered.length} className="console-button">EXPORT JSONL</button>
+          </div>
+        </section>
+        <section className="hynex-content">
+          {error && <div role="alert" className="hynex-alert">{error}</div>}
+          <div className="event-card"><div className="event-head"><span>TIME</span><span>LEVEL</span><span>SOURCE</span><span>MESSAGE</span></div>
+            {filtered.length === 0 && <div className="empty-state">NO MATCHING EVENTS</div>}
+            {filtered.map((event, index) => { const timestamp = value(event, 'timestamp', 'time', 'created_at'); const eventLevel = value(event, 'level', 'severity').toUpperCase() || 'INFO'; const sourceName = value(event, 'source', 'logger') || '-'; const requestId = value(event, 'request_id', 'requestId'); const id = value(event, 'id', 'event_id'); const danger = ['ERROR', 'FATAL', 'CRITICAL'].includes(eventLevel); const warning = ['WARN', 'WARNING'].includes(eventLevel); return <details key={eventId(event, index)} className="event-row"><summary><time>{timestamp ? new Date(timestamp).toLocaleString() : '--'}</time><span className={danger ? 'level-danger' : warning ? 'level-warning' : 'level-info'}>{eventLevel}</span><span className="source-name">{sourceName}</span><span className="event-message">{value(event, 'message') || JSON.stringify(event)}</span></summary><div className="event-detail"><div className="detail-actions">{id && <button type="button" onClick={() => copy(id)} className="console-button">{copied === id ? 'COPIED' : `COPY EVENT ${id}`}</button>}{requestId && <button type="button" onClick={() => copy(requestId)} className="console-button">{copied === requestId ? 'COPIED' : `COPY REQUEST ${requestId}`}</button>}</div><pre>{JSON.stringify(event, null, 2)}</pre></div></details>; })}<div ref={tailRef} /></div>
+        </section>
+        <style jsx global>{` .hynex-console{background:#080b10;position:relative;isolation:isolate}.hynex-console:before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 85% 0%,#063b3b44,transparent 35%),linear-gradient(135deg,#080b10,#0b1118 55%,#071918)}.hynex-header{display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem;border-bottom:1px solid #1d3038;background:#080b10dd}.hynex-brand{font-size:1rem;font-weight:800;letter-spacing:.18em;color:#67e8f9}.hynex-brand span{color:#34d399}.hynex-route,.hynex-filter-label span{font-size:.62rem;color:#66808a;letter-spacing:.12em;margin-top:.35rem}.hynex-metrics{display:flex;gap:1.4rem;font-size:.68rem;color:#78909a}.hynex-metrics b{color:#d9f99d}.status-live{color:#34d399}.status-paused{color:#fbbf24}.status-offline,.metric-error{color:#fb7185}.hynex-toolbar{padding:1.25rem 2rem;border-bottom:1px solid #1d3038;background:#0d1319}.hynex-filter-label{font-size:.68rem;color:#a7f3d0;letter-spacing:.16em;margin-bottom:.75rem}.hynex-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 2fr auto auto auto;gap:.6rem}.console-input,.console-button{min-width:0;border:1px solid #263d46;background:#0a1016;color:#c7d9dc;padding:.65rem .75rem;font:inherit;font-size:.68rem;letter-spacing:.04em}.console-input::placeholder{color:#58717a}.console-button{color:#8be9d0;border-color:#236356;background:#10231f;white-space:nowrap}.console-button:hover{background:#164038}.console-button:disabled{opacity:.3}.hynex-content{padding:1.5rem 2rem}.hynex-alert{padding:.8rem 1rem;margin-bottom:1rem;border:1px solid #8b3348;background:#2b111a;color:#fda4af;font-size:.7rem}.event-card{overflow:hidden;border:1px solid #20343b;border-radius:.45rem;background:#0b1117;box-shadow:0 18px 50px #0005}.event-head,.event-row summary{display:grid;grid-template-columns:12rem 7rem 11rem minmax(0,1fr);gap:1rem;align-items:center}.event-head{padding:.75rem 1rem;background:#111a21;color:#5f8088;font-size:.6rem;letter-spacing:.14em}.event-row{border-top:1px solid #172930}.event-row summary{padding:.85rem 1rem;cursor:pointer;list-style:none;font-size:.72rem}.event-row summary:hover,.event-row[open] summary{background:#10221f}.event-row time{color:#66808a}.event-message{overflow:hidden;color:#c9d7d8;text-overflow:ellipsis;white-space:nowrap}.source-name{overflow:hidden;color:#67e8f9;text-overflow:ellipsis}.level-info{color:#6ee7b7}.level-warning{color:#fbbf24}.level-danger{color:#fb7185}.event-detail{border-top:1px solid #1d3937;padding:1rem;background:#091615}.detail-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}.event-detail pre{margin:0;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#8ddfc3;font-size:.7rem}.empty-state{padding:4rem;text-align:center;color:#55736f;font-size:.7rem;letter-spacing:.15em}@media(max-width:800px){.hynex-header,.hynex-toolbar,.hynex-content{padding-left:1rem;padding-right:1rem}.hynex-header{align-items:flex-start;gap:1rem;flex-direction:column}.hynex-metrics{flex-wrap:wrap}.hynex-filters{grid-template-columns:1fr 1fr}.search-input{grid-column:span 2}.event-head{display:none}.event-row summary{grid-template-columns:1fr 1fr;gap:.45rem}.event-row summary .event-message{grid-column:span 2;white-space:normal}.event-row time{font-size:.62rem}}@media(prefers-reduced-motion:reduce){.console-button,.console-input{transition:none}} `}</style>
       </main>
     </DashboardShell>
   );

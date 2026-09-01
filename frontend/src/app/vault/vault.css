@@ -1,0 +1,36 @@
+
+.vault-page {
+  --vault-obsidian: #080b10;
+  --vault-cyan: #22d3ee;
+  --vault-emerald: #34d399;
+  --vault-yellow: #facc15;
+}
+
+.vault-page .vault-metrics > div,
+.vault-page .vault-activity,
+.vault-page .vault-controls {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(8, 11, 16, 0.72);
+  box-shadow: 0 18px 45px -30px rgba(0, 0, 0, 0.95);
+}
+
+.vault-page .vault-metrics > div > div,
+.vault-page .vault-activity > div,
+.vault-page .vault-controls > div {
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.vault-page .vault-metrics > div:nth-child(1) { border-top: 1px solid rgba(34, 211, 238, 0.55); }
+.vault-page .vault-metrics > div:nth-child(2) { border-top: 1px solid rgba(52, 211, 153, 0.55); }
+.vault-page .vault-metrics > div:nth-child(3) { border-top: 1px solid rgba(250, 204, 21, 0.55); }
+.vault-page .vault-metrics > div:nth-child(4) { border-top: 1px solid rgba(148, 163, 184, 0.35); }
+
+.vault-page .vault-metrics > div:hover,
+.vault-page .vault-activity:hover,
+.vault-page .vault-controls:hover {
+  border-color: rgba(34, 211, 238, 0.3);
+}
+
+.vault-page input::placeholder { color: #64748b; }
+.vault-page button:active { transform: translateY(1px); }

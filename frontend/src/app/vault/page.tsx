@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import './vault.css';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { MediaGallery } from '@/components/vault/MediaGallery';
 import { CreatorsHub, CreatorStats } from '@/components/vault/CreatorsHub';
 import { BatchActionBar } from '@/components/vault/BatchActionBar';
 import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
 import { AlbumModal } from '@/components/modals/AlbumModal';
-import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
 import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { JobRow, JobStats } from '@/components/studio/JobPipeline';
@@ -111,7 +111,6 @@ export default function VaultPage() {
   const [albumModalMode, setAlbumModalMode] = useState<'create_only' | 'add_to_album' | 'edit'>('create_only');
   const [editingAlbum, setEditingAlbum] = useState<{ id: number; name: string; description?: string } | null>(null);
   const [importMode, setImportMode] = useState<'archive' | 'vidara' | null>(null);
-  const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
   const [completedNotice, setCompletedNotice] = useState<CompletedJobNotice | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -532,11 +531,27 @@ export default function VaultPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <DashboardShell title="Vault" description="Manage archived media, albums, and exports.">
+    <DashboardShell
+      title="Vault"
+      description="Manage archived media, albums, and exports."
+      actions={(
+        <div className="flex max-w-full flex-wrap justify-end gap-2">
+          <button type="button" onClick={() => setImportMode('archive')} className="flex items-center gap-1.5 rounded-xl glass-panel px-3.5 py-1.5 text-xs font-bold text-slate-200 transition-all hover:bg-slate-800/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+            <IconUpload className="h-3.5 w-3.5 text-emerald-400" /> Import Archive
+          </button>
+          <button type="button" onClick={() => setImportMode('vidara')} className="flex items-center gap-1.5 rounded-xl glass-panel px-3.5 py-1.5 text-xs font-bold text-slate-200 transition-all hover:bg-slate-800/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+            <IconUpload className="h-3.5 w-3.5 text-emerald-400" /> Import Vidara
+          </button>
+          <button type="button" onClick={() => refreshData(true)} disabled={isRefreshing} aria-label={isRefreshing ? 'Refreshing library' : 'Refresh library'} className="flex h-8 w-8 items-center justify-center rounded-xl glass-panel text-slate-400 transition-all hover:bg-slate-800/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-50">
+            <IconRefresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+          </button>
+        </div>
+      )}
+    >
       {/* 2. Main Vault Dashboard Container */}
-      <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
+      <main className="vault-page flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
         
-        {/* Status & Quick Action Header Row */}
+         {/* Status Header Row */}
         <div className="w-full flex justify-between items-center max-w-7xl">
           {/* Live System Heartbeat Pill */}
           <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-slate-800/60 transition-colors cursor-default select-none border border-white/[0.08] shadow-2xs">
@@ -557,40 +572,11 @@ export default function VaultPage() {
             </span>
           </div>
 
-          {/* Action Tools */}
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => setImportMode('archive')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
-            >
-              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Import Archive</span>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setImportMode('vidara')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
-            >
-              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Import Vidara</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => refreshData(true)}
-              disabled={isRefreshing}
-              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-slate-800/80 text-slate-400 hover:text-white border border-white/[0.08] hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 cursor-pointer disabled:opacity-50"
-              title="Perbarui data library"
-            >
-              <IconRefresh className={`w-3.5 h-3.5 text-slate-300 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-          </div>
         </div>
 
         {/* 3. 4-Column Bento Metric Ribbon (SaaS Telemetry) */}
-        <section className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="vault-metrics w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Aset Media */}
           <div className="p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md">
             <div className="p-5 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] flex flex-col justify-between h-full">
@@ -723,7 +709,7 @@ export default function VaultPage() {
           </div>
         </section>
 
-        <section className="w-full max-w-7xl rounded-3xl border border-white/[0.08] bg-slate-950/55 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
+        <section className="vault-activity w-full max-w-7xl rounded-3xl border border-white/[0.08] bg-slate-950/55 p-1.5 shadow-2xl shadow-black/20 backdrop-blur-xl">
           <div className="rounded-[1.35rem] border border-white/[0.06] bg-slate-900/55 p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
@@ -760,7 +746,7 @@ export default function VaultPage() {
         </section>
 
         {/* 4. Universal SaaS Command & Filter Island */}
-        <section className="w-full max-w-7xl p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-2xl backdrop-blur-xl flex flex-col gap-3">
+        <section className="vault-controls w-full max-w-7xl p-1.5 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-2xl backdrop-blur-xl flex flex-col gap-3">
           <div className="p-3 sm:p-4 rounded-xl bg-slate-950/50 border border-white/[0.06] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
             
             {/* Left: View Tabs Switcher (Segmented Control) */}
@@ -1133,12 +1119,6 @@ export default function VaultPage() {
         onClose={() => setImportMode(null)}
         onSuccess={() => refreshData(true)}
         mode={importMode || 'archive'}
-      />
-
-      {/* 10. Adapters & Health Drawer */}
-      <AdapterHealthDrawer
-        isOpen={isAdaptersDrawerOpen}
-        onClose={() => setIsAdaptersDrawerOpen(false)}
       />
 
       {/* 11. Toast Notifications */}

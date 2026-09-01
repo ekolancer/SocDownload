@@ -43,6 +43,11 @@ html {
   background-color: #071221;
   color: #f8fafc;
   color-scheme: dark;
+  --obsidian: #080b10;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a, button { transition-timing-function: cubic-bezier(.22, 1, .36, 1); }
 }
 
 body {

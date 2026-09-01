@@ -1,0 +1,80 @@
+
+.settings-page {
+  --settings-surface: rgba(10, 16, 25, 0.88);
+  --settings-surface-raised: rgba(16, 24, 36, 0.94);
+  --settings-line: rgba(148, 163, 184, 0.16);
+  --settings-muted: #9aa8bb;
+  background-color: #070a0f;
+  background-image: radial-gradient(circle at 84% 0%, rgba(16, 185, 129, 0.1), transparent 34rem);
+}
+
+.settings-page > div {
+  max-width: 1120px;
+}
+
+.settings-page section {
+  border-color: var(--settings-line);
+  border-radius: 1rem;
+  background: var(--settings-surface);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.settings-page section:nth-of-type(2) {
+  background: var(--settings-surface-raised);
+}
+
+.settings-page section > div:first-child,
+.settings-page section > p:first-child {
+  border-color: var(--settings-line);
+}
+
+.settings-page h1 {
+  letter-spacing: -0.055em;
+}
+
+.settings-page h2 {
+  letter-spacing: -0.025em;
+}
+
+.settings-page label {
+  line-height: 1.35;
+}
+
+.settings-input,
+.settings-page [role="listbox"] {
+  border-radius: 0.7rem;
+}
+
+.settings-page button {
+  min-height: 44px;
+  border-radius: 0.7rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+.settings-page button.bg-emerald-300 {
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+}
+
+.settings-page input[type="file"] {
+  min-height: 48px;
+}
+
+.settings-page input[type="file"]::file-selector-button {
+  cursor: pointer;
+}
+
+@media (max-width: 639px) {
+  .settings-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .settings-page section {
+    padding: 1.125rem;
+  }
+
+  .settings-page h1 {
+    font-size: 2.75rem;
+  }
+}
