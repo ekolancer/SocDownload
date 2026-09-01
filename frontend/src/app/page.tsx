@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Navbar } from '@/components/layout/Navbar';
+import { DashboardShell } from '@/components/layout/DashboardShell';
 import { DownloadStudio } from '@/components/studio/DownloadStudio';
 import { AutoSyncCard } from '@/components/studio/AutoSyncCard';
 import { JobPipeline, JobRow, JobStats } from '@/components/studio/JobPipeline';
-import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
 import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
@@ -13,7 +12,6 @@ import Link from 'next/link';
 import { apiError, apiFetch } from '@/lib/api';
 import {
   IconVideoCamera,
-  IconLayers,
   IconRefresh,
   IconUpload,
 } from '@/components/ui/Icons';
@@ -229,76 +227,43 @@ export default function StudioPage() {
   const activeJobsCount = jobStats ? jobStats.active_total : jobs.filter((j) => j.status === 'running' || j.status === 'queued').length;
 
   return (
-    <div className="linear-dark-bg min-h-[100dvh] text-white flex flex-col antialiased selection:bg-emerald-500/30 selection:text-white overflow-x-hidden">
-      
-      {/* Top App Header (Stitch Comp) */}
-      <Navbar
-        backendStatus={backendStatus}
-        mediaCount={mediaCount}
-        activeJobsCount={activeJobsCount}
-        queueStats={jobStats}
-        onOpenImport={() => setImportMode('archive')}
-        onOpenAdapters={() => setIsAdaptersDrawerOpen(true)}
-        onRefresh={() => refreshData(true)}
-        isRefreshing={isRefreshing}
-      />
-
-      {/* Main Studio Container */}
-      <main className="flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-10">
-        
-        {/* Status & Import Header Row */}
-        <div className="w-full flex justify-between items-center max-w-4xl">
-          {/* Live System Heartbeat Pill */}
-          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-full hover:bg-slate-800/60 transition-colors cursor-default select-none border border-white/[0.08] shadow-2xs">
-            <span className="relative flex h-2.5 w-2.5">
-              {backendStatus === 'ok' ? (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                </>
-              ) : backendStatus === 'loading' ? (
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400 animate-pulse" />
-              ) : (
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
-              )}
-            </span>
-            <span className="text-xs text-slate-300 font-bold font-mono">
-              {backendStatus === 'ok' ? 'System Online' : backendStatus === 'loading' ? 'Connecting...' : 'System Offline'}
-            </span>
-          </div>
-
-          <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => setImportMode('archive')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
-            >
-              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Import Archive</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setImportMode('vidara')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl glass-panel text-slate-200 hover:bg-slate-800/80 hover:text-white border border-white/[0.08] hover:shadow-xs transition-all active:scale-95 text-xs font-bold cursor-pointer"
-            >
-              <IconUpload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Import Vidara</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => refreshData(true)}
-              disabled={isRefreshing}
-              className="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:bg-slate-800/80 text-slate-400 hover:text-white border border-white/[0.08] hover:shadow-xs hover:rotate-180 transition-all duration-500 active:scale-95 cursor-pointer disabled:opacity-50"
-              title="Sync library"
-            >
-              <IconRefresh className={`w-3.5 h-3.5 text-slate-300 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-          </div>
+    <DashboardShell
+      title="Studio"
+      description="High-performance media ingestion & archiving pipeline."
+      actions={(
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setImportMode('archive')}
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-slate-200 transition-all hover:bg-white/[0.08] hover:text-white"
+          >
+            <IconUpload className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Import Archive</span>
+            <span className="sm:hidden">Import</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setImportMode('vidara')}
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-slate-200 transition-all hover:bg-white/[0.08] hover:text-white"
+          >
+            <IconUpload className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Import Vidara</span>
+            <span className="sm:hidden">Vidara</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => refreshData(true)}
+            disabled={isRefreshing}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 text-slate-400 transition hover:border-cyan-400/40 hover:bg-white/[0.05] hover:text-cyan-300 disabled:opacity-50"
+            aria-label={isRefreshing ? 'Refreshing studio' : 'Refresh studio'}
+            title="Refresh pipeline"
+          >
+            <IconRefresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
         </div>
-
-
+      )}
+    >
+      <div className="flex flex-col items-center w-full max-w-[1440px] mx-auto py-2 gap-8">
         {/* Hero Section */}
         <DownloadStudio
           onQueueDownload={handleQueueDownload}
@@ -307,8 +272,6 @@ export default function StudioPage() {
           jobs={jobs}
         />
 
-
-
         {/* Instagram Auto-Sync Automation Card */}
         <div className="w-full max-w-4xl">
           <AutoSyncCard
@@ -316,7 +279,6 @@ export default function StudioPage() {
             onSyncComplete={() => refreshData(true)}
           />
         </div>
-
 
         {/* Recent Downloads Section */}
         {recentMedia.length > 0 && (
@@ -356,11 +318,11 @@ export default function StudioPage() {
                           src={previewUrl}
                           alt={item.caption || 'Recent Media'}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                           loading="lazy"
-                           decoding="async"
-                           width={firstFile?.width || 480}
-                           height={firstFile?.height || 270}
-                         />
+                          loading="lazy"
+                          decoding="async"
+                          width={firstFile?.width || 480}
+                          height={firstFile?.height || 270}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-slate-500 font-mono">
                           No preview
@@ -400,7 +362,6 @@ export default function StudioPage() {
                 );
               })}
             </div>
-
           </section>
         )}
 
@@ -412,28 +373,12 @@ export default function StudioPage() {
           onClearJobs={handleClearJobs}
           onDeleteJob={handleDeleteJob}
         />
-
-      </main>
-
-      {/* Footer (Shared Component) */}
-      <footer className="glass-panel w-full py-6 mt-auto border-t-0 shadow-[0_-8px_32px_0_rgba(31,38,135,0.07)]">
-        <div className="flex flex-col md:flex-row justify-between items-center px-6 max-w-[1440px] mx-auto gap-4">
-          <div className="font-medium text-xs tracking-wider text-slate-600 uppercase">
-            © 2024 MediaVault Studio. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      </div>
 
       {/* Lightbox Modal on Home */}
       <MediaLightboxModal
         item={lightboxItem}
         onClose={() => setLightboxItem(null)}
-      />
-
-      {/* Adapter Health Drawer */}
-      <AdapterHealthDrawer
-        isOpen={isAdaptersDrawerOpen}
-        onClose={() => setIsAdaptersDrawerOpen(false)}
       />
 
       {/* Archive Import Modal */}
@@ -449,6 +394,6 @@ export default function StudioPage() {
         notice={completedNotice}
         onClose={() => setCompletedNotice(null)}
       />
-    </div>
+    </DashboardShell>
   );
 }

@@ -549,7 +549,7 @@ export default function VaultPage() {
       )}
     >
       {/* 2. Main Vault Dashboard Container */}
-      <main className="vault-page flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 py-8 gap-8">
+      <div className="vault-page flex-grow flex flex-col items-center w-full max-w-[1440px] mx-auto py-2 gap-8">
         
          {/* Status Header Row */}
         <div className="w-full flex justify-between items-center max-w-7xl">
@@ -1071,7 +1071,7 @@ export default function VaultPage() {
             />
           )}
         </section>
-      </main>
+      </div>
 
       {/* 6. Floating Glass Batch Action Bar (Agency Double-Bezel Island) */}
       <BatchActionBar

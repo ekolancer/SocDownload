@@ -1,36 +1,89 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { DashboardSidebar } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
+import { CommandPalette } from '@/components/modals/CommandPalette';
+import { useLayoutStore } from '@/lib/useLayoutStore';
+import { useDashboardShortcuts } from '@/lib/useDashboardShortcuts';
 
-export function DashboardShell({ title, description, actions, children }: { title: string; description?: string; actions?: ReactNode; children: ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [adaptersOpen, setAdaptersOpen] = useState(false);
+interface DashboardShellProps {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}
 
+export function DashboardShell({
+  title,
+  description,
+  actions,
+  children,
+}: DashboardShellProps) {
+  const {
+    sidebarCollapsed,
+    mobileSidebarOpen,
+    closeMobileSidebar,
+    adaptersDrawerOpen,
+    closeAdaptersDrawer,
+  } = useLayoutStore();
+
+  // Mount global keyboard navigation & command palette shortcuts
+  useDashboardShortcuts();
+
+  // Lock body scroll when mobile drawer is open
   useEffect(() => {
-    if (!mobileOpen) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
-    document.addEventListener('keydown', close);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', close); document.body.style.overflow = ''; };
-  }, [mobileOpen]);
-
-  useEffect(() => {
-    if (!mobileOpen) triggerRef.current?.focus();
-  }, [mobileOpen]);
+    if (mobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileSidebarOpen]);
 
   return (
-    <div className="linear-dark-bg min-h-screen p-2 text-white sm:p-4 md:p-6">
-      <DashboardSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onOpenAdapters={() => setAdaptersOpen(true)} />
-      {mobileOpen && <button type="button" aria-label="Close dashboard menu" className="fixed inset-0 z-30 bg-black/60 md:hidden" onClick={() => setMobileOpen(false)} />}
-      <div className="min-h-[calc(100vh-1rem)] overflow-hidden rounded-3xl border border-white/[0.1] bg-[#0b0e13]/90 shadow-[0_24px_80px_-24px_rgba(0,0,0,.9)] transition-[margin] duration-200 sm:min-h-[calc(100vh-2rem)] md:ml-64" data-dashboard-content>
-        <DashboardHeader title={title} description={description} actions={actions} menuOpen={mobileOpen} onOpenMenu={() => setMobileOpen(true)} triggerRef={triggerRef} />
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 md:px-8">{children}</main>
+    <div className="min-h-screen bg-[#070b10] text-white selection:bg-cyan-500/30 selection:text-white">
+      {/* 1. Collapsible Sidebar */}
+      <DashboardSidebar />
+
+      {/* 2. Mobile Backdrop */}
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          className="fixed inset-0 z-30 bg-black/70 backdrop-blur-xs transition-opacity md:hidden"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
+      {/* 3. Main Dynamic Content View (Margin dynamically synchronized with sidebar state) */}
+      <div
+        className={`flex min-h-screen flex-col transition-[margin] duration-300 ease-in-out ${
+          sidebarCollapsed ? 'md:ml-[76px]' : 'md:ml-72'
+        }`}
+      >
+        {/* Header */}
+        <DashboardHeader
+          title={title}
+          description={description}
+          actions={actions}
+        />
+
+        {/* Primary Page Landmark */}
+        <main className="mx-auto w-full max-w-[1440px] flex-grow px-4 py-6 sm:px-6 md:px-8">
+          {children}
+        </main>
       </div>
-      <AdapterHealthDrawer isOpen={adaptersOpen} onClose={() => setAdaptersOpen(false)} />
+
+      {/* 4. Global Modals & Drawers */}
+      <CommandPalette />
+      <AdapterHealthDrawer
+        isOpen={adaptersDrawerOpen}
+        onClose={closeAdaptersDrawer}
+      />
     </div>
   );
 }
