@@ -102,8 +102,10 @@ export function DashboardSidebar() {
         {/* Top: Header & Brand */}
         <div>
           <div
-            className={`mb-6 flex items-center gap-2 px-1.5 ${
-              sidebarCollapsed ? 'justify-center' : 'justify-between'
+            className={`mb-6 flex items-center ${
+              sidebarCollapsed
+                ? 'flex-col gap-3 justify-center'
+                : 'justify-between px-1.5'
             }`}
           >
             <Link
@@ -133,7 +135,7 @@ export function DashboardSidebar() {
               onClick={toggleSidebar}
               aria-label={sidebarCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
               aria-expanded={!sidebarCollapsed}
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-all hover:border-cyan-400/40 hover:bg-white/[0.05] hover:text-white md:flex"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-all hover:border-cyan-400/40 hover:bg-white/[0.05] hover:text-white cursor-pointer"
               title={sidebarCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
             >
               {sidebarCollapsed ? (

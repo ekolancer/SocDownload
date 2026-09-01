@@ -45,7 +45,7 @@ export function DashboardShell({
   }, [mobileSidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-[#070b10] text-white selection:bg-cyan-500/30 selection:text-white">
+    <div className="linear-dark-bg min-h-screen text-white selection:bg-cyan-500/30 selection:text-white">
       {/* 1. Collapsible Sidebar */}
       <DashboardSidebar />
 
