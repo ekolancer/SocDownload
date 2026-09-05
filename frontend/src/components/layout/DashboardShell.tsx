@@ -1,6 +1,7 @@
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { AdapterHealthDrawer } from '@/components/modals/AdapterHealthDrawer';
@@ -21,6 +22,7 @@ export function DashboardShell({
   actions,
   children,
 }: DashboardShellProps) {
+  const router = useRouter();
   const {
     sidebarCollapsed,
     mobileSidebarOpen,
@@ -31,6 +33,24 @@ export function DashboardShell({
 
   // Mount global keyboard navigation & command palette shortcuts
   useDashboardShortcuts();
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        router.replace('/login');
+      }, 300000);
+    };
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach((event) => window.addEventListener(event, reset));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((event) => window.removeEventListener(event, reset));
+    };
+  }, [router]);
 
   // Lock body scroll when mobile drawer is open
   useEffect(() => {

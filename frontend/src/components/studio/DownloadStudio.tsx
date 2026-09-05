@@ -243,7 +243,7 @@ export function DownloadStudio({
           onSubmit={handleSubmit}
           className="w-full max-w-3xl flex flex-col md:flex-row gap-2.5 bg-slate-950/60 backdrop-blur-md p-2 rounded-2xl relative transition-all focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500/40 border border-white/[0.08] shadow-2xl"
         >
-          <div className="flex-1 flex items-center gap-2 bg-slate-900/60 rounded-xl px-4 py-2.5 border border-white/[0.05] focus-within:bg-slate-900/90 transition-colors">
+          <div className="flex-1 flex items-center gap-2 px-4 py-2.5">
             <input
               type="url"
               required
@@ -255,7 +255,8 @@ export function DownloadStudio({
                 if (errorMsg) setErrorMsg('');
               }}
               placeholder="Paste social media URL here..."
-              className="flex-grow bg-transparent border-none text-white focus:ring-0 focus:outline-none text-sm placeholder:text-slate-500 font-medium disabled:opacity-60"
+              className="flex-grow bg-transparent border-none text-white focus:ring-0 focus:outline-none focus-visible:outline-none text-sm placeholder:text-slate-500 font-medium disabled:opacity-60"
+              style={{ outline: 'none', boxShadow: 'none' }}
             />
 
             {/* Live Auto-Detected Platform Pill */}

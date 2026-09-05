@@ -15,6 +15,8 @@ from ..config import get_settings
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE_NAME = "mediavault_session"
+_login_failures = 0
+_locked_until = 0.0
 
 
 class LoginPayload(BaseModel):
@@ -33,7 +35,8 @@ def _password_ok(password: str, encoded: str) -> bool:
 
 
 def _session_value(secret: str) -> str:
-    payload = f"{int(time.time())}.{int(time.time())}.{secrets.token_urlsafe(32)}"
+    now = int(time.time())
+    payload = f"{now}.{now}.{secrets.token_urlsafe(32)}"
     signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}.{signature}"
 
@@ -56,12 +59,21 @@ def valid_session(request: Request) -> bool:
 
 @router.post("/login")
 async def login(payload: LoginPayload, request: Request):
-    password = payload.password
+    global _login_failures, _locked_until
     settings = get_settings()
-    if not settings.auth_password_hash or not settings.auth_session_secret or not _password_ok(password, settings.auth_password_hash):
+    now = time.time()
+    if now < _locked_until:
+        retry_after = max(1, int(_locked_until - now))
+        return JSONResponse({"detail": "Too many failed login attempts"}, status_code=429, headers={"Retry-After": str(retry_after)})
+    if not settings.auth_password_hash or not settings.auth_session_secret or not _password_ok(payload.password, settings.auth_password_hash):
+        _login_failures += 1
+        if _login_failures >= settings.auth_login_failure_limit:
+            _locked_until = now + settings.auth_login_lockout_seconds
+            _login_failures = 0
         return JSONResponse({"detail": "Invalid credentials"}, status_code=401)
+    _login_failures = 0
     result = JSONResponse({"authenticated": True})
-    result.set_cookie(COOKIE_NAME, _session_value(settings.auth_session_secret), httponly=True, samesite="lax", secure=request.url.scheme == "https", max_age=settings.auth_session_ttl_seconds, path="/")
+    result.set_cookie(COOKIE_NAME, _session_value(settings.auth_session_secret), httponly=True, samesite="strict", secure=request.url.scheme == "https", max_age=settings.auth_session_ttl_seconds, path="/")
     return result
 
 
