@@ -108,6 +108,13 @@ def list_media(
         return results
 
 
+@router.get("/count")
+def count_media():
+    factory = get_session_factory()
+    with factory() as session:
+        return {"count": session.scalar(select(func.count()).select_from(MediaItem)) or 0}
+
+
 @router.get("/storage")
 def get_storage_stats():
     """Return total media files count, total bytes used on disk, and formatted human size."""

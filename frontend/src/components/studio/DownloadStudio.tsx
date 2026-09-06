@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   IconSparkles,
   IconInstagram,
@@ -62,12 +62,9 @@ export function DownloadStudio({
 
   // Smooth kinetic progress state (0 to 1)
   const [progressFraction, setProgressFraction] = useState<number>(0);
-  const [displayPercent, setDisplayPercent] = useState<number>(0);
   const [progressState, setProgressState] = useState<'idle' | 'queued' | 'running' | 'done' | 'dup' | 'failed'>('idle');
-
-  // Animation frame ref for ultra-smooth 60fps number interpolation
-  const animationFrameRef = useRef<number | null>(null);
-  const targetPercentRef = useRef<number>(0);
+  const reduceMotion = useReducedMotion();
+  const displayPercent = Math.round(progressFraction * 100);
 
   // Live Auto-Detected Platform
   const detectedPlatform = detectPlatform(url);
@@ -76,29 +73,6 @@ export function DownloadStudio({
   const currentJob = singleJobId
     ? jobs.find((j) => j.id === singleJobId) || (activeJob?.id === singleJobId ? activeJob : null)
     : null;
-
-  // Smooth continuous numeric counter interpolation
-  useEffect(() => {
-    targetPercentRef.current = Math.round(progressFraction * 100);
-
-    const updateDisplay = () => {
-      setDisplayPercent((current) => {
-        const target = targetPercentRef.current;
-        if (current === target) return current;
-        const diff = target - current;
-        // Smooth lerp step with minimum delta
-        const step = diff > 0 ? Math.max(1, Math.ceil(diff * 0.15)) : Math.min(-1, Math.floor(diff * 0.15));
-        return Math.min(Math.max(current + step, 0), 100);
-      });
-      animationFrameRef.current = requestAnimationFrame(updateDisplay);
-    };
-
-    animationFrameRef.current = requestAnimationFrame(updateDisplay);
-
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [progressFraction]);
 
   // Synchronize progressFraction and progressState with job lifecycle
   useEffect(() => {
@@ -150,7 +124,7 @@ export function DownloadStudio({
 
   // Organic asymptotic progress advancement while downloading
   useEffect(() => {
-    if (progressState === 'running') {
+    if (progressState === 'running' && !reduceMotion) {
       const interval = setInterval(() => {
         setProgressFraction((prev) => {
           if (prev < 0.88) {
@@ -163,7 +137,7 @@ export function DownloadStudio({
       }, 250);
       return () => clearInterval(interval);
     }
-  }, [progressState]);
+  }, [progressState, reduceMotion]);
 
   const handlePaste = async () => {
     try {
@@ -241,7 +215,7 @@ export function DownloadStudio({
         {/* Ingestion URL Form Container */}
         <form
           onSubmit={handleSubmit}
-          className="w-full max-w-3xl flex flex-col md:flex-row gap-2.5 bg-slate-950/60 backdrop-blur-md p-2 rounded-2xl relative transition-all focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500/40 border border-white/[0.08] shadow-2xl"
+          className="w-full max-w-3xl flex flex-col md:flex-row gap-2.5 bg-slate-950/80 p-2 rounded-2xl relative transition-all focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500/40 border border-white/[0.08] shadow-2xl"
         >
           <div className="flex-1 flex items-center gap-2 px-4 py-2.5">
             <input
@@ -313,11 +287,11 @@ export function DownloadStudio({
                     key="progress-fill"
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: progressFraction }}
-                    transition={{
+                    transition={reduceMotion ? { duration: 0 } : {
                       ease: [0.16, 1, 0.3, 1],
                       duration: progressState === 'done' || progressState === 'dup' ? 0.35 : 0.6,
                     }}
-                    style={{ transformOrigin: 'left center', willChange: 'transform' }}
+                    style={{ transformOrigin: 'left center' }}
                     className={`absolute inset-0 transition-colors duration-500 ${
                       progressState === 'done'
                         ? 'bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 shadow-[0_0_24px_rgba(16,185,129,0.7)]'
@@ -325,11 +299,11 @@ export function DownloadStudio({
                         ? 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 shadow-[0_0_24px_rgba(245,158,11,0.7)]'
                         : progressState === 'failed'
                         ? 'bg-gradient-to-r from-rose-500 to-pink-600'
-                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 shadow-[0_0_20px_rgba(16,185,129,0.6)]'
+                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500'
                     }`}
                   >
                     {/* Continuous Shimmer Light Wave Overlay */}
-                    {isBusy && (
+                    {isBusy && !reduceMotion && (
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer-beam pointer-events-none" />
                     )}
                   </motion.div>

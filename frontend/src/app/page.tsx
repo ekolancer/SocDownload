@@ -36,6 +36,7 @@ export default function StudioPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const prevJobsRef = useRef<JobRow[]>([]);
+  const hasActiveJobsRef = useRef(false);
   const notifiedJobIdsRef = useRef<Set<number>>(new Set());
   const isFetchingRef = useRef(false);
   // Dedup caches to skip re-render when polling returns identical data
@@ -130,6 +131,7 @@ export default function StudioPage() {
 
 
           prevJobsRef.current = jobsData;
+          hasActiveJobsRef.current = jobsData.some((job) => job.status === 'running' || job.status === 'queued');
           // Deduplicate: only update jobs state if data actually changed
           const jobsHash = JSON.stringify(jobsData.map((j: JobRow) => `${j.id}:${j.status}:${j.finished_at}`));
           if (jobsHash !== lastJobsHashRef.current) {
@@ -149,9 +151,25 @@ export default function StudioPage() {
   }, []);
 
   useEffect(() => {
-    refreshData();
-    const interval = setInterval(() => refreshData(false), 5000);
-    return () => clearInterval(interval);
+    let timeout: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    const poll = async () => {
+      if (!document.hidden) await refreshData(false);
+      if (!cancelled) timeout = setTimeout(poll, hasActiveJobsRef.current ? 5000 : 15000);
+    };
+    poll();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        clearTimeout(timeout);
+        poll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [refreshData]);
 
   // Handle Download Queueing (returns { success, jobId })

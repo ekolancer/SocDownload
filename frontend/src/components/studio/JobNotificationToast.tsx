@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   IconCheckCircle,
   IconClose,
@@ -68,6 +68,7 @@ export function JobNotificationToast({
   autoDismissMs = 3500,
 }: JobNotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const reduceMotion = useReducedMotion();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -139,10 +140,10 @@ export function JobNotificationToast({
       {isVisible && (
         <motion.div
           key={`toast-${notice.id}-${notice.status}`}
-          initial={{ opacity: 0, y: 28, scale: 0.94, filter: 'blur(4px)' }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, y: 20, scale: 0.94, filter: 'blur(6px)' }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.94 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.94 }}
+          transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 28 }}
           className={`fixed bottom-6 right-6 z-50 max-w-xs sm:max-w-sm w-full p-3.5 rounded-2xl border backdrop-blur-xl flex flex-col gap-2.5 overflow-hidden select-none ${statusTheme.cardBg}`}
         >
           {/* Main Content Row */}

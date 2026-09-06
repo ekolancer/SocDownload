@@ -84,6 +84,7 @@ function AnimatedNumber({ value }: { value: number }) {
 export default function VaultPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [mediaTotal, setMediaTotal] = useState(0);
   const [albums, setAlbums] = useState<AlbumSummary[]>([]);
   const [creatorsList, setCreatorsList] = useState<CreatorStats[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
@@ -146,8 +147,15 @@ export default function VaultPage() {
         }
       }
 
-      // 3. Fetch Albums
-      const albumsRes = await apiFetch(`${API}/albums`).catch(() => null);
+       // 3. Fetch total media count independently from paginated gallery data
+       const mediaCountRes = await apiFetch(`${API}/media/count`).catch(() => null);
+       if (mediaCountRes && mediaCountRes.ok) {
+         const mediaCountData = await mediaCountRes.json();
+         setMediaTotal(Number(mediaCountData.count) || 0);
+       }
+
+       // 4. Fetch Albums
+       const albumsRes = await apiFetch(`${API}/albums`).catch(() => null);
       if (albumsRes && albumsRes.ok) {
         const albumsData = await albumsRes.json();
         const albumsHash = JSON.stringify(albumsData.map((a: AlbumSummary) => `${a.id}:${a.name}:${a.items_count}`));
@@ -590,7 +598,7 @@ export default function VaultPage() {
               </div>
               <div className="mt-3">
                 <span className="text-3xl font-bold font-mono tracking-tight text-white">
-                  <AnimatedNumber value={media.length} />
+                  <AnimatedNumber value={mediaTotal} />
                 </span>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-slate-400">
                   <span>{photoCount} Foto</span>

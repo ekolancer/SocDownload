@@ -66,7 +66,7 @@ export default function ConsolePage() {
   const [connection, setConnection] = useState<Connection>('connecting');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
-  const tailRef = useRef<HTMLDivElement>(null);
+  const eventBodyRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function ConsolePage() {
       try {
         const history = await apiFetch(`${HISTORY_URL}?limit=500`);
         if (!history.ok) throw new Error(`History unavailable (${history.status})`);
-        if (active) setEvents(normalize(await history.json()).slice(-MAX_EVENTS));
+        if (active) setEvents(normalize(await history.json()).reverse().slice(-MAX_EVENTS));
 
         controller = new AbortController();
         const response = await apiFetch(STREAM_URL, { headers: { Accept: 'text/event-stream' }, signal: controller.signal });
@@ -134,8 +134,16 @@ export default function ConsolePage() {
   }), [events, source, level, code, search]);
 
   useEffect(() => {
-    if (follow) tailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const body = eventBodyRef.current;
+    if (follow && body) body.scrollTop = body.scrollHeight;
   }, [filtered.length, follow]);
+
+  function handleEventScroll() {
+    const body = eventBodyRef.current;
+    if (!body) return;
+    const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 24;
+    if (follow !== atBottom) setFollow(atBottom);
+  }
 
   async function copy(text: string) {
     if (!text) return;
@@ -196,7 +204,7 @@ export default function ConsolePage() {
               <span>SOURCE</span>
               <span>MESSAGE</span>
             </div>
-            <div className="event-body flex-1 min-h-0 overflow-y-auto">
+            <div ref={eventBodyRef} onScroll={handleEventScroll} className="event-body flex-1 min-h-0 overflow-y-auto">
               {filtered.length === 0 && <div className="empty-state">NO MATCHING EVENTS</div>}
               {filtered.map((event, index) => {
                 const timestamp = value(event, 'timestamp', 'time', 'created_at');
@@ -224,7 +232,6 @@ export default function ConsolePage() {
                   </details>
                 );
               })}
-              <div ref={tailRef} />
             </div>
           </div>
         </section>
