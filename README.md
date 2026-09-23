@@ -406,7 +406,16 @@ Setelah perubahan backend, frontend, atau `.env`, jalankan dari PowerShell:
 Set-Location C:\laragon\www\Scrapper
 Set-ExecutionPolicy -Scope Process Bypass
 Stop-ScheduledTask -TaskName "MediaVault Production" -ErrorAction SilentlyContinue
+Get-Process node,python,caddy -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Seconds 3
 .\run-production.ps1 -SkipInstall -InstallTask
+```
+
+Verifikasi setelah deployment:
+
+```powershell
+Get-ScheduledTaskInfo -TaskName "MediaVault Production"
+Get-NetTCPConnection -LocalPort 80,3000,8000 -State Listen
 ```
 
 Penjelasan tiap command:
@@ -414,8 +423,12 @@ Penjelasan tiap command:
 - `Set-Location C:\laragon\www\Scrapper`: pindah ke root project agar script, `.env`, database, frontend, dan path relatif ditemukan dengan benar.
 - `Set-ExecutionPolicy -Scope Process Bypass`: mengizinkan script PowerShell pada sesi terminal saat ini saja. Setting kembali normal setelah terminal ditutup.
 - `Stop-ScheduledTask ...`: menghentikan task production lama sebelum build/restart, mencegah dua instance memakai port atau database yang sama.
+- `Get-Process node,python,caddy ...`: menghentikan proses backend, frontend, dan Caddy lama yang mungkin masih memakai port production.
+- `Start-Sleep -Seconds 3`: memberi waktu proses lama benar-benar berhenti sebelum deployment baru dimulai.
 - `-SkipInstall`: melewati `pip install` dan `npm ci`. Gunakan ketika hanya code backend/frontend atau `.env` berubah dan dependency tidak berubah.
 - `-InstallTask`: mendaftarkan/update hidden Task Scheduler, menjalankan build frontend, lalu start task production kembali.
+- `Get-ScheduledTaskInfo ...`: memastikan task selesai berjalan; `LastTaskResult` idealnya `0`.
+- `Get-NetTCPConnection ...`: memastikan port Caddy `80`, frontend `3000`, dan backend `8000` sedang listen.
 
 Efek eksekusi:
 

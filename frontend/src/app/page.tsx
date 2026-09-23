@@ -133,7 +133,7 @@ export default function StudioPage() {
           prevJobsRef.current = jobsData;
           hasActiveJobsRef.current = jobsData.some((job) => job.status === 'running' || job.status === 'queued');
           // Deduplicate: only update jobs state if data actually changed
-          const jobsHash = JSON.stringify(jobsData.map((j: JobRow) => `${j.id}:${j.status}:${j.finished_at}`));
+          const jobsHash = JSON.stringify(jobsData.map((j: JobRow) => `${j.id}:${j.status}:${j.finished_at}:${j.progress_percent}:${j.bytes_downloaded}:${j.progress_stage}`));
           if (jobsHash !== lastJobsHashRef.current) {
             lastJobsHashRef.current = jobsHash;
             setJobs(jobsData);

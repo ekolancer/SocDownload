@@ -5,8 +5,10 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
+from collections.abc import Callable
 
 import httpx
 
@@ -64,13 +66,29 @@ class VidaraAdapter(BaseAdapter):
         return data
 
     def resolve(self, url: str) -> ResolvedMedia:
-        data = self._stream_data(url)
+        return self.resolve_from_data(url, self.resolve_data(url))
+
+    def resolve_from_data(self, url: str, data: dict[str, object]) -> ResolvedMedia:
         return ResolvedMedia(platform=self.platform, source_url=url, caption=data.get("title") if isinstance(data.get("title"), str) else None)
 
-    def _download_http(self, stream_url: str, dest_file: str) -> None:
+    def resolve_data(self, url: str) -> dict[str, object]:
+        last_error: Exception | None = None
+        for attempt in range(2):
+            try:
+                return self._stream_data(url)
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                last_error = exc
+                if attempt == 0:
+                    time.sleep(1)
+        assert last_error is not None
+        raise last_error
+
+    def _download_http(self, stream_url: str, dest_file: str, on_progress: Callable[[int, int | None, float | None, int | None], None] | None = None) -> None:
         cap = get_settings().vidara_max_download_bytes
         total = 0
+        started = __import__("time").monotonic()
         with httpx.stream("GET", validate_public_url(stream_url), follow_redirects=True, timeout=30, headers={"User-Agent": "MediaVault"}) as response:
+            total_bytes = int(response.headers.get("content-length", "0")) or None
             validate_public_url(str(response.url))
             response.raise_for_status()
             with open(dest_file, "wb") as output:
@@ -79,10 +97,15 @@ class VidaraAdapter(BaseAdapter):
                     if total > cap:
                         raise RuntimeError("Vidara download exceeds configured byte cap")
                     output.write(chunk)
+                    if on_progress:
+                        elapsed = max(__import__("time").monotonic() - started, 0.001)
+                        speed = total / elapsed
+                        eta = int((total_bytes - total) / speed) if total_bytes and speed > 0 else None
+                        on_progress(total, total_bytes, speed, eta)
 
-    def download(self, url: str, dest_dir: str) -> list[str]:
+    def download(self, url: str, dest_dir: str, on_progress: Callable[[int, int | None, float | None, int | None], None] | None = None, resolved_data: dict[str, object] | None = None) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)
-        data = self._stream_data(url)
+        data = resolved_data or self.resolve_data(url)
         stream_url = str(data["streaming_url"])
         filecode = self.page_pattern.fullmatch(validate_url(url)).group(1)
         if ".m3u8" in urlsplit(stream_url).path.lower():

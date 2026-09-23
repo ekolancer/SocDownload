@@ -137,6 +137,12 @@ def list_jobs(
                 "created_at": _format_dt(j.created_at),
                 "started_at": _format_dt(j.started_at),
                 "finished_at": _format_dt(j.finished_at),
+                "progress_percent": j.progress_percent,
+                "bytes_downloaded": j.bytes_downloaded,
+                "total_bytes": j.total_bytes,
+                "progress_stage": j.progress_stage,
+                "transfer_speed": j.transfer_speed,
+                "eta_seconds": j.eta_seconds,
             }
             for j in jobs
         ]
@@ -203,6 +209,12 @@ def get_job(job_id: int):
             "created_at": job.created_at,
             "started_at": job.started_at,
             "finished_at": job.finished_at,
+            "progress_percent": job.progress_percent,
+            "bytes_downloaded": job.bytes_downloaded,
+            "total_bytes": job.total_bytes,
+            "progress_stage": job.progress_stage,
+            "transfer_speed": job.transfer_speed,
+            "eta_seconds": job.eta_seconds,
         }
 
 

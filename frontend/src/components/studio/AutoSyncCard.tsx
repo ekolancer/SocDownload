@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/api';
+import React, { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 import {
   IconInstagram,
   IconRefresh,
@@ -9,7 +9,7 @@ import {
   IconCheckCircle,
   IconAlertCircle,
   IconSparkles,
-} from '@/components/ui/Icons';
+} from "@/components/ui/Icons";
 
 interface AutoSyncConfig {
   platform: string;
@@ -34,7 +34,10 @@ interface AutoSyncCardProps {
 
 const INTERVAL_OPTIONS = [5, 15, 30, 60];
 
-export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardProps) {
+export function AutoSyncCard({
+  onOpenAdapters,
+  onSyncComplete,
+}: AutoSyncCardProps) {
   const [config, setConfig] = useState<AutoSyncConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -43,13 +46,13 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
   // Fetch initial config
   const fetchConfig = async () => {
     try {
-      const res = await apiFetch('/api/autosync/config?platform=instagram');
+      const res = await apiFetch("/api/autosync/config?platform=instagram");
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
       }
     } catch (err) {
-      console.error('Failed to load autosync config:', err);
+      console.error("Failed to load autosync config:", err);
     } finally {
       setLoading(false);
     }
@@ -63,11 +66,11 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
   const updateConfig = async (patch: Partial<AutoSyncConfig>) => {
     if (!config) return;
     try {
-      const res = await apiFetch('/api/autosync/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await apiFetch("/api/autosync/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          platform: 'instagram',
+          platform: "instagram",
           ...patch,
         }),
       });
@@ -76,7 +79,7 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
         setConfig(data);
       }
     } catch (err) {
-      console.error('Failed to update autosync config:', err);
+      console.error("Failed to update autosync config:", err);
     }
   };
 
@@ -87,22 +90,24 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
     setSyncFeedback(null);
 
     try {
-      const res = await apiFetch('/api/autosync/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: 'instagram' }),
+      const res = await apiFetch("/api/autosync/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform: "instagram" }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.sync_result) {
         const r = data.sync_result;
-        if (r.status === 'ok') {
+        if (r.status === "ok") {
           setSyncFeedback(
-            `✓ Sync selesai: +${r.enqueued_count} terdownload, ${r.skipped_dup_count || 0} duplikat di-skip`
+            `✓ Sync selesai: +${r.enqueued_count} terdownload, ${r.skipped_dup_count || 0} duplikat di-skip`,
           );
-        } else if (r.status === 'session_expired') {
-          setSyncFeedback('Session expired. Silakan update cookie Instagram di panel adapters.');
+        } else if (r.status === "session_expired") {
+          setSyncFeedback(
+            "Session expired. Silakan update cookie Instagram di panel adapters.",
+          );
         } else {
           setSyncFeedback(`Info: ${r.status}`);
         }
@@ -111,11 +116,11 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
         }
         if (onSyncComplete) onSyncComplete();
       } else {
-        setSyncFeedback('Gagal memulai sinkronisasi.');
+        setSyncFeedback("Gagal memulai sinkronisasi.");
       }
     } catch (err) {
-      console.error('Failed to trigger autosync:', err);
-      setSyncFeedback('Koneksi terputus saat memicu sinkronisasi.');
+      console.error("Failed to trigger autosync:", err);
+      setSyncFeedback("Koneksi terputus saat memicu sinkronisasi.");
     } finally {
       setSyncing(false);
       setTimeout(() => setSyncFeedback(null), 5000);
@@ -129,27 +134,28 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
   }
 
   const isEnabled = config?.enabled ?? false;
-  const isSessionExpired = config?.session_expired || config?.last_sync_status === 'session_expired';
+  const isSessionExpired =
+    config?.session_expired || config?.last_sync_status === "session_expired";
 
   // Format GMT+7 time
   const formattedLastSync = (() => {
-    if (!config?.last_sync_at) return 'Belum pernah';
+    if (!config?.last_sync_at) return "Belum pernah";
     let str = config.last_sync_at;
-    if (!str.includes('Z') && !str.includes('+') && !/\d{2}-\d{2}$/.test(str)) {
-      str = str + '+07:00';
+    if (!str.includes("Z") && !str.includes("+") && !/\d{2}-\d{2}$/.test(str)) {
+      str = str + "+07:00";
     }
     const d = new Date(str);
     const validDate = isNaN(d.getTime()) ? new Date(config.last_sync_at) : d;
     return (
       validDate
-        .toLocaleTimeString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
+        .toLocaleTimeString("id-ID", {
+          timeZone: "Asia/Jakarta",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
           hour12: false,
         })
-        .replace(/\./g, ':') + ' WIB'
+        .replace(/\./g, ":") + " WIB"
     );
   })();
 
@@ -167,7 +173,8 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                 Session Expired, Please Re-login
               </span>
               <span className="text-[11px] text-rose-300 font-medium">
-                Sesi cookie Instagram telah kedaluwarsa. Perbarui cookie di panel Adapters untuk melanjutkan auto-sync.
+                Sesi cookie Instagram telah kedaluwarsa. Perbarui cookie di
+                panel Adapters untuk melanjutkan auto-sync.
               </span>
             </div>
           </div>
@@ -185,10 +192,8 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
 
       {/* Main Compact High-End Glassmorphic Card */}
       <div className="w-full bg-slate-900/60 backdrop-blur-xl rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] border border-white/[0.08]">
-        
         {/* Header Row */}
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
-          
           {/* Platform Identity & Status */}
           <div className="flex items-center gap-2.5">
             {/* Instagram Gradient Refraction Badge */}
@@ -205,20 +210,23 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-mono font-bold border transition-colors ${
                     isEnabled
-                      ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400'
-                      : 'bg-slate-800/60 border-white/10 text-slate-400'
+                      ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-400"
+                      : "bg-slate-800/60 border-white/10 text-slate-400"
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                      isEnabled
+                        ? "bg-emerald-400 animate-pulse"
+                        : "bg-slate-500"
                     }`}
                   />
-                  <span>{isEnabled ? 'Active' : 'Disabled'}</span>
+                  <span>{isEnabled ? "Active" : "Disabled"}</span>
                 </span>
               </div>
               <span className="text-[11px] text-slate-400 font-medium mt-0.5">
-                Otomatis mengunduh postingan tersimpan (Saved Posts) secara berkala
+                Otomatis mengunduh postingan tersimpan (Saved Posts) secara
+                berkala
               </span>
             </div>
           </div>
@@ -234,8 +242,12 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
               aria-label="Jalankan sinkronisasi sekarang"
               title="Jalankan sinkronisasi sekarang"
             >
-              <IconRefresh className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-emerald-400' : 'text-slate-300'}`} />
-              <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Now'}</span>
+              <IconRefresh
+                className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-emerald-400" : "text-slate-300"}`}
+              />
+              <span className="hidden sm:inline">
+                {syncing ? "Syncing..." : "Sync Now"}
+              </span>
             </button>
 
             {/* Master Toggle */}
@@ -243,24 +255,26 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
               type="button"
               role="switch"
               aria-checked={isEnabled}
-              onClick={() => updateConfig({ enabled: !isEnabled, sync_saved: true })}
+              onClick={() =>
+                updateConfig({ enabled: !isEnabled, sync_saved: true })
+              }
               className={`relative inline-flex h-6.5 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
-                isEnabled ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-slate-800'
+                isEnabled
+                  ? "bg-emerald-500 shadow-emerald-500/30"
+                  : "bg-slate-800"
               }`}
             >
               <span
                 className={`pointer-events-none inline-block h-5.5 w-5.5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                  isEnabled ? 'translate-x-5.5' : 'translate-x-0'
+                  isEnabled ? "translate-x-5.5" : "translate-x-0"
                 }`}
               />
             </button>
           </div>
-
         </div>
 
         {/* Body: 2-Column Bento Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          
           {/* 1. Interval Selector (lg:col-span-5) */}
           <div className="lg:col-span-5 flex flex-col justify-between gap-2 p-3 rounded-xl bg-slate-950/50 border border-white/[0.06] backdrop-blur-md shadow-2xs">
             <div className="flex items-center justify-between">
@@ -284,8 +298,8 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                     onClick={() => updateConfig({ interval_minutes: min })}
                     className={`flex-1 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-white text-slate-950 shadow-2xs'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                        ? "bg-white text-slate-950 shadow-2xs"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                     }`}
                   >
                     {min}m
@@ -303,19 +317,14 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                 <span className="font-bold text-slate-400 uppercase tracking-wider">
                   Hasil Sync Terakhir
                 </span>
-                <span className="font-mono font-bold text-slate-300 bg-slate-900/80 px-1.5 py-0.2 rounded border border-white/10 shadow-2xs">
-                  {formattedLastSync}
-                </span>
               </div>
-              <span className="flex items-center gap-1 font-mono font-semibold text-slate-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>WIB</span>
+              <span className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-900/60 border border-white/[0.06] tracking-wider">
+                {formattedLastSync}
               </span>
             </div>
 
             {/* 4 Outcome Metrics: Terbaca, Sukses, Di-skip, Gagal */}
             <div className="grid grid-cols-4 gap-1.5">
-              
               {/* 1. Terbaca (Total Scanned/Discovered) */}
               <div className="flex flex-col items-center justify-center p-1.5 rounded-lg bg-slate-900/80 border border-white/[0.08] text-center shadow-2xs">
                 <span className="text-[8.5px] font-mono uppercase font-bold text-slate-400">
@@ -355,10 +364,8 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
                   {config?.last_failed_count || 0}
                 </span>
               </div>
-
             </div>
           </div>
-
         </div>
 
         {/* Sync Feedback Toast Message */}
@@ -368,7 +375,6 @@ export function AutoSyncCard({ onOpenAdapters, onSyncComplete }: AutoSyncCardPro
             <span>{syncFeedback}</span>
           </div>
         )}
-
       </div>
     </div>
   );

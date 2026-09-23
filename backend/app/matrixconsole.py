@@ -116,6 +116,8 @@ store = EventStore()
 class ConsoleFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         event = getattr(record, "event", {})
+        if record.name == "apscheduler.executors.default" and record.levelno < logging.WARNING:
+            return False
         return event.get("code") != "request_completed"
 
 

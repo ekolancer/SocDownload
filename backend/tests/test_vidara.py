@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 
+import httpx
 import pytest
 
 from backend.app.adapters.vidara import VidaraAdapter
@@ -24,6 +25,17 @@ def test_resolve_validates_embed_and_stream(adapter):
         result = adapter.resolve("https://vidara.to/v/abc_123")
     assert result.caption == "Test"
     assert request.call_args_list[1].kwargs["json"] == {"filecode": "abc_123", "device": "web"}
+
+
+def test_resolve_data_retries_transient_timeout(adapter):
+    page = Mock(text='<iframe src="https://kitchenstories.ink/e/abc"></iframe>')
+    api = Mock()
+    api.json.return_value = {"streaming_url": "https://cdn.example/video.mp4"}
+    timeout = httpx.ReadTimeout("read timeout")
+    with patch.object(adapter, "_request", side_effect=[timeout, page, api]) as request, patch("backend.app.adapters.vidara.validate_public_url", side_effect=lambda value: value), patch("backend.app.adapters.vidara.time.sleep"):
+        result = adapter.resolve_data("https://vidara.to/v/abc")
+    assert result["streaming_url"] == "https://cdn.example/video.mp4"
+    assert request.call_count == 3
 
 
 def test_resolve_rejects_drm(adapter):

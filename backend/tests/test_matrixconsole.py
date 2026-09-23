@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.errors import AppError, error_envelope, map_exception
 from backend.app.main import create_app
-from backend.app.matrixconsole import EventStore, JsonFormatter, redact, store
+from backend.app.matrixconsole import ConsoleFilter, EventStore, JsonFormatter, redact, store
 
 
 def test_error_mapping_and_envelope():
@@ -36,6 +36,14 @@ def test_ring_capacity_and_filters():
     assert events.get(first["id"]) is None
     assert len(events.list()) == 2
     assert [item["message"] for item in events.list(source="worker", severity="error", code="failed")] == ["three"]
+
+
+def test_console_filter_hides_scheduler_info_but_keeps_warnings():
+    console_filter = ConsoleFilter()
+    info = logging.LogRecord("apscheduler.executors.default", logging.INFO, __file__, 1, "tick", (), None)
+    warning = logging.LogRecord("apscheduler.executors.default", logging.WARNING, __file__, 1, "failed", (), None)
+    assert not console_filter.filter(info)
+    assert console_filter.filter(warning)
 
 
 def test_console_auth_and_api():

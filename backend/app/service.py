@@ -223,6 +223,27 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
 
 
 def _sync_process_job(job_id: int) -> None:
+    last_progress_at = 0.0
+
+    def update_progress(bytes_downloaded: int, total_bytes: int | None, speed: float | None, eta_seconds: int | None, stage: str = "downloading") -> None:
+        nonlocal last_progress_at
+        now = __import__("time").monotonic()
+        if now - last_progress_at < 0.5 and total_bytes and bytes_downloaded < total_bytes:
+            return
+        last_progress_at = now
+        factory = get_session_factory()
+        with factory() as progress_session:
+            progress_job = progress_session.get(Job, job_id)
+            if progress_job is None:
+                return
+            progress_job.bytes_downloaded = bytes_downloaded
+            progress_job.total_bytes = total_bytes
+            progress_job.transfer_speed = speed
+            progress_job.eta_seconds = eta_seconds
+            progress_job.progress_stage = stage
+            progress_job.progress_percent = min(99, int(bytes_downloaded * 100 / total_bytes)) if total_bytes else None
+            progress_session.commit()
+
     """Synchronous core job processing running inside a worker thread."""
     factory = get_session_factory()
     with factory() as session:
@@ -252,7 +273,9 @@ def _sync_process_job(job_id: int) -> None:
         existing = existing_by_url(job.url)
         if existing:
             job.status = JobStatus.DUP.value
+            job.progress_stage = "duplicate"
             job.finished_at = now_wib()
+
             job.lease_until = None
             job.lease_token = None
             session.commit()
@@ -261,14 +284,19 @@ def _sync_process_job(job_id: int) -> None:
         # 2. Download to temp dir
         log_download("download_started", f"Download media dari {adapter.platform} dimulai", job_id=job_id, status="running", platform=adapter.platform)
         settings = get_settings()
+        job.progress_stage = "downloading"
+        session.commit()
         media_root = str((ROOT / settings.media_root).resolve())
         temp_dir = tempfile.mkdtemp(prefix="mv_dl_")
         final_files: list[str] = []
         downloaded: list[str] = []
         metadata_path: str | None = None
+        resolved_data = None
 
         try:
-            downloaded = adapter.download(job.url, temp_dir)
+            if adapter.platform == "vidara":
+                resolved_data = adapter.resolve_data(job.url)
+            downloaded = adapter.download(job.url, temp_dir, on_progress=update_progress, resolved_data=resolved_data) if adapter.platform == "vidara" else adapter.download(job.url, temp_dir)
             normalized = []
             for path in downloaded:
                 if Path(path).suffix.lower() in {".mp4", ".ts", ".m2ts"}:
@@ -283,6 +311,9 @@ def _sync_process_job(job_id: int) -> None:
                 log_download("download_failed", f"Download media dari {adapter.platform} gagal: tidak ada file", job_id=job_id, status="failed", error_code="no_files_downloaded", platform=adapter.platform)
                 return
 
+            job.progress_stage = "processing"
+            job.progress_percent = None
+            session.commit()
             hashes = compute_hashes(downloaded)
             first_hash = list(hashes.values())[0] if hashes else None
 
@@ -296,7 +327,10 @@ def _sync_process_job(job_id: int) -> None:
                 return
 
             # 4. Resolve metadata
-            res = adapter.resolve(job.url)
+            if adapter.platform == "vidara":
+                res = adapter.resolve_from_data(job.url, resolved_data or {})
+            else:
+                res = adapter.resolve(job.url)
 
             # 5. Move files
             final_files = organize(
@@ -355,6 +389,8 @@ def _sync_process_job(job_id: int) -> None:
                 session.add(mf)
 
             job.status = JobStatus.DONE.value
+            job.progress_percent = 100
+            job.progress_stage = "done"
             job.finished_at = now_wib()
             job.lease_until = None
             job.lease_token = None

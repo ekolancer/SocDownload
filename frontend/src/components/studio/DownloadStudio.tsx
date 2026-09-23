@@ -87,10 +87,10 @@ export function DownloadStudio({
     if (currentJob) {
       if (currentJob.status === 'queued') {
         setProgressState('queued');
-        setProgressFraction((prev) => Math.max(prev, 0.18));
+        setProgressFraction(0);
       } else if (currentJob.status === 'running') {
         setProgressState('running');
-        setProgressFraction((prev) => Math.max(prev, 0.42));
+        setProgressFraction(currentJob.progress_percent == null ? 0 : currentJob.progress_percent / 100);
       } else if (currentJob.status === 'done') {
         setProgressState('done');
         setProgressFraction(1);
@@ -122,22 +122,6 @@ export function DownloadStudio({
     }
   }, [currentJob, singleJobId, isSubmitting]);
 
-  // Organic asymptotic progress advancement while downloading
-  useEffect(() => {
-    if (progressState === 'running' && !reduceMotion) {
-      const interval = setInterval(() => {
-        setProgressFraction((prev) => {
-          if (prev < 0.88) {
-            // Asymptotic deceleration curve: faster at first, slowing down near 88%
-            const remaining = 0.90 - prev;
-            return prev + remaining * 0.08;
-          }
-          return prev;
-        });
-      }, 250);
-      return () => clearInterval(interval);
-    }
-  }, [progressState, reduceMotion]);
 
   const handlePaste = async () => {
     try {
@@ -182,6 +166,8 @@ export function DownloadStudio({
   };
 
   const isBusy = isSubmitting || progressState === 'queued' || progressState === 'running';
+  const measuredPercent = currentJob?.progress_percent ?? null;
+  const progressLabel = currentJob?.progress_stage === 'processing' ? 'Menyimpan media…' : progressState === 'queued' ? 'Menunggu antrean…' : measuredPercent == null ? 'Mengunduh…' : `Mengunduh ${measuredPercent}%`;
 
   return (
     <section className="w-full max-w-4xl flex flex-col items-center text-center gap-6 pt-2 pb-6 relative">
@@ -346,9 +332,7 @@ export function DownloadStudio({
                   <span className="flex items-center gap-2 font-mono text-white">
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin shrink-0 shadow-xs" />
                     <span className="font-bold tracking-tight">
-                      {progressState === 'queued'
-                        ? 'Connecting...'
-                        : `Downloading ${displayPercent}%`}
+                      {progressLabel}
                     </span>
                   </span>
                 ) : (

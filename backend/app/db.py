@@ -67,6 +67,12 @@ class Job(Base):
     lease_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    progress_percent: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bytes_downloaded: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    progress_stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    transfer_speed: Mapped[float | None] = mapped_column(nullable=True)
+    eta_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class MediaItem(Base):
@@ -219,6 +225,14 @@ MIGRATIONS = {
         "ALTER TABLE media_files ADD COLUMN duration FLOAT",
         "ALTER TABLE media_files ADD COLUMN video_codec VARCHAR(32)",
         "ALTER TABLE media_files ADD COLUMN audio_codec VARCHAR(32)",
+    ),
+    9: (
+        "ALTER TABLE jobs ADD COLUMN progress_percent INTEGER",
+        "ALTER TABLE jobs ADD COLUMN bytes_downloaded INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE jobs ADD COLUMN total_bytes INTEGER",
+        "ALTER TABLE jobs ADD COLUMN progress_stage VARCHAR(32)",
+        "ALTER TABLE jobs ADD COLUMN transfer_speed FLOAT",
+        "ALTER TABLE jobs ADD COLUMN eta_seconds INTEGER",
     ),
 
 }

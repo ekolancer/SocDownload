@@ -29,6 +29,12 @@ export interface JobRow {
   created_at: string;
   started_at?: string | null;
   finished_at?: string | null;
+  progress_percent?: number | null;
+  bytes_downloaded?: number;
+  total_bytes?: number | null;
+  progress_stage?: string | null;
+  transfer_speed?: number | null;
+  eta_seconds?: number | null;
 }
 
 export interface JobStats {
