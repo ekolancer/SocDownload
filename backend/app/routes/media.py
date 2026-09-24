@@ -5,6 +5,9 @@ import tempfile
 import os
 import re
 import zipfile
+import shutil
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -115,9 +118,20 @@ def count_media():
         return {"count": session.scalar(select(func.count()).select_from(MediaItem)) or 0}
 
 
+_storage_cache: tuple[float, dict[str, int | str]] | None = None
+_storage_cache_lock = threading.Lock()
+_STORAGE_CACHE_TTL_SECONDS = 60
+
+
 @router.get("/storage")
 def get_storage_stats():
     """Return total media files count, total bytes used on disk, and formatted human size."""
+    global _storage_cache
+    now = time.monotonic()
+    with _storage_cache_lock:
+        if _storage_cache and now - _storage_cache[0] < _STORAGE_CACHE_TTL_SECONDS:
+            return _storage_cache[1]
+
     settings = get_settings()
     media_root = Path(settings.media_root).resolve()
     if not media_root.is_absolute():
@@ -143,11 +157,18 @@ def get_storage_stats():
     else:
         human_size = f"{total_bytes / (1024 * 1024 * 1024):.2f} GB"
 
-    return {
+    disk = shutil.disk_usage(media_root)
+    result = {
         "total_bytes": total_bytes,
         "total_files": total_files,
         "human_size": human_size,
+        "disk_total_bytes": disk.total,
+        "disk_free_bytes": disk.free,
+        "disk_used_bytes": disk.used,
     }
+    with _storage_cache_lock:
+        _storage_cache = (time.monotonic(), result)
+    return result
 
 
 @router.get("/thumbnails/{file_id}")

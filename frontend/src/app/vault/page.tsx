@@ -89,7 +89,7 @@ export default function VaultPage() {
   const [creatorsList, setCreatorsList] = useState<CreatorStats[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
-  const [storageStats, setStorageStats] = useState<{ total_bytes: number; total_files: number; human_size: string } | null>(null);
+  const [storageStats, setStorageStats] = useState<{ total_bytes: number; total_files: number; human_size: string; disk_total_bytes: number; disk_free_bytes: number; disk_used_bytes: number } | null>(null);
 
   // Navigation & View States
   const [currentTab, setCurrentTab] = useState<VaultTab>('photos');
@@ -635,9 +635,9 @@ export default function VaultPage() {
                         100,
                         Math.max(
                           10,
-                          storageStats?.total_bytes
-                            ? (storageStats.total_bytes / (5 * 1024 * 1024 * 1024)) * 100
-                            : (media.length / 500) * 100
+storageStats?.disk_total_bytes
+                             ? (storageStats.total_bytes / storageStats.disk_total_bytes) * 100
+                             : 0
                         )
                       )}%`,
                     }}

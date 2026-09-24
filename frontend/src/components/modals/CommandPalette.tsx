@@ -211,7 +211,7 @@ export function CommandPalette() {
             <div ref={listRef} className="max-h-[360px] overflow-y-auto p-2">
               {filteredItems.length === 0 ? (
                 <div className="py-10 text-center text-xs text-slate-500">
-                  No matching commands found for <span className="text-white">"{query}"</span>
+                  No matching commands found for <span className="text-white">&quot;{query}&quot;</span>
                 </div>
               ) : (
                 <div className="space-y-1">

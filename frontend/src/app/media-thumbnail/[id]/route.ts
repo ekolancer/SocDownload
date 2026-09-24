@@ -1,11 +1,10 @@
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const token = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
-  if (!token) return new Response('Server authentication is not configured', { status: 500 });
   const { id } = await context.params;
-  const response = await fetch(`http://127.0.0.1:8000/api/media/thumbnails/${encodeURIComponent(id)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const cookie = request.headers.get('cookie');
+  const response = await fetch(`${process.env.BACKEND_INTERNAL_URL || 'http://backend:8000'}/api/media/thumbnails/${encodeURIComponent(id)}`, {
+    headers: cookie ? { cookie } : {},
     cache: 'no-store',
   });
   const headers = new Headers();

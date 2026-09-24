@@ -104,7 +104,8 @@ def create_app() -> FastAPI:
         authorization = request.headers.get("authorization", "")
         token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
         session_valid = auth.valid_session(request)
-        if not session_valid and not compare_digest(token, settings.api_token):
+        token_valid = bool(settings.api_token) and compare_digest(token, settings.api_token)
+        if not session_valid and not token_valid:
             return JSONResponse({"detail": "Unauthorized"}, status_code=401)
         return await call_next(request)
 

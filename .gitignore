@@ -1,5 +1,9 @@
 # MediaVault
 .env
+.env.compose
+.env.runtime
+.env.podman
+secrets/
 data/
 media/
 logs/

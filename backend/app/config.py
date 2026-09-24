@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+import os
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -43,6 +44,18 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
+def _secret_value(value: str, file_env: str) -> str:
+    path = os.getenv(file_env, "")
+    if path:
+        return Path(path).read_text(encoding="utf-8").strip()
+    return value
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    settings.api_token = _secret_value(settings.api_token, "API_TOKEN_FILE")
+    settings.auth_password_hash = _secret_value(settings.auth_password_hash, "AUTH_PASSWORD_HASH_FILE")
+    settings.auth_session_secret = _secret_value(settings.auth_session_secret, "AUTH_SESSION_SECRET_FILE")
+    settings.vault_key = _secret_value(settings.vault_key, "VAULT_KEY_FILE")
+    return settings

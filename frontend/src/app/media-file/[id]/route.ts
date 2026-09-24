@@ -1,15 +1,14 @@
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const token = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
   const { id } = await context.params;
-  const headers = new Headers(token ? { Authorization: `Bearer ${token}` } : {});
+  const headers = new Headers();
   const cookie = request.headers.get('cookie');
   if (cookie) headers.set('cookie', cookie);
   const range = request.headers.get('range');
   if (range) headers.set('Range', range);
 
-  const response = await fetch(`http://127.0.0.1:8000/api/media/files/${encodeURIComponent(id)}`, {
+  const response = await fetch(`${process.env.BACKEND_INTERNAL_URL || 'http://backend:8000'}/api/media/files/${encodeURIComponent(id)}`, {
     headers,
     cache: 'no-store',
   });

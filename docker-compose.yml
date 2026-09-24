@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      DATABASE_URL: sqlite:////app/data/mediavault.db
+      MEDIA_ROOT: /app/media
+      COOKIES_FILE: /app/config/cookies.txt
+      INSTAGRAM_SESSION_FILE: /app/config/instagram-session
+      FFMPEG_PATH: ffmpeg
+      FFPROBE_PATH: ffprobe
+      API_TOKEN_FILE: /run/secrets/api_token
+      AUTH_PASSWORD_HASH_FILE: /run/secrets/auth_password_hash
+      AUTH_SESSION_SECRET_FILE: /run/secrets/auth_session_secret
+      VAULT_KEY_FILE: /run/secrets/vault_key
+    volumes:
+      - ${MEDIAVAULT_DATA_DIR:-./data}:/app/data
+      - ${MEDIAVAULT_MEDIA_DIR:-./media}:/app/media
+      - ${MEDIAVAULT_CONFIG_DIR:-./config}:/app/config
+      - ${MEDIAVAULT_SECRETS_DIR:-./secrets}:/run/secrets:ro
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - mediavault
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - mediavault
+      - cloudflared
+
+networks:
+  mediavault:
+    internal: false
+  cloudflared:
+    external: true
+    name: ${CLOUDFLARED_NETWORK:-mediavault_tunnel}

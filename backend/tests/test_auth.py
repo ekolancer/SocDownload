@@ -12,6 +12,17 @@ def test_api_requires_bearer_token():
         assert client.options('/api/jobs').status_code != 401
 
 
+def test_password_only_auth_rejects_empty_bearer(monkeypatch):
+    from backend.app.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv('API_TOKEN', '')
+    monkeypatch.setenv('AUTH_PASSWORD_HASH', 'pbkdf2_sha256$1$c2FsdA$invalid')
+    monkeypatch.setenv('AUTH_SESSION_SECRET', 'session-secret')
+    with TestClient(create_app()) as client:
+        assert client.get('/api/jobs', headers={'Authorization': 'Bearer '}).status_code == 401
+    get_settings.cache_clear()
+
+
 def test_app_fails_closed_without_token(monkeypatch):
     from backend.app.config import get_settings
     get_settings.cache_clear()

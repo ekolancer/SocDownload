@@ -317,6 +317,83 @@ Get-ScheduledTaskInfo -TaskName "MediaVault Production" | Select-Object LastRunT
 
 Simpan backup database dan media lama sampai verifikasi selesai.
 
+## Docker Desktop deployment
+
+Use Docker Desktop with Linux containers and WSL2. Stop the Windows Task Scheduler deployment before starting containers; do not run both against the same database.
+
+Create `.env.runtime` from `.env.example`, then remove secret values from its container environment. Store each existing secret as a separate file under `secrets\`: `api_token`, `auth_password_hash`, `auth_session_secret`, and `vault_key`. Keep `secrets\` local and never commit it. Set bind mounts to existing Windows directories without moving media:
+
+```powershell
+Copy-Item .env.example .env.runtime
+```
+
+```powershell
+$env:MEDIAVAULT_DATA_DIR = 'C:/laragon/www/Scrapper/data'
+$env:MEDIAVAULT_MEDIA_DIR = 'D:/NAS/Docker/Mediavault/Media'
+$env:MEDIAVAULT_CONFIG_DIR = 'C:/laragon/www/Scrapper/config'
+$env:CLOUDFLARED_NETWORK = 'mediavault_tunnel'
+Copy-Item .env.compose.example .env.compose -ErrorAction SilentlyContinue
+
+# Create once; cloudflared-hub must also join this network:
+podman network exists mediavault_tunnel; if ($LASTEXITCODE -ne 0) { podman network create mediavault_tunnel }
+podman network connect --alias cloudflared-hub mediavault_tunnel cloudflared-hub
+
+podman compose --env-file .env.compose build
+podman compose --env-file .env.compose up -d
+```
+
+`CLOUDFLARED_NETWORK` must be the external Docker network used by `cloudflared-hub`; discover it without exposing tunnel credentials:
+
+```powershell
+podman inspect cloudflared-hub --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}'
+```
+
+In Cloudflare Dashboard, set the tunnel public hostname service to `http://frontend:3000`. LAN clients use `http://<PC-LAN-IP>:3000`; domain clients use the Cloudflare HTTPS hostname. Only frontend port `3000` is published; backend port `8000` remains internal.
+
+Before first start, back up `data/mediavault.db`, `.env.runtime`, `secrets/`, `config/`, and media. Preview path migration on a database copy:
+
+```powershell
+Copy-Item data\mediavault.db data\mediavault.container-test.db
+.\.venv\Scripts\python.exe migrate_media_paths.py `
+  --database data\mediavault.container-test.db `
+  --source-media-root 'D:\NAS\Docker\Mediavault\Media' `
+  --source-config-root 'C:\laragon\www\Scrapper\config' `
+  --target-media-root /app/media `
+  --target-config-root /app/config
+```
+
+Require `missing=0` before `--apply`. Existing database paths must match `/app/media`; if they contain Windows paths, stop and perform the tested path migration on a database copy before production cutover. Keep the Windows deployment stopped during migration.
+
+Operational commands:
+
+```powershell
+podman compose ps
+podman compose logs --tail=100 backend frontend
+podman compose stop
+podman compose down
+```
+
+LAN HTTP is unencrypted. Use Cloudflare HTTPS for routine access. Application login remains required; do not expose backend port `8000`.
+
+## Codebase graph workflow
+
+Graphify output is intentionally ignored by Git (`/graphify-out`). It is generated local analysis, not application source. Install Graphify separately, then enable repository-local hooks:
+
+```powershell
+uv tool install --upgrade graphifyy
+graphify hook install
+graphify hook status
+```
+
+The hooks run Graphify after `git commit` and branch checkout. Generated files remain local and are not committed. Run manually when needed:
+
+```powershell
+graphify update .
+graphify query "How does the download queue work?"
+```
+
+Do not add `graphify-out/` to commits unless a reviewed, versioned architecture snapshot is explicitly required.
+
 ## Production deployment guide
 
 ### Windows local production
