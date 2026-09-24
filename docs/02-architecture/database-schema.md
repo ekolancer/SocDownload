@@ -3,21 +3,17 @@
 > Document Type: Database Schema  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [ERD](../01-requirements/ERD.md), [Data Dictionary](../01-requirements/data-dictionary.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [ERD](../01-requirements/ERD.md), [Data Dictionary](../01-requirements/data-dictionary.md), [LLD](LLD.md)
 
-## Source
+## Source and lifecycle
 
-Schema is defined by SQLAlchemy models in `backend/app/db.py`. SQLite is default. `Base.metadata.create_all()` creates missing tables; `MIGRATIONS` applies versioned indexes and columns through `schema_migrations`.
+`backend/app/db.py` defines SQLAlchemy models. `init_db()` runs `Base.metadata.create_all()` then versioned `MIGRATIONS` recorded in `schema_migrations`. SQLite foreign keys are enabled on connections.
 
 ## Tables
 
-See [ERD physical model](../01-requirements/ERD.md#physical-model) and [Data Dictionary](../01-requirements/data-dictionary.md). The exact source remains authoritative.
+`accounts`, `jobs`, `media_items`, `media_files`, `albums`, `album_media_items`, `platform_adapters`, `app_settings`, and `auto_sync_config` are model tables. `schema_migrations` tracks migration versions.
 
-## Integrity
+Relationships and complete field list: [ERD physical source](../01-requirements/ERD.md) and [Data Dictionary](../01-requirements/data-dictionary.md). Important constraints: unique `(source_url, sha256)`, unique `(album_id, media_item_id)`, unique adapter platform, and foreign keys on media/job and album membership.
 
-SQLite foreign keys are enabled on connections. Album membership has cascade foreign keys and unique `(album_id, media_item_id)`. Media has unique `(source_url, sha256)`. Job and media query indexes are created by model metadata/migrations.
-
-## Operational notes
-
-Back up `data/mediavault.db` before schema changes. Existing migration rollback procedure is `[TBD — confirm with team]`.
+Backup, rollback, and migration recovery procedure: `[TBD — confirm with team]`.

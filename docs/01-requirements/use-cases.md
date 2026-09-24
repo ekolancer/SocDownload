@@ -3,66 +3,51 @@
 > Document Type: Use Cases  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [SRS](SRS.md), [HLD](../02-architecture/HLD.md), [API](../03-technical/api.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [SRS](SRS.md), [HLD](../02-architecture/HLD.md), [API](../03-technical/api.md)
 
 ## Actors
 
-- **User:** local operator.
-- **Scheduler:** periodic autosync trigger.
-- **Platform:** external social-media service.
+Local operator, scheduler, external platform, download engine.
 
 ## UC-001 Download URL
 
-**Related:** [FR-001](SRS.md#functional-requirements), [FR-002](SRS.md#functional-requirements)
+1. Operator submits URL.
+2. API validates and enqueues job.
+3. Worker claims lease and selects registered adapter.
+4. Adapter/engine downloads to staging.
+5. Service hashes, persists metadata/files, and finalizes storage.
+6. Operator polls job/media state.
 
-1. User submits HTTPS URL.
-2. API validates host, credentials, port, and DNS.
-3. System creates queued job.
-4. Worker claims job and selects adapter.
-5. Adapter downloads files.
-6. System hashes, organizes, and stores metadata.
-7. User polls job/vault status.
-
-Failure: invalid URL returns validation error; download failure marks job failed.
+Invalid input returns validation failure; download failure marks job failed.
 
 ## UC-002 Manage vault
 
-**Related:** [FR-003](SRS.md#functional-requirements)
-
-User lists media, filters/paginates, views files, favorites, assigns albums, deletes, or exports.
+Operator lists/filter media, retrieves files/thumbnails, toggles favorites, manages albums, deletes items, and exports data.
 
 ## UC-003 Import/export
 
-**Related:** [FR-004](SRS.md#functional-requirements)
-
-User uploads supported archive data or requests CSV/JSON/ZIP export. Limits apply.
+Operator uploads supported archive data and requests supported export formats. Exact formats and limits are route/config facts; business retention is `[TBD — confirm with team]`.
 
 ## UC-004 Autosync
 
-**Related:** [FR-005](SRS.md#functional-requirements)
-
-Scheduler or user trigger reads Instagram saved posts, deduplicates, and enqueues downloads.
-
-## Flow
+Scheduler or operator triggers Instagram saved-post discovery. Items are deduplicated and enqueued.
 
 ```mermaid
 sequenceDiagram
-  actor User
-  participant API
-  participant Queue
-  participant Worker
-  participant Platform
-  participant DB
-  participant Vault
-  User->>API: Submit URL
-  API->>DB: Create Job
-  API->>Queue: Enqueue Job ID
-  Worker->>DB: Claim lease
-  Worker->>Platform: Download
-  Platform-->>Worker: Files
-  Worker->>Vault: Stage/finalize files
-  Worker->>DB: Store metadata/status
-  User->>API: Poll status
-  API-->>User: Job/media response
+ actor Operator
+ participant API
+ participant DB
+ participant Worker
+ participant Adapter
+ participant FS as Media storage
+ Operator->>API: Submit URL
+ API->>DB: Persist queued job
+ API-->>Operator: Job ID
+ Worker->>DB: Claim lease
+ Worker->>Adapter: Download
+ Adapter-->>Worker: Files/metadata
+ Worker->>FS: Stage/finalize
+ Worker->>DB: Persist status and metadata
+ Operator->>API: Poll job/media
 ```

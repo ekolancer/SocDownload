@@ -3,29 +3,25 @@
 > Document Type: User Guide  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [API](api.md), [Deployment](deployment.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [API](api.md), [Deployment](deployment.md), [SOP](sop.md)
 
 ## Start
 
-1. Configure root `.env` with `API_TOKEN` and `VAULT_KEY`.
-2. Run `run-local.ps1` on Windows or `run-local.sh` on Unix-like systems.
-3. Open `http://127.0.0.1:3000`.
+1. Configure `.env` with valid authentication and storage settings.
+2. Run `run-local.ps1` or `run-local.sh`.
+3. Open the frontend URL emitted by launcher; backend default is `http://127.0.0.1:8000`.
 
-## Download
+## Download and vault
 
-Enter an approved HTTPS social-media URL in Studio and submit. Monitor active jobs; completed items appear in Vault.
-
-## Vault
-
-Use search/filter, pagination, preview, favorite, album actions, delete, and ZIP export. File previews require frontend proxy authentication configured by the launcher.
+Submit approved HTTPS URL in Studio. Monitor jobs. Completed records appear in media list; available actions include filtering, favorites, albums, file/thumbnail preview, deletion, and export.
 
 ## Import and autosync
 
-Use archive import for supported JSON/HTML/TXT inputs. Autosync currently targets Instagram saved posts; Instagram session setup is required for private/saved content.
+Use importer routes for supported archive inputs. Instagram saved-post autosync requires configured session access. Exact input limits and platform availability derive from route/settings code.
 
 ## Troubleshooting
 
-- Backend fails on startup: configure non-placeholder `API_TOKEN`.
-- Media preview returns unauthorized: restart launcher so `frontend/.env.local` matches root `.env`.
-- Instagram session error: clear `INSTAGRAM_SESSION_FILE` or provide a valid Instaloader session file.
+- Startup auth error: replace placeholder token or configure password/session auth.
+- Unauthorized media: verify frontend/backend auth configuration.
+- Adapter failure: inspect adapter health and logs; platform availability may change.

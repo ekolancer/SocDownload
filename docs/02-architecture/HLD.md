@@ -3,35 +3,23 @@
 > Document Type: HLD  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [SRS](../01-requirements/SRS.md), [LLD](LLD.md), [API](../03-technical/api.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [SRS](../01-requirements/SRS.md), [LLD](LLD.md), [API](../03-technical/api.md), [Deployment](../03-technical/deployment.md)
 
-## System shape
-
-MediaVault is a modular monolith: Next.js frontend proxies `/api/*` to FastAPI. FastAPI routes call services, a SQLite-backed job state coordinates an in-process `asyncio.Queue`, and workers invoke platform adapters. Files live under configured media root.
+MediaVault is a modular monolith. FastAPI exposes API routes; a lifespan registers adapters, initializes/recoveries SQLite state, starts scheduler and two workers. Job dispatch uses an in-process queue; job state persists in SQLite; media persists under configured filesystem root.
 
 ```mermaid
 flowchart LR
- Browser --> Next[Next.js]
- Next --> API[FastAPI]
- API --> Routes[Route modules]
- Routes --> Service[Download service]
- Service --> Queue[SQLite state + asyncio queue]
- Queue --> Worker[Worker coroutines]
- Worker --> Adapter[Platform adapters]
- Adapter --> Engines[yt-dlp/gallery-dl/Instaloader/HTTP]
- Service --> DB[(SQLite)]
- Service --> FS[(Media root)]
+ B[Browser/frontend] --> A[FastAPI routes]
+ A --> S[Service]
+ S --> Q[asyncio queue]
+ S --> DB[(SQLite)]
+ Q --> W[2 worker coroutines]
+ W --> AD[Registered adapters]
+ AD --> E[yt-dlp/gallery-dl/Instaloader/HTTP]
+ W --> FS[(MEDIA_ROOT)]
 ```
 
-## Runtime components
+Registered adapters: Instagram, X, Threads, YouTube, Reddit, Pinterest, TikTok, Vidara. Facebook adapter import exists but registration is disabled in `backend/app/main.py`.
 
-- Frontend: `frontend/src/app`, components, shared API helper.
-- API: `backend/app/main.py` and `backend/app/routes`.
-- Domain services: `service.py`, `autosync.py`, `importer.py`.
-- Persistence: `db.py` SQLAlchemy models and migrations.
-- Operations: scheduler, worker, launch scripts, GitHub Actions.
-
-## Security boundary
-
-Default bind is loopback. API routes use single-user Bearer token. Health GET is public. URL validation restricts approved HTTPS hosts and public DNS; fallback HTTP redirects are revalidated. Multi-user auth, CSRF/Origin policy, and production TLS are `[TBD — confirm with team]`.
+Authentication middleware permits `GET /api/health`, `/api/auth*`, `OPTIONS`, and non-API paths; other API routes accept Bearer token or valid session. CORS allows `http://127.0.0.1:3000`. Production TLS, network topology, and multi-user authorization: `[TBD — confirm with team]`.

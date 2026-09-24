@@ -3,18 +3,16 @@
 > Document Type: API Integration  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [HLD](../02-architecture/HLD.md), [API](api.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [HLD](../02-architecture/HLD.md), [API](api.md), [Deployment](deployment.md)
 
-## External integrations
+## External components
 
-- `yt-dlp`: metadata resolution and downloads for supported platforms.
-- `gallery-dl`: media extraction/download for supported platforms.
-- `Instaloader`: Instagram session-based access and saved-post autosync.
-- TikTok fallback: `www.tikwm.com` API and returned media URLs.
+- `yt-dlp`: registered engine dependency for supported downloads.
+- `gallery-dl`: registered engine dependency for supported downloads.
+- `Instaloader`: Instagram session and saved-post autosync.
+- HTTP adapters/fallbacks: adapter source defines target hosts; availability and terms vary.
 
-## Controls
+Registered platforms are defined in `backend/app/main.py`; Facebook registration is disabled. URL validation checks approved HTTPS hosts, ports, and public DNS; redirect/fallback handling is revalidated where implemented.
 
-User URLs are validated before enqueue and worker execution. HTTP fallback URLs use public-DNS and redirect validation. Native engine transport DNS pinning is not available. Cookie/session files are local secrets and must not be committed.
-
-External API availability, rate limits, privacy requirements, and platform terms are `[TBD — confirm with team]`.
+Credentials/cookies/session files are local secrets. External rate limits, privacy/legal requirements, platform terms, and uptime: `[TBD — confirm with team]`.

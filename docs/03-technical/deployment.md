@@ -3,17 +3,12 @@
 > Document Type: Deployment Guide  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [HLD](../02-architecture/HLD.md), [SOP](sop.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [HLD](../02-architecture/HLD.md), [SOP](sop.md), [Portal](../../README.md)
 
 ## Local
 
-Windows: `run-local.ps1`  
-Unix-like: `./run-local.sh`
-
-The launchers create data/media/log directories, prepare `.env`, initialize SQLite, and start backend/frontend on loopback ports 8000/3000.
-
-## Manual development
+Windows: `run-local.ps1`. Unix-like systems: `run-local.sh`. These scripts are repository launchers; inspect them before production use.
 
 ```bash
 python -m venv .venv
@@ -22,14 +17,12 @@ python -m backend.init_db
 python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
-```bash
-cd frontend
-npm ci
-npm run dev
-```
+Frontend setup uses Node.js `>=20.9 <25` and scripts from `frontend/package.json`: `npm ci`, `npm run dev`, `npm run build`, and `npm run start`.
+
+## Runtime prerequisites
+
+Configure non-placeholder auth plus `DATABASE_URL`, `MEDIA_ROOT`, and optional engine/session settings. Default backend bind is loopback. Do not expose backend port directly without reviewed network/TLS controls.
 
 ## Production
 
-No Dockerfile, reverse-proxy configuration, process manager configuration, TLS configuration, or production topology exists in the repository. Ubuntu/Nginx deployment is `[TBD — confirm with team]`; do not infer production readiness from local scripts.
-
-Before exposure: configure strong secrets, rotate cookie/session material, add TLS, restrict network access, define backups, and test recovery.
+Repository scan found no Dockerfile, reverse proxy config, process manager config, or TLS config. Ubuntu/Nginx topology, DNS, backup/restore, monitoring, and rollback: `[TBD — confirm with team]`.

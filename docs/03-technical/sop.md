@@ -3,22 +3,24 @@
 > Document Type: Operations SOP  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [Deployment](deployment.md), [API](api.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [Deployment](deployment.md), [API](api.md), [LLD](../02-architecture/LLD.md)
 
-## Daily operation
+## Routine checks
 
-- Check `/api/health` and `/api/health/ready`.
-- Inspect active jobs and failed jobs.
-- Check `logs/backend.log` and `logs/backend-error.log` for actionable errors.
-- Confirm database and media backups according to `[TBD — confirm with team]` retention policy.
+1. Check `GET /api/health` and readiness route.
+2. Review active/failed jobs through API or console.
+3. Inspect application logs without exposing credentials.
+4. Verify database/media backup according to policy `[TBD — confirm with team]`.
+5. Check adapter health after dependency/platform changes.
 
-## Incident response
+## Incident steps
 
-1. Stop launcher.
-2. Preserve logs and database backup.
-3. Record job ID, request ID, timestamp, and platform.
-4. Restart only after identifying configuration or dependency cause.
-5. Reconcile failed jobs and orphan files.
+1. Stop launcher/workers.
+2. Preserve logs, request ID, job ID, timestamp, and platform.
+3. Back up database before repair.
+4. Identify configuration/dependency cause.
+5. Restart and verify health, queue, vault, and file access.
+6. Reconcile failed jobs/orphan files using an approved procedure `[TBD — confirm with team]`.
 
-Never print or share `.env`, cookie files, or session files.
+Never print/share `.env`, `secrets/`, cookie, session, or vault-key material.

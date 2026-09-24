@@ -3,33 +3,29 @@
 > Document Type: Flowcharts  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [SRS](SRS.md), [LLD](../02-architecture/LLD.md)
-
-## Download flow
+> Last Updated: 2026-09-24  
+> Related Documents: [SRS](SRS.md), [LLD](../02-architecture/LLD.md), [Use Cases](use-cases.md)
 
 ```mermaid
 flowchart TD
- A[Submit URL] --> B{Validate URL}
- B -- invalid --> C[Return validation error]
+ A[POST /api/jobs] --> B{Validate URL}
+ B -- invalid --> C[422 response]
  B -- valid --> D[Persist queued Job]
- D --> E[Queue Job ID]
- E --> F[Claim lease]
+ D --> E[In-process queue]
+ E --> F[Worker claims lease]
  F --> G[Resolve adapter]
  G --> H[Download to staging]
  H --> I{Files available?}
- I -- no --> J[Mark failed]
+ I -- no --> J[Failed status and cleanup]
  I -- yes --> K[Hash and finalize]
  K --> L[Persist MediaItem and MediaFile]
- L --> M[Mark done]
+ L --> M[Done status]
 ```
-
-## Recovery flow
 
 ```mermaid
 flowchart TD
- A[Application start] --> B[Run migrations]
- B --> C[Find expired queued/running leases]
- C --> D[Reset retryable jobs]
- D --> E[Enqueue recovered IDs]
+ A[Application lifespan] --> B[init_db]
+ B --> C[recover_jobs]
+ C --> D[Register enabled adapters]
+ D --> E[Start scheduler and two workers]
 ```

@@ -1,13 +1,13 @@
-# Technical Documentation
+# Technical Index
 
-> Document Type: Index  
+> Document Type: Technical Index  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [Requirements](../01-requirements/README.md), [Architecture](../02-architecture/README.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [Requirements](../01-requirements/README.md), [Architecture](../02-architecture/README.md)
 
-- [API Documentation](api.md)
+- [API](api.md)
 - [API Integration](api-integration.md)
+- [Deployment](deployment.md)
 - [User Guide](user-guide.md)
 - [Operations SOP](sop.md)
-- [Deployment Guide](deployment.md)

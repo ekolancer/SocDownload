@@ -3,46 +3,30 @@
 > Document Type: BRD  
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
-> Last Updated: 2026-08-27  
-> Related: [SRS](SRS.md), [Use Cases](use-cases.md)
+> Last Updated: 2026-09-24  
+> Related Documents: [SRS](SRS.md), [Use Cases](use-cases.md), [HLD](../02-architecture/HLD.md)
 
-## Purpose
+## Purpose and scope
 
-Provide a local application to download, archive, manage, and export personal social-media media. This purpose is evidenced by project metadata and implemented routes; business stakeholders and success metrics remain `[TBD — confirm with team]`.
+Code identifies MediaVault as a personal social-media downloader. Current scope: submit approved URLs, queue downloads, store media metadata/files, browse/filter/favorite/delete media, manage albums, import/export, inspect adapter health, and configure Instagram saved-post autosync.
 
-## Scope
+## Actors
 
-### In scope
+- Local operator: uses frontend/API.
+- Scheduler: triggers periodic work.
+- External platforms and download engines: supply media.
 
-- Submit media URLs for background download.
-- View jobs and media vault.
-- Manage favorites, albums, and exports.
-- Import archive data.
-- Configure Instagram saved-post autosync.
-- Check adapter and service health.
+Stakeholders, business objectives, success measures, retention, SLA, and legal policy: `[TBD — confirm with team]`.
 
-### Out of scope or conditional
+## Constraints and risks
 
-- Multi-user authorization: `[TBD — confirm with team]`.
-- Facebook adapter is registered disabled.
-- Production deployment/container topology: `[TBD — confirm with team]`.
-- Liked-post sync is not supported by current contract.
-
-## Stakeholders
-
-`[TBD — confirm with team]`.
-
-## Business risks
-
-- Download jobs require reliable recovery.
-- Cookies/session files contain account access material.
-- External platform behavior changes independently.
+SQLite-backed state coordinates an in-process worker queue. External platforms and engines can change. Cookies, session files, tokens, vault keys, and password/session secrets require local protection. Multi-user authorization and tenant isolation are not evidenced.
 
 ## Traceability
 
-| Business need | SRS | Use case |
+| Need | Requirement | Use case |
 |---|---|---|
-| Download media | FR-001 | UC-001 |
-| Manage vault | FR-002 | UC-002 |
-| Import/export | FR-003 | UC-003 |
-| Autosync | FR-004 | UC-004 |
+| Download | [FR-001](SRS.md#functional-requirements) | [UC-001](use-cases.md#uc-001-download-url) |
+| Vault | [FR-003](SRS.md#functional-requirements) | [UC-002](use-cases.md#uc-002-manage-vault) |
+| Import/export | [FR-004](SRS.md#functional-requirements) | [UC-003](use-cases.md#uc-003-importexport) |
+| Autosync | [FR-005](SRS.md#functional-requirements) | [UC-004](use-cases.md#uc-004-autosync) |
