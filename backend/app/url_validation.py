@@ -6,6 +6,14 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, build_opener
 
 
+class HostResolutionError(ValueError):
+    """Transient DNS failure: the host name could not be resolved right now.
+
+    Distinct from a permanent rejection (private address, bad scheme) so callers
+    and the job worker can classify it as retryable.
+    """
+
+
 def validate_public_url(url: str) -> str:
     try:
         parsed = urlsplit(url)
@@ -20,7 +28,7 @@ def validate_public_url(url: str) -> str:
     try:
         addresses = {item[4][0] for item in socket.getaddrinfo(hostname, port or 443, type=socket.SOCK_STREAM)}
     except socket.gaierror as exc:
-        raise ValueError("URL host could not be resolved") from exc
+        raise HostResolutionError("URL host could not be resolved") from exc
     if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
         raise ValueError("URL host resolves to a non-public address")
     return urlunsplit((parsed.scheme.lower(), hostname, parsed.path or "/", parsed.query, ""))
@@ -80,7 +88,7 @@ def validate_url(url: str) -> str:
             for item in socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)
         }
     except socket.gaierror as exc:
-        raise ValueError("URL host could not be resolved") from exc
+        raise HostResolutionError("URL host could not be resolved") from exc
     if not addresses or any(not ipaddress.ip_address(address).is_global for address in addresses):
         raise ValueError("URL host resolves to a non-public address")
 

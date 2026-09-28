@@ -24,6 +24,11 @@ class VidaraAdapter(BaseAdapter):
     page_pattern = re.compile(r"^https://vidara\.to/v/([A-Za-z0-9_-]+)$")
     iframe_pattern = re.compile(r"<iframe\b[^>]*?\bsrc\s*=\s*[\"']([^\"']+)[\"'][^>]*>", re.I)
 
+    # Keys in the stream API payload that signal licensed/DRM playback. Matched
+    # against payload keys only, never against the media URL: a hostname such as
+    # "drm-cdn.example.com" is legitimate and must not be treated as DRM.
+    _DRM_KEYS = frozenset({"drm", "drm_data", "license_url", "license", "widevine", "fairplay", "playready", "clearkey"})
+
     def detect(self, url: str) -> bool:
         return self.page_pattern.fullmatch(url.strip()) is not None
 
@@ -60,10 +65,18 @@ class VidaraAdapter(BaseAdapter):
         stream_url = data.get("streaming_url")
         if not isinstance(stream_url, str) or not stream_url:
             raise RuntimeError("Vidara stream unavailable")
-        if any(token in stream_url.lower() for token in ("drm", "widevine", "fairplay", "playready")):
+        if self._is_drm_payload(data):
             raise RuntimeError("Vidara DRM stream unsupported")
         data["streaming_url"] = validate_public_url(stream_url)
         return data
+
+    @classmethod
+    def _is_drm_payload(cls, data: dict[str, object]) -> bool:
+        """Detect licensed DRM from payload fields, not from the stream URL."""
+        for key, value in data.items():
+            if key.lower() in cls._DRM_KEYS and value:
+                return True
+        return False
 
     def resolve(self, url: str) -> ResolvedMedia:
         return self.resolve_from_data(url, self.resolve_data(url))

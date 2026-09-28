@@ -66,9 +66,38 @@ def organize(
         base = os.path.basename(f)
         target = os.path.join(dest, base)
         if os.path.abspath(f) != os.path.abspath(target):
-            shutil.move(f, target)
+            _move_file(f, target)
         moved.append(target)
     return moved
+
+
+def _move_file(source: str, target: str) -> None:
+    """Move a downloaded file into the media tree.
+
+    The media root may live on a bind mount (e.g. NTFS via WSL) that rejects
+    ``utime``/``chmod``. ``shutil.move`` falls back to ``copy2`` on
+    cross-device moves and then raises ``PermissionError`` from ``copystat``,
+    even though the bytes were copied. Fall back to copy-without-metadata so
+    the transfer still succeeds.
+    """
+    try:
+        shutil.move(source, target)
+    except OSError:
+        # If the move partially succeeded, the bytes already sit at target and
+        # the source is gone (e.g. copystat/utime failed after copy2). Treat
+        # that as success rather than re-copying from a missing source.
+        if os.path.exists(target):
+            if os.path.exists(source):
+                try:
+                    os.remove(source)
+                except OSError:
+                    pass
+            return
+        shutil.copyfile(source, target)
+        try:
+            os.remove(source)
+        except OSError:
+            pass
 
 
 def write_metadata(dest_dir: str, metadata: dict) -> str:

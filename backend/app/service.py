@@ -287,7 +287,11 @@ def _sync_process_job(job_id: int) -> None:
         job.progress_stage = "downloading"
         session.commit()
         media_root = str((ROOT / settings.media_root).resolve())
-        temp_dir = tempfile.mkdtemp(prefix="mv_dl_")
+        # Keep the staging dir on the same filesystem as the media root so the
+        # final move is a cheap rename. Cross-device moves onto bind-mounted
+        # volumes (NTFS via WSL) fail on utime/chmod metadata copy.
+        os.makedirs(media_root, exist_ok=True)
+        temp_dir = tempfile.mkdtemp(prefix=".mv_dl_", dir=media_root)
         final_files: list[str] = []
         downloaded: list[str] = []
         metadata_path: str | None = None

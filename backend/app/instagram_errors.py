@@ -34,6 +34,10 @@ def classify_instagram_error(error: BaseException) -> InstagramErrorCategory:
         return InstagramErrorCategory.SESSION_EXPIRED
     if any(value in text for value in ("bad credentials", "invalid credentials", "badcredentials")):
         return InstagramErrorCategory.INVALID_CREDENTIALS
+    if any(value in text for value in ("could not be resolved", "name resolution", "failed to resolve", "getaddrinfo")):
+        return InstagramErrorCategory.NETWORK_ERROR
+    if any(value in text for value in ("drm", "widevine", "fairplay", "playready", "clearkey")):
+        return InstagramErrorCategory.DOWNLOAD_FAILURE
     if any(value in text for value in ("download", "no files", "no media", "extractor")):
         return InstagramErrorCategory.DOWNLOAD_FAILURE
     if any(value in text for value in ("timeout", "network", "dns", "name or service not known", "connection")):
