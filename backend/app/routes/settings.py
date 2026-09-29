@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 import secrets
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -14,6 +13,7 @@ from ..db import AppSettings, AutoSyncConfig, get_session_factory
 from ..instagram_challenges import InstagramChallengeStore
 from ..instagram_session import InstagramSessionError, InstagramSessionService
 from ..settings_store import SettingsStore
+from ..settings_upload import SettingsFileError, SettingsFileService
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 _STORAGE = ROOT / "config" / "uploads"
@@ -153,25 +153,14 @@ def instagram_disconnect():
 
 @router.post("/upload/{kind}")
 def upload_settings_file(kind: str, file: UploadFile = File(...)):
-    if kind not in _ALLOWED or not file.filename or len(file.filename) > _MAX_NAME:
-        raise HTTPException(status_code=400, detail="Invalid settings file")
-    suffix = Path(file.filename).suffix.lower()
-    if suffix not in _ALLOWED[kind]:
-        raise HTTPException(status_code=400, detail="Unsupported settings file type")
     content = file.file.read(get_settings().max_upload_bytes + 1)
-    if len(content) > get_settings().max_upload_bytes or not content:
-        raise HTTPException(status_code=413, detail="Settings file is too large or empty")
-    if kind == "cookies" and not content.startswith(b"# Netscape HTTP Cookie File"):
-        raise HTTPException(status_code=400, detail="Cookies file must use Netscape format")
-    _STORAGE.mkdir(parents=True, exist_ok=True)
-    path = _STORAGE / f"{kind}-{secrets.token_hex(16)}{suffix}"
-    path.write_bytes(content)
-    session = get_session_factory()()
+    service = SettingsFileService(
+        storage_dir=_STORAGE,
+        settings_store=_settings_store_for(),
+        allowed=_ALLOWED,
+        max_name_length=_MAX_NAME,
+    )
     try:
-        item = _settings_store_for().get_or_create(session)
-        setattr(item, f"{kind}_file", str(path))
-        session.add(item)
-        session.commit()
-        return _settings_store_for().serialize(item)
-    finally:
-        session.close()
+        return service.upload(kind=kind, filename=file.filename, content=content, max_bytes=get_settings().max_upload_bytes)
+    except SettingsFileError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from None

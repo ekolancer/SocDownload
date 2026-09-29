@@ -14,6 +14,10 @@ class SettingsStore:
     def __init__(self, session_factory=None) -> None:
         self._session_factory = session_factory or get_session_factory()
 
+    @property
+    def session_factory(self):
+        return self._session_factory
+
     def _open(self):
         return self._session_factory()
 
