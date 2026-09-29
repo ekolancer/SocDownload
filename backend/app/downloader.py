@@ -24,18 +24,18 @@ def compute_hashes(files: list[str]) -> dict[str, str]:
     return {f: sha256_file(f) for f in files}
 
 
-def existing_by_url(url: str) -> MediaItem | None:
+def existing_by_url(url: str, session_factory=None) -> MediaItem | None:
     from sqlalchemy import select
 
-    factory = get_session_factory()
+    factory = session_factory or get_session_factory()
     with factory() as session:
         return session.scalars(select(MediaItem).where(MediaItem.source_url == url)).first()
 
 
-def existing_by_sha256(sha: str) -> MediaItem | None:
+def existing_by_sha256(sha: str, session_factory=None) -> MediaItem | None:
     from sqlalchemy import select
 
-    factory = get_session_factory()
+    factory = session_factory or get_session_factory()
     with factory() as session:
         return session.scalars(select(MediaItem).where(MediaItem.sha256 == sha)).first()
 

@@ -5,17 +5,24 @@ import logging
 import time
 
 from .db import Job, JobStatus, now_wib
-
+from .jobs import DownloadJob
 
 
 logger = logging.getLogger(__name__)
 
 
 class Worker:
-    def __init__(self, queue: asyncio.Queue[int], n_workers: int = 2, cooldown_seconds: int = 3) -> None:
+    """Async loop that pulls job IDs from the queue and runs ``DownloadJob``.
+
+    Lifecycle ownership (claim, download, dedup, persist, retry) lives in
+    ``DownloadJob``; this module only schedules.
+    """
+
+    def __init__(self, queue: asyncio.Queue[int], n_workers: int = 2, cooldown_seconds: int = 3, download_job: DownloadJob | None = None) -> None:
         self.queue = queue
         self.n_workers = n_workers
         self.cooldown_seconds = cooldown_seconds
+        self.download_job = download_job or DownloadJob()
         self._cooldown_state: dict = {"active": False, "remaining": 0, "next_job_id": None}
         self._has_processed_any: bool = False
 
@@ -38,7 +45,8 @@ class Worker:
             started = time.perf_counter()
             try:
                 from .observability import record_job
-                # If jobs have already been processed, apply the delay before the next job
+
+                # Apply the inter-job cooldown only after the first job.
                 if self._has_processed_any and self.cooldown_seconds > 0:
                     self._cooldown_state["active"] = True
                     self._cooldown_state["next_job_id"] = job_id
@@ -52,58 +60,38 @@ class Worker:
                 self._has_processed_any = True
                 await self._process(job_id)
             except Exception as exc:  # noqa: BLE001
-                logger.exception("worker %s failed job %s: %s", idx, job_id, exc, extra={"event": {"code": "worker_job_failed", "severity": "error", "retryable": False, "job_id": job_id, "worker_id": idx, "operator_message": str(exc), "remediation": "Inspect job input and adapter health."}})
-                await self._set_status(job_id, JobStatus.FAILED, str(exc))
+                logger.exception(
+                    "worker %s failed job %s: %s",
+                    idx,
+                    job_id,
+                    exc,
+                    extra={"event": {"code": "worker_job_failed", "severity": "error", "retryable": False, "job_id": job_id, "worker_id": idx, "operator_message": str(exc), "remediation": "Inspect job input and adapter health."}},
+                )
+                await self._set_failed(job_id, str(exc))
             finally:
                 record_job("completed", time.perf_counter() - started)
                 self.queue.task_done()
 
     async def _process(self, job_id: int) -> None:
-        from .service import process_job
-        from .db import get_session_factory
+        await asyncio.to_thread(self.download_job.process, job_id)
 
-        from .service import claim_job
-
-
-        token = await asyncio.to_thread(claim_job, job_id)
-        if not token:
-            return
-        await process_job(job_id)
-
-    async def _set_status(self, job_id: int, status: JobStatus, error: str | None = None) -> None:
-        from .db import get_session_factory
-        from .service import get_queue
+    async def _set_failed(self, job_id: int, error: str) -> None:
+        """Last-resort guard: ``DownloadJob`` owns state; this only backstops."""
 
         def _update():
-            factory = get_session_factory()
-            with factory() as session:
+            from .db import get_session_factory
+
+            with get_session_factory()() as session:
                 job = session.get(Job, job_id)
-                if job is not None:
-                    job.status = status.value
-                    if error:
-                        job.error = error
-                    if status == JobStatus.FAILED:
-                        from .instagram_errors import InstagramErrorCategory, classify_instagram_error
-
-                        category = classify_instagram_error(job.error or "")
-                        retryable = category == InstagramErrorCategory.NETWORK_ERROR
-                        if retryable and job.attempts < 3:
-                            job.status = JobStatus.QUEUED.value
-                            job.finished_at = None
-                            job.lease_until = None
-                            job.lease_token = None
-                            session.commit()
-                            delay = min(30, 2 ** max(0, job.attempts - 1))
-                            asyncio.get_running_loop().call_later(delay, get_queue().put_nowait, job_id)
-                            return
-                    if status == JobStatus.RUNNING:
-                        job.started_at = now_wib()
-                    if status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.DUP):
-                        job.finished_at = now_wib()
-                        job.lease_until = None
-                        job.lease_token = None
-
-                    session.commit()
+                if job is None or job.status in (JobStatus.DONE.value, JobStatus.DUP.value):
+                    return
+                if job.status == JobStatus.QUEUED.value:
+                    return
+                job.status = JobStatus.FAILED.value
+                job.error = error
+                job.finished_at = now_wib()
+                job.lease_until = None
+                job.lease_token = None
+                session.commit()
 
         await asyncio.to_thread(_update)
-

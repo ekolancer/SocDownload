@@ -1,50 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-import os
-import shutil
-from pathlib import Path
-import tempfile
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy import select, update
 
-from .adapters.registry import detect_platform, registry
-from .config import ROOT, get_settings
-from .db import Job, JobStatus, MediaFile, MediaItem, get_session_factory, now_wib
-from .errors import classify_download_error
+from .adapters.registry import detect_platform
+from .db import Job, JobStatus, get_session_factory, now_wib
 from .url_validation import validate_url
-from .video import classify_media, normalize, probe, thumbnail
-
-from .downloader import (
-    compute_hashes,
-    existing_by_sha256,
-    existing_by_url,
-    organize,
-    write_metadata,
-)
-
-logger = logging.getLogger(__name__)
-
-
-def log_download(code: str, message: str, **event: object) -> None:
-    logger.info(message, extra={"event": {"code": code, "severity": "info", **event}})
-
 
 _queue: asyncio.Queue[int] | None = None
 
-
-def _parse_posted_at(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    for parser in (datetime.fromisoformat, lambda text: datetime.strptime(text, "%Y%m%d")):
-        try:
-            return parser(value)
-        except ValueError:
-            continue
-    return None
+DEFAULT_LEASE_SECONDS = 300
 
 
 def recover_jobs() -> None:
@@ -61,7 +29,12 @@ def recover_jobs() -> None:
         queue.put_nowait(job_id)
 
 
-def claim_job(job_id: int, lease_seconds: int = 300) -> str | None:
+def claim_job(job_id: int, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> str | None:
+    """Claim a queued job by setting it RUNNING with a lease.
+
+    Retained for callers that only need the claim step; ``DownloadJob`` claims
+    internally during ``process``.
+    """
     token = uuid.uuid4().hex
     now = now_wib()
     factory = get_session_factory()
@@ -147,6 +120,8 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
             "job_ids": [],
         }
 
+    from .db import MediaItem
+
     valid_urls: list[str] = []
     skipped_invalid: list[str] = []
     for url in urls:
@@ -157,7 +132,6 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
     urls = valid_urls
     factory = get_session_factory()
     with factory() as session:
-        # Check existing URLs in jobs table (any status)
         existing_job_urls = set(
             session.scalars(
                 select(Job.url).where(
@@ -166,7 +140,6 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
                 )
             ).all()
         )
-        # Check existing URLs in media items table
         existing_media_urls = set(
             session.scalars(select(MediaItem.source_url).where(MediaItem.source_url.in_(urls))).all()
         )
@@ -220,212 +193,3 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
         "skipped_invalid": skipped_invalid,
         "job_ids": job_ids,
     }
-
-
-def _sync_process_job(job_id: int) -> None:
-    last_progress_at = 0.0
-
-    def update_progress(bytes_downloaded: int, total_bytes: int | None, speed: float | None, eta_seconds: int | None, stage: str = "downloading") -> None:
-        nonlocal last_progress_at
-        now = __import__("time").monotonic()
-        if now - last_progress_at < 0.5 and total_bytes and bytes_downloaded < total_bytes:
-            return
-        last_progress_at = now
-        factory = get_session_factory()
-        with factory() as progress_session:
-            progress_job = progress_session.get(Job, job_id)
-            if progress_job is None:
-                return
-            progress_job.bytes_downloaded = bytes_downloaded
-            progress_job.total_bytes = total_bytes
-            progress_job.transfer_speed = speed
-            progress_job.eta_seconds = eta_seconds
-            progress_job.progress_stage = stage
-            progress_job.progress_percent = min(99, int(bytes_downloaded * 100 / total_bytes)) if total_bytes else None
-            progress_session.commit()
-
-    """Synchronous core job processing running inside a worker thread."""
-    factory = get_session_factory()
-    with factory() as session:
-        job = session.get(Job, job_id)
-        if not job:
-            return
-
-        try:
-            job.url = validate_url(job.url)
-        except ValueError as exc:
-            job.status = JobStatus.FAILED.value
-            job.error = str(exc)
-            job.finished_at = now_wib()
-            session.commit()
-            log_download("download_failed", "Download gagal: URL tidak valid", job_id=job_id, status="failed", error_code="invalid_url", retryable=False)
-            return
-
-        adapter = detect_platform(job.url)
-        if not adapter:
-            job.status = JobStatus.FAILED.value
-            job.error = f"unsupported URL: {job.url}"
-            job.finished_at = now_wib()
-            session.commit()
-            return
-
-        # 1. URL-based dedup
-        existing = existing_by_url(job.url)
-        if existing:
-            job.status = JobStatus.DUP.value
-            job.progress_stage = "duplicate"
-            job.finished_at = now_wib()
-
-            job.lease_until = None
-            job.lease_token = None
-            session.commit()
-            return
-
-        # 2. Download to temp dir
-        log_download("download_started", f"Download media dari {adapter.platform} dimulai", job_id=job_id, status="running", platform=adapter.platform)
-        settings = get_settings()
-        job.progress_stage = "downloading"
-        session.commit()
-        media_root = str((ROOT / settings.media_root).resolve())
-        # Keep the staging dir on the same filesystem as the media root so the
-        # final move is a cheap rename. Cross-device moves onto bind-mounted
-        # volumes (NTFS via WSL) fail on utime/chmod metadata copy.
-        os.makedirs(media_root, exist_ok=True)
-        temp_dir = tempfile.mkdtemp(prefix=".mv_dl_", dir=media_root)
-        final_files: list[str] = []
-        downloaded: list[str] = []
-        metadata_path: str | None = None
-        resolved_data = None
-
-        try:
-            if adapter.platform == "vidara":
-                resolved_data = adapter.resolve_data(job.url)
-            downloaded = adapter.download(job.url, temp_dir, on_progress=update_progress, resolved_data=resolved_data) if adapter.platform == "vidara" else adapter.download(job.url, temp_dir)
-            normalized = []
-            for path in downloaded:
-                if Path(path).suffix.lower() in {".mp4", ".ts", ".m2ts"}:
-                    path = normalize(path)
-                normalized.append(path)
-            downloaded = normalized
-            if not downloaded:
-                job.status = JobStatus.FAILED.value
-                job.error = "no_files_downloaded"
-                job.finished_at = now_wib()
-                session.commit()
-                log_download("download_failed", f"Download media dari {adapter.platform} gagal: tidak ada file", job_id=job_id, status="failed", error_code="no_files_downloaded", platform=adapter.platform)
-                return
-
-            job.progress_stage = "processing"
-            job.progress_percent = None
-            session.commit()
-            hashes = compute_hashes(downloaded)
-            first_hash = list(hashes.values())[0] if hashes else None
-
-            # 3. Hash-based dedup
-            if first_hash and existing_by_sha256(first_hash):
-                job.status = JobStatus.DUP.value
-                job.finished_at = now_wib()
-                job.lease_until = None
-                job.lease_token = None
-                session.commit()
-                return
-
-            # 4. Resolve metadata
-            if adapter.platform == "vidara":
-                res = adapter.resolve_from_data(job.url, resolved_data or {})
-            else:
-                res = adapter.resolve(job.url)
-
-            # 5. Move files
-            final_files = organize(
-                media_root,
-                adapter.platform,
-                res.username,
-                res.posted_at,
-                downloaded,
-            )
-
-            # 6. Write sidecar metadata.json
-            dest_dir = os.path.dirname(final_files[0]) if final_files else temp_dir
-            meta_dict = {
-                "platform": adapter.platform,
-                "source_url": job.url,
-                "username": res.username,
-                "caption": res.caption,
-                "posted_at": res.posted_at,
-                "hashtags": res.hashtags,
-                "files": [os.path.basename(f) for f in final_files],
-            }
-            metadata_path = write_metadata(dest_dir, meta_dict)
-
-            # 7. Save DB records
-            item = MediaItem(
-                job_id=job.id,
-                platform=adapter.platform,
-                source_url=job.url,
-                username=res.username,
-                caption=res.caption,
-                posted_at=_parse_posted_at(res.posted_at),
-                hashtags=",".join(res.hashtags) if res.hashtags else None,
-                sha256=first_hash,
-            )
-            session.add(item)
-            session.flush()
-
-            for f, path in zip(downloaded, final_files):
-                mf = MediaFile(
-                    media_item_id=item.id,
-                    path=path,
-                    kind=classify_media(path),
-                    sha256=hashes.get(f),
-                )
-                if mf.kind in {"image", "video"}:
-                    try:
-                        thumb, metadata = thumbnail(path)
-                        mf.thumbnail_path = thumb
-                        mf.width = metadata["width"]
-                        mf.height = metadata["height"]
-                        mf.duration = metadata["duration"]
-                        mf.video_codec = metadata["video_codec"]
-                        mf.audio_codec = metadata["audio_codec"]
-                    except RuntimeError:
-                        pass
-                session.add(mf)
-
-            job.status = JobStatus.DONE.value
-            job.progress_percent = 100
-            job.progress_stage = "done"
-            job.finished_at = now_wib()
-            job.lease_until = None
-            job.lease_token = None
-            session.commit()
-            log_download("download_succeeded", f"Download media dari {adapter.platform} berhasil", job_id=job_id, status="done", platform=adapter.platform, files=len(final_files))
-
-        except Exception as exc:
-            for source, target in zip(downloaded, final_files):
-                if os.path.exists(target) and not os.path.exists(source):
-                    os.makedirs(os.path.dirname(source), exist_ok=True)
-                    shutil.move(target, source)
-            if metadata_path:
-                try:
-                    os.remove(metadata_path)
-                except FileNotFoundError:
-                    pass
-            job.status = JobStatus.FAILED.value
-            job.error = str(exc)
-            job.finished_at = now_wib()
-            job.lease_until = None
-            job.lease_token = None
-            session.commit()
-            error_code, error_message, retryable = classify_download_error(exc)
-            log_download("download_failed", f"Download media dari {adapter.platform} gagal: {error_message}", job_id=job_id, status="failed", platform=adapter.platform, error_code=error_code, retryable=retryable)
-            raise
-
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-async def process_job(job_id: int) -> None:
-    """Offload blocking job processing to thread pool so FastAPI event loop never hangs."""
-    await asyncio.to_thread(_sync_process_job, job_id)
-
