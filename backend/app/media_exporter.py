@@ -21,7 +21,7 @@ class MediaExporter:
     """
 
     def __init__(self, vault: MediaVault | None = None, session_factory=None) -> None:
-        self._session_factory = session_factory or get_session_factory
+        self._session_factory = session_factory or get_session_factory()
         self._vault = vault or MediaVault(session_factory=self._session_factory)
 
     def _items(self, query: MediaQuery):

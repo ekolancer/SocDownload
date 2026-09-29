@@ -73,7 +73,7 @@ class DownloadJob:
         lease_seconds: int = DEFAULT_LEASE_SECONDS,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     ) -> None:
-        self._session_factory = session_factory or get_session_factory
+        self._session_factory = session_factory or get_session_factory()
         self._media_root = media_root
         self._adapter_of = adapter_of or detect_platform
         self._clock = clock

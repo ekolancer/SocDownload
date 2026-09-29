@@ -118,7 +118,7 @@ class MediaVault:
     """
 
     def __init__(self, session_factory=None) -> None:
-        self._session_factory = session_factory or get_session_factory
+        self._session_factory = session_factory or get_session_factory()
 
     # -- reads ------------------------------------------------------------
 
