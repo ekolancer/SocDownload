@@ -76,3 +76,8 @@ export async function toggleFavorite(itemId: number, isFavorite?: boolean): Prom
   if (!res.ok) throw new Error(await apiError(res, "Failed to toggle favorite"));
   return res.json();
 }
+
+export async function deleteMedia(itemId: number): Promise<void> {
+  const res = await apiFetch(`${API}/media/${itemId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await apiError(res, "Failed to delete media"));
+}

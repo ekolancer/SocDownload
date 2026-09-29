@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   batchDeleteMedia,
   batchDownloadZip,
+  deleteMedia,
   fetchMedia,
   fetchMediaCount,
   fetchCreators,
@@ -80,5 +81,18 @@ describe("vault-api URL contract", () => {
     expect(String(url)).toContain("/api/media/7/favorite");
     expect(init?.method).toBe("PATCH");
     expect(result.is_favorite).toBe(true);
+  });
+
+  it("deleteMedia DELETEs /api/media/{id}", async () => {
+    const fetchMock = mockFetch({ json: async () => ({ deleted: true, id: 9 }) });
+    await deleteMedia(9);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/media/9");
+    expect(init?.method).toBe("DELETE");
+  });
+
+  it("deleteMedia throws on failure", async () => {
+    mockFetch({ ok: false, status: 404, json: async () => ({ detail: "Media item not found" }) });
+    await expect(deleteMedia(9)).rejects.toThrow("Media item not found");
   });
 });

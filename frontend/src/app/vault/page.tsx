@@ -17,6 +17,7 @@ import { apiFetch } from '@/lib/api';
 import {
   batchDeleteMedia,
   batchDownloadZip,
+  deleteMedia,
   fetchCreators,
   fetchMedia,
   fetchMediaCount,
@@ -350,16 +351,14 @@ export default function VaultPage() {
   // Single Item Handlers
   const handleDeleteItem = async (id: number) => {
     try {
-      const res = await apiFetch(`${API}/media/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setMedia((prev) => prev.filter((m) => m.id !== id));
-        setSelectedIds((prev) => prev.filter((i) => i !== id));
-        if (selectedCreator) {
-          creatorArchive.removeItem(id);
-        }
-        if (lightboxItem?.id === id) setLightboxItem(null);
-        refreshData(false);
+      await deleteMedia(id);
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      setSelectedIds((prev) => prev.filter((i) => i !== id));
+      if (selectedCreator) {
+        creatorArchive.removeItem(id);
       }
+      if (lightboxItem?.id === id) setLightboxItem(null);
+      refreshData(false);
     } catch (err) {
       console.error('Delete item failed:', err);
     }
