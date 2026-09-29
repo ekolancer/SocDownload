@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import secrets
-import time
 
+from ..instagram_challenges import InstagramChallengeStore
 
-_challenges: dict[str, dict[str, object]] = {}
+_challenges_store = InstagramChallengeStore(ttl_seconds=300, max_attempts=3)
+# Backwards-compatible view used by callers/tests that reach for the dict.
+_challenges: dict[str, dict] = _challenges_store._entries
 _CHALLENGE_TTL = 300
 _MAX_ATTEMPTS = 3
 
@@ -91,28 +93,24 @@ def instagram_login(payload: InstagramLogin):
     adapter = registry.get("instagram")
     if adapter is None or not hasattr(adapter, "login"):
         raise HTTPException(status_code=503, detail="Instagram adapter unavailable")
-    challenge = _challenges.get(payload.challenge_id or "")
     if payload.verification_code:
-        if not challenge or float(challenge["expires"]) < time.time() or int(challenge["attempts"]) >= _MAX_ATTEMPTS:
+        if not _challenges_store.is_valid(payload.challenge_id, adapter):
             raise HTTPException(status_code=400, detail="Invalid or expired Instagram challenge")
-        challenge["attempts"] = int(challenge["attempts"]) + 1
-        if challenge["adapter"] is not adapter:
-            raise HTTPException(status_code=400, detail="Invalid Instagram challenge")
+        _challenges_store.record_attempt(payload.challenge_id)
     try:
         if payload.verification_code:
             adapter.two_factor_login(payload.verification_code)
         else:
             adapter.login(payload.username.strip(), payload.password)
     except instaloader.TwoFactorAuthRequiredException:
-        challenge_id = secrets.token_urlsafe(32)
-        _challenges[challenge_id] = {"expires": time.time() + _CHALLENGE_TTL, "attempts": 0, "adapter": adapter, "username": payload.username.strip()}
+        challenge_id = _challenges_store.create(adapter=adapter, username=payload.username.strip())
         raise HTTPException(status_code=428, detail={"code": "challenge_required", "challenge_id": challenge_id}) from None
     except (instaloader.BadCredentialsException, instaloader.LoginException):
         raise HTTPException(status_code=401, detail="instagram_invalid_credentials") from None
     finally:
         payload.password = ""
     if payload.verification_code:
-        del _challenges[payload.challenge_id]
+        _challenges_store.consume(payload.challenge_id)
     valid, reason = adapter.check_session_valid()
     if not valid:
         raise HTTPException(status_code=401, detail=f"instagram_{reason or 'unknown_error'}")
@@ -122,7 +120,8 @@ def instagram_login(payload: InstagramLogin):
     session = get_session_factory()()
     try:
         item = session.get(AppSettings, 1) or AppSettings(id=1)
-        item.instagram_username = str(challenge["username"]) if payload.verification_code and challenge else payload.username.strip()
+        challenge_username = _challenges_store.username_of(payload.challenge_id) if payload.verification_code else None
+        item.instagram_username = challenge_username or payload.username.strip()
         item.instagram_session_file = str(session_path)
         sync_config = session.query(AutoSyncConfig).filter(AutoSyncConfig.platform == 'instagram').first()
         if sync_config:
