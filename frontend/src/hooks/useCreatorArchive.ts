@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchMedia, fetchMediaCount, type MediaQueryArgs } from "@/lib/vault-api";
+import type { MediaItem } from "@/lib/types";
 
 export const CREATOR_PAGE_SIZE = 90;
 const CREATOR_POLL_MS = 10_000;
@@ -28,7 +29,7 @@ export type CreatorArchive<T> = {
  * scroll-more append, a 10s refresh and the request/offset bookkeeping so the
  * page only renders the result.
  */
-export function useCreatorArchive<T extends { id: number }>(
+export function useCreatorArchive<T extends MediaItem = MediaItem>(
   filters: CreatorArchiveFilters,
 ): CreatorArchive<T> {
   const [items, setItems] = useState<T[]>([]);
@@ -66,7 +67,7 @@ export function useCreatorArchive<T extends { id: number }>(
       ]);
       if (requestId !== requestRef.current) return;
       if (data) {
-        setItems(data as T[]);
+        setItems(data as unknown as T[]);
         offsetRef.current = data.length;
         setHasMore(data.length >= CREATOR_PAGE_SIZE);
       }
@@ -89,7 +90,7 @@ export function useCreatorArchive<T extends { id: number }>(
         }
         setItems((prev) => {
           const seen = new Set(prev.map((m) => m.id));
-          return [...prev, ...(data as T[]).filter((m) => !seen.has(m.id))];
+          return [...prev, ...(data as unknown as T[]).filter((m) => !seen.has(m.id))];
         });
         offsetRef.current += data.length;
         setHasMore(data.length >= CREATOR_PAGE_SIZE);
