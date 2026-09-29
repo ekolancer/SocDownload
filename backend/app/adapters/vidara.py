@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -16,6 +17,9 @@ from ..config import get_settings
 from ..url_validation import validate_public_url, validate_url
 from ..video import normalize
 from .base import BaseAdapter, ResolvedMedia
+
+# How long a stream payload stays valid for reuse between resolve and download.
+STREAM_CACHE_TTL_SECONDS = 300
 
 
 class VidaraAdapter(BaseAdapter):
@@ -29,8 +33,15 @@ class VidaraAdapter(BaseAdapter):
     # "drm-cdn.example.com" is legitimate and must not be treated as DRM.
     _DRM_KEYS = frozenset({"drm", "drm_data", "license_url", "license", "widevine", "fairplay", "playready", "clearkey"})
 
+    def __init__(self) -> None:
+        # The registry shares one instance across worker threads, so the cache
+        # is guarded by a lock. Keyed by URL; value is (fetched_at, payload).
+        self._cache: dict[str, tuple[float, dict[str, object]]] = {}
+        self._cache_lock = threading.Lock()
+
     def detect(self, url: str) -> bool:
         return self.page_pattern.fullmatch(url.strip()) is not None
+
 
     def _page_url(self, url: str) -> tuple[str, str]:
         normalized = validate_url(url)
@@ -85,16 +96,43 @@ class VidaraAdapter(BaseAdapter):
         return ResolvedMedia(platform=self.platform, source_url=url, caption=data.get("title") if isinstance(data.get("title"), str) else None)
 
     def resolve_data(self, url: str) -> dict[str, object]:
+        normalized = validate_url(url)
+        cached = self._cache_get(normalized)
+        if cached is not None:
+            return cached
+
         last_error: Exception | None = None
         for attempt in range(2):
             try:
-                return self._stream_data(url)
+                data = self._stream_data(normalized)
+                self._cache_put(normalized, data)
+                return data
             except (httpx.TimeoutException, httpx.NetworkError) as exc:
                 last_error = exc
                 if attempt == 0:
                     time.sleep(1)
         assert last_error is not None
         raise last_error
+
+    def _cache_get(self, url: str) -> dict[str, object] | None:
+        with self._cache_lock:
+            entry = self._cache.get(url)
+        if entry is None:
+            return None
+        fetched_at, data = entry
+        if time.monotonic() - fetched_at > STREAM_CACHE_TTL_SECONDS:
+            with self._cache_lock:
+                self._cache.pop(url, None)
+            return None
+        return data
+
+    def _cache_put(self, url: str, data: dict[str, object]) -> None:
+        with self._cache_lock:
+            self._cache[url] = (time.monotonic(), data)
+
+    def _cache_drop(self, url: str) -> None:
+        with self._cache_lock:
+            self._cache.pop(url, None)
 
     def _download_http(self, stream_url: str, dest_file: str, on_progress: Callable[[int, int | None, float | None, int | None], None] | None = None) -> None:
         cap = get_settings().vidara_max_download_bytes
@@ -118,9 +156,12 @@ class VidaraAdapter(BaseAdapter):
 
     def download(self, url: str, dest_dir: str, on_progress: Callable[[int, int | None, float | None, int | None], None] | None = None, resolved_data: dict[str, object] | None = None) -> list[str]:
         os.makedirs(dest_dir, exist_ok=True)
-        data = resolved_data or self.resolve_data(url)
+        normalized = validate_url(url)
+        # Reuse the payload from a prior resolve via the internal cache; only
+        # fetch when neither the caller nor the cache has it.
+        data = resolved_data or self._cache_get(normalized) or self.resolve_data(normalized)
         stream_url = str(data["streaming_url"])
-        filecode = self.page_pattern.fullmatch(validate_url(url)).group(1)
+        filecode = self.page_pattern.fullmatch(normalized).group(1)
         if ".m3u8" in urlsplit(stream_url).path.lower():
             yt_dlp = shutil.which("yt-dlp")
             if not yt_dlp:
@@ -133,8 +174,9 @@ class VidaraAdapter(BaseAdapter):
             if downloaded:
                 normalize(downloaded)
         else:
-            self._download_http(stream_url, str(Path(dest_dir) / f"{filecode}.mp4"))
+            self._download_http(stream_url, str(Path(dest_dir) / f"{filecode}.mp4"), on_progress)
         files = [str(path) for path in Path(dest_dir).iterdir() if path.is_file()]
         if not files:
             raise RuntimeError("no_files_downloaded")
+        self._cache_drop(normalized)
         return files
