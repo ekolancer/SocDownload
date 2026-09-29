@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app import db as db_module
 from backend.app.db import Base, MediaFile, MediaItem
-from backend.app.routes import media as media_routes
+from backend.app.media_vault import MediaQuery, MediaVault
 
 
 @pytest.fixture()
@@ -18,8 +18,12 @@ def session_factory(tmp_path, monkeypatch):
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     monkeypatch.setattr(db_module, "_session_factory", factory)
     monkeypatch.setattr(db_module, "get_session_factory", lambda: factory)
-    monkeypatch.setattr(media_routes, "get_session_factory", lambda: factory)
     return factory
+
+
+@pytest.fixture()
+def vault(session_factory):
+    return MediaVault(session_factory=session_factory)
 
 
 def _seed(factory):
@@ -41,52 +45,52 @@ def _seed(factory):
         session.commit()
 
 
-def test_creator_filter_is_case_insensitive(session_factory):
+def test_creator_filter_is_case_insensitive(session_factory, vault):
     _seed(session_factory)
-    rows = media_routes.list_media(creator="rhmfskw", limit=100, offset=0)
+    rows = vault.list_items(MediaQuery(creator="rhmfskw", limit=100))
     assert {r["id"] for r in rows} == {1, 2}
     # Different casing must return the same set.
-    assert {r["id"] for r in media_routes.list_media(creator="RHmFSKW", limit=100, offset=0)} == {1, 2}
+    assert {r["id"] for r in vault.list_items(MediaQuery(creator="RHmFSKW", limit=100))} == {1, 2}
 
 
-def test_unknown_creator_matches_null_username(session_factory):
+def test_unknown_creator_matches_null_username(session_factory, vault):
     _seed(session_factory)
-    rows = media_routes.list_media(creator="unknown", limit=100, offset=0)
+    rows = vault.list_items(MediaQuery(creator="unknown", limit=100))
     assert {r["id"] for r in rows} == {3, 4}
     assert all(r["username"] == "unknown" for r in rows)
 
 
-def test_creator_pagination_offset_is_stable(session_factory):
+def test_creator_pagination_offset_is_stable(session_factory, vault):
     _seed(session_factory)
     # 4 null-username items -> page size 2 across two pages, no overlap.
-    page1 = media_routes.list_media(creator="unknown", limit=2, offset=0)
-    page2 = media_routes.list_media(creator="unknown", limit=2, offset=2)
+    page1 = vault.list_items(MediaQuery(creator="unknown", limit=2, offset=0))
+    page2 = vault.list_items(MediaQuery(creator="unknown", limit=2, offset=2))
     assert [r["id"] for r in page1] == [4, 3]
     assert [r["id"] for r in page2] == []
     # Descending created_at with id tiebreaker.
     assert page1[0]["id"] == 4 and page1[1]["id"] == 3
 
 
-def test_count_endpoint_respects_creator_filter(session_factory):
+def test_count_endpoint_respects_creator_filter(session_factory, vault):
     _seed(session_factory)
-    assert media_routes.count_media(creator="unknown") == {"count": 2}
-    assert media_routes.count_media(creator="rhmfskw") == {"count": 2}
-    assert media_routes.count_media(creator="nobody") == {"count": 0}
+    assert vault.count(MediaQuery(creator="unknown")) == 2
+    assert vault.count(MediaQuery(creator="rhmfskw")) == 2
+    assert vault.count(MediaQuery(creator="nobody")) == 0
 
 
-def test_media_type_and_query_filters(session_factory):
+def test_media_type_and_query_filters(session_factory, vault):
     _seed(session_factory)
-    video_rows = media_routes.list_media(media_type="video", limit=100, offset=0)
+    video_rows = vault.list_items(MediaQuery(media_type="video", limit=100))
     assert {r["id"] for r in video_rows} == {5}
-    image_rows = media_routes.list_media(media_type="image", limit=100, offset=0)
+    image_rows = vault.list_items(MediaQuery(media_type="image", limit=100))
     assert {r["id"] for r in image_rows} == {1}
-    search_rows = media_routes.list_media(q="other", limit=100, offset=0)
+    search_rows = vault.list_items(MediaQuery(q="other", limit=100))
     assert {r["id"] for r in search_rows} == {5}
 
 
-def test_list_media_returns_unknown_label_for_null_username(session_factory):
+def test_list_media_returns_unknown_label_for_null_username(session_factory, vault):
     _seed(session_factory)
-    rows = media_routes.list_media(limit=100, offset=0)
+    rows = vault.list_items(MediaQuery(limit=100))
     by_id = {r["id"]: r for r in rows}
     assert by_id[3]["username"] == "unknown"
     assert by_id[1]["username"] == "rhmfskw"

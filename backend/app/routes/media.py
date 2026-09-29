@@ -1,55 +1,34 @@
 from __future__ import annotations
 
 import io
-import tempfile
-import os
-import re
-import zipfile
 import shutil
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, or_, select
 
 from ..config import ROOT, get_settings
-from ..db import (
-    AlbumMediaItem,
-    MediaFile,
-    MediaItem,
-    get_session_factory,
-    now_wib,
+from ..db import MediaFile, get_session_factory, now_wib
+from ..media_vault import (
+    MediaQuery,
+    MediaVault,
+    neutralize_csv_formula,
+    sanitize_zip_component,
 )
+from ..media_exporter import MediaExporter
 
 router = APIRouter(prefix="/api/media", tags=["media"])
+_vault = MediaVault()
+_exporter = MediaExporter(vault=_vault)
 
+_storage_cache: dict = {"value": None}
+_storage_cache_lock = threading.Lock()
+_STORAGE_CACHE_TTL_SECONDS = 60
 
-def neutralize_csv_formula(value):
-    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
-        return "'" + value
-    return value
-
-
-def sanitize_zip_component(value: str | None, fallback: str) -> str:
-    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", value or "").strip(" ._")
-    if sanitized in {"", ".", ".."}:
-        return fallback
-    return sanitized[:100]
-
-
-def _deduplicate_ids(ids: list[int]) -> list[int]:
-    return list(dict.fromkeys(ids))
-
-
-def _validate_batch_ids(ids: list[int]) -> list[int]:
-    ids = _deduplicate_ids(ids)
-    if len(ids) > get_settings().batch_ids_limit:
-        raise HTTPException(status_code=422, detail="Too many media IDs")
-    return ids
+__all__ = ["router", "BatchMediaPayload", "ToggleFavoritePayload", "neutralize_csv_formula", "sanitize_zip_component"]
 
 
 class BatchMediaPayload(BaseModel):
@@ -60,43 +39,36 @@ class ToggleFavoritePayload(BaseModel):
     is_favorite: bool | None = None
 
 
-def _media_filters(
+def _validate_batch_ids(ids: list[int]) -> list[int]:
+    ids = list(dict.fromkeys(ids))
+    if len(ids) > get_settings().batch_ids_limit:
+        raise HTTPException(status_code=422, detail="Too many media IDs")
+    return ids
+
+
+def _query(
     *,
     platform: str | None = None,
     creator: str | None = None,
     is_favorite: bool | None = None,
     media_type: str | None = None,
     q: str | None = None,
-) -> list:
-    """Build SQLAlchemy filter clauses shared by the list and count endpoints."""
-    clauses: list = []
-    if platform and platform != "all":
-        clauses.append(func.lower(MediaItem.platform) == platform.lower())
-    if creator:
-        if creator.lower() == "unknown":
-            clauses.append(MediaItem.username.is_(None))
-        else:
-            clauses.append(func.lower(MediaItem.username) == creator.lower())
-    if is_favorite is not None:
-        clauses.append(MediaItem.is_favorite == is_favorite)
-    if media_type and media_type != "all":
-        # Match on related files without duplicating rows.
-        clauses.append(
-            MediaItem.id.in_(
-                select(MediaFile.media_item_id).where(func.lower(MediaFile.kind) == media_type.lower())
-            )
-        )
-    if q and q.strip():
-        like = f"%{q.strip().lower()}%"
-        clauses.append(
-            or_(
-                func.lower(MediaItem.caption).like(like),
-                func.lower(MediaItem.username).like(like),
-                func.lower(MediaItem.source_url).like(like),
-                func.lower(MediaItem.platform).like(like),
-            )
-        )
-    return clauses
+    ids: list[int] | None = None,
+    album_id: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> MediaQuery:
+    return MediaQuery(
+        platform=platform,
+        creator=creator,
+        is_favorite=is_favorite,
+        media_type=media_type,
+        q=q,
+        ids=ids,
+        album_id=album_id,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("")
@@ -110,49 +82,7 @@ def list_media(
     offset: int = Query(default=0, ge=0),
 ):
     limit = min(limit, get_settings().list_limit)
-    factory = get_session_factory()
-    with factory() as session:
-        stmt = select(MediaItem)
-        for clause in _media_filters(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q):
-            stmt = stmt.where(clause)
-        # Deterministic ordering so offset pagination never drops or repeats rows
-        # when several items share the same created_at.
-        stmt = stmt.order_by(MediaItem.created_at.desc(), MediaItem.id.desc()).offset(offset).limit(limit)
-
-        items = session.scalars(stmt).all()
-        results = []
-        # Single batched lookup instead of one query per item (avoids N+1).
-        files_by_item: dict[int, list[MediaFile]] = {}
-        if items:
-            for f in session.scalars(select(MediaFile).where(MediaFile.media_item_id.in_([i.id for i in items]))).all():
-                files_by_item.setdefault(f.media_item_id, []).append(f)
-        for i in items:
-            file_list = []
-            for f in files_by_item.get(i.id, []):
-                if f.kind == "audio" or Path(f.path).suffix.lower() in {".m4a", ".mp3", ".wav", ".aac", ".flac", ".ogg"}:
-                    continue
-                file_list.append({
-                    "id": f.id,
-                    "kind": f.kind,
-                    "url": f"/api/media/files/{f.id}",
-                    "thumbnail_url": f"/media-thumbnail/{f.id}" if f.thumbnail_path else None,
-                    "width": f.width,
-                    "height": f.height,
-                    "duration_seconds": f.duration,
-                    "name": Path(f.path).name,
-                })
-            results.append({
-                "id": i.id,
-                "platform": i.platform,
-                "source_url": i.source_url,
-                "username": i.username or "unknown",
-                "caption": i.caption,
-                "is_favorite": bool(i.is_favorite),
-                "posted_at": i.posted_at.isoformat() if i.posted_at else None,
-                "created_at": i.created_at.isoformat() if i.created_at else None,
-                "files": file_list,
-            })
-        return results
+    return _vault.list_items(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, limit=limit, offset=offset))
 
 
 @router.get("/count")
@@ -163,28 +93,23 @@ def count_media(
     media_type: str | None = None,
     q: str | None = None,
 ):
-    factory = get_session_factory()
-    with factory() as session:
-        stmt = select(func.count()).select_from(MediaItem)
-        for clause in _media_filters(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q):
-            stmt = stmt.where(clause)
-        return {"count": session.scalar(stmt) or 0}
+    return {"count": _vault.count(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q))}
 
 
-_storage_cache: tuple[float, dict[str, int | str]] | None = None
-_storage_cache_lock = threading.Lock()
-_STORAGE_CACHE_TTL_SECONDS = 60
+@router.get("/creators")
+def list_creators():
+    return _vault.creators()
 
 
 @router.get("/storage")
 def get_storage_stats():
-    """Return total media files count, total bytes used on disk, and formatted human size."""
-    global _storage_cache
     now = time.monotonic()
     with _storage_cache_lock:
-        if _storage_cache and now - _storage_cache[0] < _STORAGE_CACHE_TTL_SECONDS:
-            return _storage_cache[1]
+        cached = _storage_cache.get("value")
+        if cached and now - cached[0] < _STORAGE_CACHE_TTL_SECONDS:
+            return cached[1]
 
+    result = {"total_bytes": 0, "total_files": 0, "human_size": "0.0 KB", "disk_total_bytes": 0, "disk_free_bytes": 0, "disk_used_bytes": 0}
     settings = get_settings()
     media_root = Path(settings.media_root).resolve()
     if not media_root.is_absolute():
@@ -192,7 +117,6 @@ def get_storage_stats():
 
     total_bytes = 0
     total_files = 0
-
     if media_root.is_dir():
         for p in media_root.rglob("*"):
             if p.is_file() and not p.name.startswith("."):
@@ -202,7 +126,6 @@ def get_storage_stats():
                 except Exception:
                     pass
 
-    # Human-readable string
     if total_bytes < 1024 * 1024:
         human_size = f"{total_bytes / 1024:.1f} KB"
     elif total_bytes < 1024 * 1024 * 1024:
@@ -211,16 +134,16 @@ def get_storage_stats():
         human_size = f"{total_bytes / (1024 * 1024 * 1024):.2f} GB"
 
     disk = shutil.disk_usage(media_root)
-    result = {
+    result.update({
         "total_bytes": total_bytes,
         "total_files": total_files,
         "human_size": human_size,
         "disk_total_bytes": disk.total,
         "disk_free_bytes": disk.free,
         "disk_used_bytes": disk.used,
-    }
+    })
     with _storage_cache_lock:
-        _storage_cache = (time.monotonic(), result)
+        _storage_cache["value"] = (time.monotonic(), result)
     return result
 
 
@@ -231,14 +154,9 @@ def serve_thumbnail(file_id: int):
         mf = session.get(MediaFile, file_id)
         if not mf or not mf.thumbnail_path:
             raise HTTPException(status_code=404, detail="thumbnail not found")
-        root = Path(get_settings().media_root).resolve()
-        if not root.is_absolute():
-            root = (ROOT / root).resolve()
+        root = _media_root()
         path = Path(mf.thumbnail_path).resolve()
-        try:
-            path.relative_to(root)
-        except ValueError:
-            raise HTTPException(status_code=403, detail="path traversal")
+        _guard_within(path, root)
         if not path.is_file():
             raise HTTPException(status_code=404, detail="thumbnail missing")
         return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
@@ -246,240 +164,62 @@ def serve_thumbnail(file_id: int):
 
 @router.get("/files/{file_id}")
 def serve_media_file(file_id: int):
-
     factory = get_session_factory()
     with factory() as session:
         mf = session.get(MediaFile, file_id)
         if not mf:
             raise HTTPException(status_code=404, detail="file not found")
-
-        settings = get_settings()
-        media_root = Path(settings.media_root).resolve()
-        if not media_root.is_absolute():
-            media_root = (ROOT / media_root).resolve()
-
         file_path = Path(mf.path).resolve()
-        try:
-            file_path.relative_to(media_root)
-        except ValueError:
-            raise HTTPException(status_code=403, detail="path traversal")
-
+        _guard_within(file_path, _media_root())
         if not file_path.is_file():
             raise HTTPException(status_code=404, detail="file missing")
-
-        media_type = "image"
-        if mf.kind == "video":
-            media_type = "video"
+        media_type = "video" if mf.kind == "video" else "image"
         return FileResponse(file_path, media_type=f"{media_type}/*", filename=file_path.name)
+
+
+def _media_root() -> Path:
+    settings = get_settings()
+    root = Path(settings.media_root).resolve()
+    if not root.is_absolute():
+        root = (ROOT / root).resolve()
+    return root
+
+
+def _guard_within(path: Path, root: Path) -> None:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="path traversal") from None
 
 
 @router.patch("/{item_id}/favorite")
 def toggle_favorite(item_id: int, payload: ToggleFavoritePayload | None = None):
-    factory = get_session_factory()
-    with factory() as session:
-        item = session.get(MediaItem, item_id)
-        if not item:
-            raise HTTPException(status_code=404, detail="Media item not found")
-
-        if payload and payload.is_favorite is not None:
-            item.is_favorite = payload.is_favorite
-        else:
-            item.is_favorite = not bool(item.is_favorite)
-
-        session.commit()
-        return {"id": item.id, "is_favorite": item.is_favorite}
+    result = _vault.toggle_favorite(item_id, payload.is_favorite if payload else None)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Media item not found")
+    return result
 
 
 @router.delete("/{item_id}")
 def delete_media_item(item_id: int):
-    factory = get_session_factory()
-    with factory() as session:
-        item = session.get(MediaItem, item_id)
-        if not item:
-            raise HTTPException(status_code=404, detail="Media item not found")
-
-        # 1. Fetch all associated media files
-        files = session.scalars(select(MediaFile).where(MediaFile.media_item_id == item.id)).all()
-
-        # 2. Delete physical files from disk (cascade disk delete)
-        parent_dirs: set[Path] = set()
-        for f in files:
-            p = Path(f.path)
-            thumbnail = Path(f.thumbnail_path) if f.thumbnail_path else None
-            if thumbnail and thumbnail.is_file():
-                thumbnail.unlink(missing_ok=True)
-            if p.is_file():
-                try:
-                    parent_dirs.add(p.parent)
-                    p.unlink(missing_ok=True)
-                except Exception:
-                    pass
-            session.delete(f)
-
-        # 3. Clean up directory metadata sidecar & empty folder
-        for pdir in parent_dirs:
-            try:
-                meta_json = pdir / "metadata.json"
-                if meta_json.is_file():
-                    meta_json.unlink(missing_ok=True)
-                if pdir.is_dir() and not any(pdir.iterdir()):
-                    pdir.rmdir()
-            except Exception:
-                pass
-
-        # 4. Clean junction entries in album_media_items
-        session.execute(delete(AlbumMediaItem).where(AlbumMediaItem.media_item_id == item.id))
-
-        # 5. Cascade delete MediaItem record from DB
-        session.delete(item)
-        session.commit()
-
-        return {"deleted": True, "id": item_id}
+    _vault.delete([item_id])
+    return {"deleted": True, "id": item_id}
 
 
 @router.post("/batch-delete")
 def batch_delete_media(payload: BatchMediaPayload):
     media_ids = _validate_batch_ids(payload.media_ids)
-    if not media_ids:
-        return {"deleted_count": 0}
-
-    deleted_count = 0
-    factory = get_session_factory()
-    with factory() as session:
-        items = session.scalars(
-            select(MediaItem).where(MediaItem.id.in_(media_ids))
-        ).all()
-
-        parent_dirs: set[Path] = set()
-        for item in items:
-            files = session.scalars(select(MediaFile).where(MediaFile.media_item_id == item.id)).all()
-            for f in files:
-                p = Path(f.path)
-                if p.is_file():
-                    try:
-                        parent_dirs.add(p.parent)
-                        p.unlink(missing_ok=True)
-                    except Exception:
-                        pass
-                session.delete(f)
-
-            session.execute(delete(AlbumMediaItem).where(AlbumMediaItem.media_item_id == item.id))
-            session.delete(item)
-            deleted_count += 1
-
-        for pdir in parent_dirs:
-            try:
-                meta_json = pdir / "metadata.json"
-                if meta_json.is_file():
-                    meta_json.unlink(missing_ok=True)
-                if pdir.is_dir() and not any(pdir.iterdir()):
-                    pdir.rmdir()
-            except Exception:
-                pass
-
-        session.commit()
-        return {"deleted_count": deleted_count}
+    return {"deleted_count": _vault.delete(media_ids)}
 
 
-@router.get("/creators")
-def list_creators():
-    """Aggregate media items by (username, platform) with counts and statistics."""
-    factory = get_session_factory()
-    with factory() as session:
-        items = session.scalars(
-            select(MediaItem).order_by(MediaItem.created_at.desc())
-        ).all()
-
-        creators_map: dict[tuple[str, str], dict] = {}
-
-        for item in items:
-            username = item.username or "unknown"
-            platform = item.platform or "unknown"
-            key = (username, platform)
-
-            if key not in creators_map:
-                creators_map[key] = {
-                    "username": username,
-                    "platform": platform,
-                    "media_count": 0,
-                    "video_count": 0,
-                    "image_count": 0,
-                    "first_posted_at": None,
-                    "last_posted_at": None,
-                    "sample_thumbnails": [],
-                }
-
-            creator = creators_map[key]
-            creator["media_count"] += 1
-
-            # Check posted dates
-            if item.posted_at:
-                iso_posted = item.posted_at.isoformat()
-                if not creator["first_posted_at"] or iso_posted < creator["first_posted_at"]:
-                    creator["first_posted_at"] = iso_posted
-                if not creator["last_posted_at"] or iso_posted > creator["last_posted_at"]:
-                    creator["last_posted_at"] = iso_posted
-
-            # Fetch media files for this item
-            files = session.scalars(
-                select(MediaFile).where(MediaFile.media_item_id == item.id)
-            ).all()
-
-            for f in files:
-                if f.kind == "video":
-                    creator["video_count"] += 1
-                else:
-                    creator["image_count"] += 1
-
-                if len(creator["sample_thumbnails"]) < 4:
-                    if f.thumbnail_path:
-                        creator["sample_thumbnails"].append({
-                            "url": f"/media-thumbnail/{f.id}",
-                            "width": f.width,
-                            "height": f.height,
-                        })
-                    elif f.kind != "video":
-                        creator["sample_thumbnails"].append({
-                            "url": f"/api/media/files/{f.id}",
-                            "width": f.width,
-                            "height": f.height,
-                        })
-
-        # Sort creators by media_count descending
-        results = sorted(creators_map.values(), key=lambda c: c["media_count"], reverse=True)
-        return results
-
-
-def _get_filtered_media_items(
-    session,
-    ids: str | None = None,
-    album_id: int | None = None,
-    username: str | None = None,
-    platform: str | None = None,
-    limit: int = 500,
-) -> list[MediaItem]:
-    query = select(MediaItem)
-
+def _export_query(ids: str | None, album_id: int | None, username: str | None, platform: str | None, limit: int) -> MediaQuery:
+    id_list = None
     if ids:
         try:
             id_list = _validate_batch_ids([int(i.strip()) for i in ids.split(",") if i.strip()])
         except ValueError:
-            raise HTTPException(status_code=422, detail="Invalid media IDs")
-        if id_list:
-            query = query.where(MediaItem.id.in_(id_list))
-
-    if album_id:
-        query = query.join(AlbumMediaItem, AlbumMediaItem.media_item_id == MediaItem.id).where(
-            AlbumMediaItem.album_id == album_id
-        )
-
-    if username and username != "all":
-        query = query.where(MediaItem.username == username)
-
-    if platform and platform != "all":
-        query = query.where(MediaItem.platform == platform)
-
-    return session.scalars(query.order_by(MediaItem.created_at.desc()).limit(limit)).all()
+            raise HTTPException(status_code=422, detail="Invalid media IDs") from None
+    return _query(ids=id_list, album_id=album_id, creator=username, platform=platform, limit=limit)
 
 
 @router.get("/export/csv")
@@ -490,58 +230,10 @@ def export_metadata_csv(
     platform: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
-    """Export metadata as a downloadable CSV file."""
-    import csv
-
     limit = min(limit, get_settings().export_items_limit)
-    factory = get_session_factory()
-    with factory() as session:
-        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
-
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow([
-            "ID",
-            "Platform",
-            "Username",
-            "Source URL",
-            "Caption",
-            "Hashtags",
-            "Posted At",
-            "Archived At",
-            "Files Count",
-            "SHA256",
-        ])
-
-        for item in items:
-            files_count = session.scalar(
-                select(func.count(MediaFile.id)).where(MediaFile.media_item_id == item.id)
-            ) or 0
-
-            writer.writerow([
-                neutralize_csv_formula(value)
-                for value in [
-                    item.id,
-                    item.platform,
-                    item.username or "",
-                    item.source_url,
-                    (item.caption or "").replace("\n", " "),
-                    item.hashtags or "",
-                    item.posted_at.isoformat() if item.posted_at else "",
-                    item.created_at.isoformat() if item.created_at else "",
-                    files_count,
-                    item.sha256 or "",
-                ]
-            ])
-
-        output.seek(0)
-        filename = f"mediavault_metadata_{now_wib().strftime('%Y%m%d_%H%M%S')}.csv"
-        return StreamingResponse(
-
-            io.BytesIO(output.getvalue().encode("utf-8-sig")),
-            media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
+    data = _exporter.csv_bytes(_export_query(ids, album_id, username, platform, limit))
+    filename = f"mediavault_metadata_{now_wib().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(io.BytesIO(data), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 @router.get("/export/json")
@@ -552,55 +244,10 @@ def export_metadata_json(
     platform: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
-    """Export full metadata as a downloadable JSON file."""
-    import json
-
     limit = min(limit, get_settings().export_items_limit)
-    factory = get_session_factory()
-    with factory() as session:
-        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
-
-        data = []
-        for item in items:
-            files = session.scalars(
-                select(MediaFile).where(MediaFile.media_item_id == item.id)
-            ).all()
-
-            data.append({
-                "id": item.id,
-                "platform": item.platform,
-                "username": item.username,
-                "source_url": item.source_url,
-                "caption": item.caption,
-                "hashtags": item.hashtags.split(",") if item.hashtags else [],
-                "posted_at": item.posted_at.isoformat() if item.posted_at else None,
-                "created_at": item.created_at.isoformat() if item.created_at else None,
-                "sha256": item.sha256,
-                "files": [
-                    {
-                        "id": f.id,
-                        "kind": f.kind,
-                    "name": Path(f.path).name,
-                    "thumbnail_url": f"/media-thumbnail/{f.id}" if f.thumbnail_path else None,
-                    "width": f.width,
-                    "height": f.height,
-                    "duration_seconds": f.duration,
-                    "video_codec": f.video_codec,
-                    "audio_codec": f.audio_codec,
-
-                        "sha256": f.sha256,
-                    }
-                    for f in files
-                ],
-            })
-
-        json_str = json.dumps(data, ensure_ascii=False, indent=2)
-        filename = f"mediavault_export_{now_wib().strftime('%Y%m%d_%H%M%S')}.json"
-        return StreamingResponse(
-            io.BytesIO(json_str.encode("utf-8")),
-            media_type="application/json",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
+    data = _exporter.json_bytes(_export_query(ids, album_id, username, platform, limit))
+    filename = f"mediavault_export_{now_wib().strftime('%Y%m%d_%H%M%S')}.json"
+    return StreamingResponse(io.BytesIO(data), media_type="application/json", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 @router.get("/export/zip")
@@ -611,99 +258,17 @@ def export_media_zip(
     platform: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
-    """Export structured ZIP package containing organized media files and metadata."""
-    import json
-    import csv
-
     settings = get_settings()
     limit = min(limit, settings.export_items_limit)
-    factory = get_session_factory()
-    with factory() as session:
-        items = _get_filtered_media_items(session, ids, album_id, username, platform, limit=limit)
-
-        if not items:
-            raise HTTPException(status_code=404, detail="No media items found for export")
-
-        export_files = []
-        total_bytes = 0
-        for item in items:
-            files = session.scalars(
-                select(MediaFile).where(MediaFile.media_item_id == item.id)
-            ).all()
-            item_files = []
-            for media_file in files:
-                path = Path(media_file.path)
-                if path.is_file():
-                    total_bytes += path.stat().st_size
-                    if total_bytes > settings.export_bytes_limit:
-                        raise HTTPException(status_code=413, detail="Export is too large")
-                    item_files.append((media_file, path))
-            export_files.append((item, item_files))
-
-        zip_file = tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b")
-        with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zf:
-            metadata_items = []
-            csv_rows = [
-                ["ID", "Platform", "Username", "Source URL", "Caption", "Hashtags", "Posted At", "Archived At", "Files"]
-            ]
-
-            for item, files in export_files:
-                u_dir = sanitize_zip_component(item.username, "unknown")
-                p_dir = sanitize_zip_component(item.platform, "general")
-                folder_path = f"{p_dir}/{u_dir}"
-
-                item_files = []
-                for f, p in files:
-                    name = sanitize_zip_component(p.name, f"file_{f.id}")
-                    arcname = f"{folder_path}/{item.id}_{name}"
-                    zf.write(p, arcname=arcname)
-                    item_files.append(f"{item.id}_{name}")
-
-                meta_entry = {
-                    "id": item.id,
-                    "platform": item.platform,
-                    "username": item.username,
-                    "source_url": item.source_url,
-                    "caption": item.caption,
-                    "posted_at": item.posted_at.isoformat() if item.posted_at else None,
-                    "created_at": item.created_at.isoformat() if item.created_at else None,
-                    "files": item_files,
-                }
-                metadata_items.append(meta_entry)
-
-                csv_rows.append([
-                    neutralize_csv_formula(value)
-                    for value in [
-                        item.id,
-                        item.platform,
-                        item.username or "",
-                        item.source_url,
-                        (item.caption or "").replace("\n", " "),
-                        item.hashtags or "",
-                        item.posted_at.isoformat() if item.posted_at else "",
-                        item.created_at.isoformat() if item.created_at else "",
-                        ", ".join(item_files),
-                    ]
-                ])
-
-            # Write metadata.json at root of ZIP
-            zf.writestr("metadata.json", json.dumps(metadata_items, ensure_ascii=False, indent=2))
-
-            # Write metadata.csv at root of ZIP
-            csv_buf = io.StringIO()
-            writer = csv.writer(csv_buf)
-            writer.writerows(csv_rows)
-            zf.writestr("metadata.csv", csv_buf.getvalue().encode("utf-8-sig"))
-
-        zip_file.seek(0)
-        prefix = f"mediavault_{username}" if username else "mediavault_vault"
-        filename = f"{prefix}_{now_wib().strftime('%Y%m%d_%H%M%S')}.zip"
-
-        return StreamingResponse(
-            zip_file,
-            media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
+    try:
+        data = _exporter.zip_bytes(_export_query(ids, album_id, username, platform, limit), bytes_limit=settings.export_bytes_limit)
+    except ValueError as exc:
+        if str(exc) == "export_too_large":
+            raise HTTPException(status_code=413, detail="Export is too large") from None
+        raise HTTPException(status_code=404, detail="No media items found for export") from None
+    prefix = f"mediavault_{username}" if username else "mediavault_vault"
+    filename = f"{prefix}_{now_wib().strftime('%Y%m%d_%H%M%S')}.zip"
+    return StreamingResponse(io.BytesIO(data), media_type="application/zip", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 @router.post("/batch-zip")
@@ -711,7 +276,4 @@ def batch_zip_media(payload: BatchMediaPayload):
     media_ids = _validate_batch_ids(payload.media_ids)
     if not media_ids:
         raise HTTPException(status_code=400, detail="No media IDs specified")
-
-    ids_str = ",".join(str(i) for i in media_ids)
-    return export_media_zip(ids=ids_str, limit=get_settings().export_items_limit)
-
+    return export_media_zip(ids=",".join(str(i) for i in media_ids), limit=get_settings().export_items_limit)

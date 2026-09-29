@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import delete, func, select
 
 from ..db import Album, AlbumMediaItem, MediaFile, MediaItem, get_session_factory, now_wib
+from ..media_vault import serialize_item
 
 router = APIRouter(prefix="/api/albums", tags=["albums"])
 
@@ -119,26 +119,9 @@ def get_album_detail(album_id: int):
         items = []
         for item, added_at in rows:
             files = session.scalars(select(MediaFile).where(MediaFile.media_item_id == item.id)).all()
-            file_list = []
-            for f in files:
-                file_list.append({
-                    "id": f.id,
-                    "kind": f.kind,
-                    "url": f"/api/media/files/{f.id}",
-                    "name": Path(f.path).name,
-                })
-            items.append({
-                "id": item.id,
-                "platform": item.platform,
-                "source_url": item.source_url,
-                "username": item.username,
-                "caption": item.caption,
-                "is_favorite": item.is_favorite,
-                "posted_at": item.posted_at.isoformat() if item.posted_at else None,
-                "created_at": item.created_at.isoformat() if item.created_at else None,
-                "added_to_album_at": added_at.isoformat() if added_at else None,
-                "files": file_list,
-            })
+            payload = serialize_item(item, list(files))
+            payload["added_to_album_at"] = added_at.isoformat() if added_at else None
+            items.append(payload)
 
         return {
             "id": album.id,
