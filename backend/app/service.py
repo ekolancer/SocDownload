@@ -64,6 +64,21 @@ def get_queue() -> asyncio.Queue[int]:
     return _queue
 
 
+def platform_of(url: str) -> str:
+    """Platform label for a URL, or ``unknown`` when no adapter claims it."""
+    adapter = detect_platform(url)
+    return adapter.platform if adapter else "unknown"
+
+
+def _push(job_ids: list[int]) -> None:
+    queue = get_queue()
+    for job_id in job_ids:
+        try:
+            queue.put_nowait(job_id)
+        except Exception:
+            pass
+
+
 def purge_queue() -> int:
     """Drain all pending job IDs from the in-memory queue."""
     q = get_queue()
@@ -80,8 +95,7 @@ def purge_queue() -> int:
 
 def enqueue(url: str) -> int:
     url = validate_url(url)
-    adapter = detect_platform(url)
-    platform = adapter.platform if adapter else "unknown"
+    platform = platform_of(url)
 
     factory = get_session_factory()
     with factory() as session:
@@ -95,12 +109,7 @@ def enqueue(url: str) -> int:
         session.commit()
         job_id = job.id
 
-    q = get_queue()
-    try:
-        q.put_nowait(job_id)
-    except Exception:
-        pass
-
+    _push([job_id])
     return job_id
 
 
@@ -170,21 +179,14 @@ def bulk_enqueue(urls: list[str], limit: int = 500) -> dict:
 
     jobs_to_create = []
     for url in to_enqueue:
-        adapter = detect_platform(url)
-        platform = adapter.platform if adapter else "unknown"
-        jobs_to_create.append(Job(platform=platform, url=url, status=JobStatus.QUEUED.value))
+        jobs_to_create.append(Job(platform=platform_of(url), url=url, status=JobStatus.QUEUED.value))
 
     with factory() as session:
         session.add_all(jobs_to_create)
         session.commit()
         job_ids = [j.id for j in jobs_to_create]
 
-    q = get_queue()
-    for job_id in job_ids:
-        try:
-            q.put_nowait(job_id)
-        except Exception:
-            pass
+    _push(job_ids)
 
     return {
         "enqueued": to_enqueue,
