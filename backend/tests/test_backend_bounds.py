@@ -50,11 +50,11 @@ class BackendBoundsTestCase(unittest.TestCase):
             self.assertGreater(job.lease_until, utcnow().replace(tzinfo=None))
 
     def test_adapter_author_extraction(self):
-        with patch("backend.app.adapters.pinterest.gdl_first_item", return_value={"author": "Archived", "pinner": {"username": "real_owner"}}):
+        with patch("backend.app.adapters.gallerydl.gdl_first_item", return_value={"author": "Archived", "pinner": {"username": "real_owner"}}):
             self.assertEqual(PinterestAdapter().resolve("https://www.pinterest.com/pin/1").username, "real_owner")
-        with patch("backend.app.adapters.x.gdl_first_item", return_value={"author": {"username": "x_owner"}}):
+        with patch("backend.app.adapters.gallerydl.gdl_first_item", return_value={"author": {"username": "x_owner"}}):
             self.assertEqual(XAdapter().resolve("https://x.com/user/status/1").username, "x_owner")
-        with patch("backend.app.adapters.reddit.gdl_first_item", return_value={"author": {"name": "reddit_owner"}}):
+        with patch("backend.app.adapters.gallerydl.gdl_first_item", return_value={"author": {"name": "reddit_owner"}}):
             self.assertEqual(RedditAdapter().resolve("https://www.reddit.com/r/test/comments/1").username, "reddit_owner")
 
     def test_settings_bounds(self):
