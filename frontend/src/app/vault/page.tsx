@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,7 +13,16 @@ import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
 import { JobRow, JobStats } from '@/components/studio/JobPipeline';
 import { AlbumSummary } from '@/components/vault/VaultSidebar';
-import { apiError, apiFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import {
+  batchDeleteMedia,
+  batchDownloadZip,
+  fetchCreators,
+  fetchMedia,
+  fetchMediaCount,
+  toggleFavorite,
+  type MediaQueryArgs,
+} from '@/lib/vault-api';
 import {
   IconLayers,
   IconFolderPlus,
@@ -147,9 +156,8 @@ export default function VaultPage() {
       }
 
       // 2. Fetch Media Library
-      const mediaRes = await apiFetch(`${API}/media?limit=1500`).catch(() => null);
-      if (mediaRes && mediaRes.ok) {
-        const mediaData = await mediaRes.json();
+      const mediaData = await fetchMedia({ limit: 1500 }).catch(() => null);
+      if (mediaData) {
         const mediaHash = JSON.stringify(mediaData.map((m: MediaItem) => `${m.id}:${m.is_favorite}:${m.created_at}`));
         if (mediaHash !== lastMediaHashRef.current) {
           lastMediaHashRef.current = mediaHash;
@@ -158,11 +166,10 @@ export default function VaultPage() {
       }
 
        // 3. Fetch total media count independently from paginated gallery data
-       const mediaCountRes = await apiFetch(`${API}/media/count`).catch(() => null);
-       if (mediaCountRes && mediaCountRes.ok) {
-         const mediaCountData = await mediaCountRes.json();
-         setMediaTotal(Number(mediaCountData.count) || 0);
-       }
+      const mediaCount = await fetchMediaCount().catch(() => null);
+      if (mediaCount !== null) {
+        setMediaTotal(mediaCount);
+      }
 
        // 4. Fetch Albums
        const albumsRes = await apiFetch(`${API}/albums`).catch(() => null);
@@ -176,9 +183,8 @@ export default function VaultPage() {
       }
 
       // 4. Fetch Creators Aggregation
-      const creatorsRes = await apiFetch(`${API}/media/creators`).catch(() => null);
-      if (creatorsRes && creatorsRes.ok) {
-        const creatorsData = await creatorsRes.json();
+      const creatorsData = await fetchCreators().catch(() => null);
+      if (creatorsData) {
         const creatorsHash = JSON.stringify(creatorsData);
         if (creatorsHash !== lastCreatorsHashRef.current) {
           lastCreatorsHashRef.current = creatorsHash;
@@ -224,8 +230,7 @@ export default function VaultPage() {
       if (storageRes && storageRes.ok) {
         const sData = await storageRes.json();
         setStorageStats(sData);
-      }
-    } catch (err) {
+      }    } catch (err) {
       console.error('Vault polling failed:', err);
     } finally {
       isFetchingRef.current = false;
@@ -254,23 +259,19 @@ export default function VaultPage() {
     }
   }, [selectedAlbum, fetchAlbumDetail]);
 
-  // Build the shared query string for creator archive requests so list and
-  // count stay in sync with the active server-side filters.
-  const buildCreatorFilters = useCallback(() => {
-    const params = new URLSearchParams();
-    params.set('creator', selectedCreator ?? '');
-    if (selectedPlatforms.length === 1) params.set('platform', selectedPlatforms[0]);
-    if (mediaTypeFilter !== 'all') params.set('media_type', mediaTypeFilter);
-    if (searchQuery.trim()) params.set('q', searchQuery.trim());
-    return params;
-  }, [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery]);
-
-  const buildCreatorQuery = useCallback((offset: number) => {
-    const params = buildCreatorFilters();
-    params.set('limit', String(CREATOR_PAGE_SIZE));
-    params.set('offset', String(offset));
-    return params.toString();
-  }, [buildCreatorFilters, CREATOR_PAGE_SIZE]);
+  // Build the shared query for creator archive requests so list and count stay
+  // in sync with the active server-side filters.
+  const buildCreatorArgs = useCallback(
+    (offset = 0): MediaQueryArgs => ({
+      creator: selectedCreator,
+      platform: selectedPlatforms.length === 1 ? selectedPlatforms[0] : null,
+      media_type: mediaTypeFilter !== 'all' ? mediaTypeFilter : null,
+      q: searchQuery.trim() || null,
+      limit: CREATOR_PAGE_SIZE,
+      offset,
+    }),
+    [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery, CREATOR_PAGE_SIZE],
+  );
 
   // Load the first page of a creator's archive from the server.
   const fetchCreatorFirstPage = useCallback(async () => {
@@ -278,27 +279,26 @@ export default function VaultPage() {
     const requestId = ++creatorRequestRef.current;
     setCreatorLoading(true);
     try {
-      const [listRes, countRes] = await Promise.all([
-        apiFetch(`${API}/media?${buildCreatorQuery(0)}`).catch(() => null),
-        apiFetch(`${API}/media/count?${buildCreatorFilters().toString()}`).catch(() => null),
+      const args = buildCreatorArgs(0);
+      const [data, count] = await Promise.all([
+        fetchMedia(args).catch(() => null),
+        fetchMediaCount({ ...args, limit: undefined, offset: undefined }).catch(() => null),
       ]);
       if (requestId !== creatorRequestRef.current) return;
-      if (listRes && listRes.ok) {
-        const data: MediaItem[] = await listRes.json();
+      if (data) {
         setCreatorMedia(data);
         creatorOffsetRef.current = data.length;
         setCreatorHasMore(data.length >= CREATOR_PAGE_SIZE);
       }
-      if (countRes && countRes.ok) {
-        const data = await countRes.json();
-        setCreatorTotal(Number(data.count) || 0);
+      if (count !== null) {
+        setCreatorTotal(count);
       }
     } catch (err) {
       console.error('Fetch creator media failed:', err);
     } finally {
       if (requestId === creatorRequestRef.current) setCreatorLoading(false);
     }
-  }, [selectedCreator, buildCreatorQuery, buildCreatorFilters, API]);
+  }, [selectedCreator, buildCreatorArgs]);
 
   // Append the next page when the user scrolls to the sentinel.
   const loadMoreCreatorMedia = useCallback(async () => {
@@ -306,10 +306,9 @@ export default function VaultPage() {
     const requestId = creatorRequestRef.current;
     setCreatorLoadingMore(true);
     try {
-      const res = await apiFetch(`${API}/media?${buildCreatorQuery(creatorOffsetRef.current)}`).catch(() => null);
+      const data: MediaItem[] | null = await fetchMedia(buildCreatorArgs(creatorOffsetRef.current)).catch(() => null);
       if (requestId !== creatorRequestRef.current) return;
-      if (res && res.ok) {
-        const data: MediaItem[] = await res.json();
+      if (data) {
         if (data.length === 0) {
           setCreatorHasMore(false);
         } else {
@@ -326,7 +325,7 @@ export default function VaultPage() {
     } finally {
       if (requestId === creatorRequestRef.current) setCreatorLoadingMore(false);
     }
-  }, [selectedCreator, creatorLoading, creatorLoadingMore, creatorHasMore, buildCreatorQuery, API]);
+  }, [selectedCreator, creatorLoading, creatorLoadingMore, creatorHasMore, buildCreatorArgs]);
 
   // Reset & reload whenever a creator is selected or its filters change.
   useEffect(() => {
@@ -455,20 +454,17 @@ export default function VaultPage() {
 
   const handleToggleFavorite = async (id: number) => {
     try {
-      const res = await apiFetch(`${API}/media/${id}/favorite`, { method: 'PATCH' });
-      if (res.ok) {
-        const data = await res.json();
-        setMedia((prev) =>
+      const data = await toggleFavorite(id);
+      setMedia((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
+      );
+      if (selectedCreator) {
+        setCreatorMedia((prev) =>
           prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
         );
-        if (selectedCreator) {
-          setCreatorMedia((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
-          );
-        }
-        if (lightboxItem && lightboxItem.id === id) {
-          setLightboxItem((prev) => prev ? { ...prev, is_favorite: data.is_favorite } : null);
-        }
+      }
+      if (lightboxItem && lightboxItem.id === id) {
+        setLightboxItem((prev) => prev ? { ...prev, is_favorite: data.is_favorite } : null);
       }
     } catch (err) {
       console.error('Favorite toggle failed:', err);
@@ -482,22 +478,13 @@ export default function VaultPage() {
 
     setIsBatchProcessing(true);
     try {
-      const res = await apiFetch(`${API}/media/batch-delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ media_ids: selectedIds }),
-      });
-       if (!res.ok) {
-         throw new Error(await apiError(res, 'Batch delete failed'));
-       }
-       if (res.ok) {
-         setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
-        setSelectedIds([]);
-        refreshData(false);
-      }
-     } catch (err) {
-       alert(err instanceof Error ? err.message : 'Batch delete failed');
-     } finally {
+      await batchDeleteMedia(selectedIds);
+      setMedia((prev) => prev.filter((m) => !selectedIds.includes(m.id)));
+      setSelectedIds([]);
+      refreshData(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Batch delete failed');
+    } finally {
       setIsBatchProcessing(false);
     }
   };
@@ -506,24 +493,17 @@ export default function VaultPage() {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      const res = await apiFetch(`${API}/media/batch/download-zip`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ media_ids: selectedIds }),
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `mediavault-batch-${new Date().toISOString().slice(0, 10)}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      }
+      const blob = await batchDownloadZip(selectedIds);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mediavault-batch-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Batch download zip failed:', err);
+      alert(err instanceof Error ? err.message : 'Batch download failed');
     } finally {
       setIsBatchProcessing(false);
     }
@@ -533,11 +513,7 @@ export default function VaultPage() {
     if (selectedIds.length === 0) return;
     setIsBatchProcessing(true);
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          apiFetch(`${API}/media/${id}/favorite`, { method: 'PATCH' })
-        )
-      );
+      await Promise.all(selectedIds.map((id) => toggleFavorite(id)));
       refreshData(false);
     } catch (err) {
       console.error('Batch favorite toggle failed:', err);
