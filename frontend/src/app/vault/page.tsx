@@ -21,8 +21,8 @@ import {
   fetchMedia,
   fetchMediaCount,
   toggleFavorite,
-  type MediaQueryArgs,
 } from '@/lib/vault-api';
+import { useCreatorArchive } from '@/hooks/useCreatorArchive';
 import {
   IconLayers,
   IconFolderPlus,
@@ -111,12 +111,18 @@ export default function VaultPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaTypeFilter>('all');
 
-  // Creator archive: server-side pagination state
-  const [creatorMedia, setCreatorMedia] = useState<MediaItem[]>([]);
-  const [creatorTotal, setCreatorTotal] = useState(0);
-  const [creatorLoading, setCreatorLoading] = useState(false);
-  const [creatorLoadingMore, setCreatorLoadingMore] = useState(false);
-  const [creatorHasMore, setCreatorHasMore] = useState(false);
+  // Creator archive: server-side pagination, owned by useCreatorArchive.
+  const creatorArchive = useCreatorArchive<MediaItem>({
+    creator: selectedCreator,
+    platform: selectedPlatforms.length === 1 ? selectedPlatforms[0] : null,
+    media_type: mediaTypeFilter !== 'all' ? mediaTypeFilter : null,
+    q: searchQuery,
+  });
+  const creatorMedia = creatorArchive.items;
+  const creatorTotal = creatorArchive.total;
+  const creatorLoading = creatorArchive.loading;
+  const creatorLoadingMore = creatorArchive.loadingMore;
+  const creatorHasMore = creatorArchive.hasMore;
 
   // Multi-Selection States
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -136,9 +142,6 @@ export default function VaultPage() {
   const lastMediaHashRef = useRef<string>('');
   const lastAlbumsHashRef = useRef<string>('');
   const lastCreatorsHashRef = useRef<string>('');
-  const creatorOffsetRef = useRef(0);
-  const creatorRequestRef = useRef(0);
-  const CREATOR_PAGE_SIZE = 90;
 
   // Fetch & Synchronize Library Data
   const refreshData = useCallback(async (showIndicator = false) => {
@@ -259,95 +262,6 @@ export default function VaultPage() {
     }
   }, [selectedAlbum, fetchAlbumDetail]);
 
-  // Build the shared query for creator archive requests so list and count stay
-  // in sync with the active server-side filters.
-  const buildCreatorArgs = useCallback(
-    (offset = 0): MediaQueryArgs => ({
-      creator: selectedCreator,
-      platform: selectedPlatforms.length === 1 ? selectedPlatforms[0] : null,
-      media_type: mediaTypeFilter !== 'all' ? mediaTypeFilter : null,
-      q: searchQuery.trim() || null,
-      limit: CREATOR_PAGE_SIZE,
-      offset,
-    }),
-    [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery, CREATOR_PAGE_SIZE],
-  );
-
-  // Load the first page of a creator's archive from the server.
-  const fetchCreatorFirstPage = useCallback(async () => {
-    if (!selectedCreator) return;
-    const requestId = ++creatorRequestRef.current;
-    setCreatorLoading(true);
-    try {
-      const args = buildCreatorArgs(0);
-      const [data, count] = await Promise.all([
-        fetchMedia(args).catch(() => null),
-        fetchMediaCount({ ...args, limit: undefined, offset: undefined }).catch(() => null),
-      ]);
-      if (requestId !== creatorRequestRef.current) return;
-      if (data) {
-        setCreatorMedia(data);
-        creatorOffsetRef.current = data.length;
-        setCreatorHasMore(data.length >= CREATOR_PAGE_SIZE);
-      }
-      if (count !== null) {
-        setCreatorTotal(count);
-      }
-    } catch (err) {
-      console.error('Fetch creator media failed:', err);
-    } finally {
-      if (requestId === creatorRequestRef.current) setCreatorLoading(false);
-    }
-  }, [selectedCreator, buildCreatorArgs]);
-
-  // Append the next page when the user scrolls to the sentinel.
-  const loadMoreCreatorMedia = useCallback(async () => {
-    if (!selectedCreator || creatorLoading || creatorLoadingMore || !creatorHasMore) return;
-    const requestId = creatorRequestRef.current;
-    setCreatorLoadingMore(true);
-    try {
-      const data: MediaItem[] | null = await fetchMedia(buildCreatorArgs(creatorOffsetRef.current)).catch(() => null);
-      if (requestId !== creatorRequestRef.current) return;
-      if (data) {
-        if (data.length === 0) {
-          setCreatorHasMore(false);
-        } else {
-          setCreatorMedia((prev) => {
-            const seen = new Set(prev.map((m) => m.id));
-            return [...prev, ...data.filter((m) => !seen.has(m.id))];
-          });
-          creatorOffsetRef.current += data.length;
-          setCreatorHasMore(data.length >= CREATOR_PAGE_SIZE);
-        }
-      }
-    } catch (err) {
-      console.error('Load more creator media failed:', err);
-    } finally {
-      if (requestId === creatorRequestRef.current) setCreatorLoadingMore(false);
-    }
-  }, [selectedCreator, creatorLoading, creatorLoadingMore, creatorHasMore, buildCreatorArgs]);
-
-  // Reset & reload whenever a creator is selected or its filters change.
-  useEffect(() => {
-    if (!selectedCreator) {
-      creatorRequestRef.current += 1;
-      creatorOffsetRef.current = 0;
-      setCreatorMedia([]);
-      setCreatorTotal(0);
-      setCreatorHasMore(false);
-      return;
-    }
-    creatorOffsetRef.current = 0;
-    fetchCreatorFirstPage();
-  }, [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery, fetchCreatorFirstPage]);
-
-  // Keep the creator archive fresh on the existing 10s poll (first page only).
-  useEffect(() => {
-    if (!selectedCreator) return;
-    const interval = setInterval(() => fetchCreatorFirstPage(), 10000);
-    return () => clearInterval(interval);
-  }, [selectedCreator, fetchCreatorFirstPage]);
-
   // Initial load & background polling
   useEffect(() => {
     refreshData(false);
@@ -441,8 +355,7 @@ export default function VaultPage() {
         setMedia((prev) => prev.filter((m) => m.id !== id));
         setSelectedIds((prev) => prev.filter((i) => i !== id));
         if (selectedCreator) {
-          setCreatorMedia((prev) => prev.filter((m) => m.id !== id));
-          setCreatorTotal((prev) => Math.max(0, prev - 1));
+          creatorArchive.removeItem(id);
         }
         if (lightboxItem?.id === id) setLightboxItem(null);
         refreshData(false);
@@ -459,9 +372,7 @@ export default function VaultPage() {
         prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
       );
       if (selectedCreator) {
-        setCreatorMedia((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
-        );
+        creatorArchive.patchItem(id, { is_favorite: data.is_favorite });
       }
       if (lightboxItem && lightboxItem.id === id) {
         setLightboxItem((prev) => prev ? { ...prev, is_favorite: data.is_favorite } : null);
@@ -1171,7 +1082,7 @@ storageStats?.disk_total_bytes
                   : undefined
               }
               totalCount={selectedCreator ? creatorTotal : undefined}
-              onLoadMore={selectedCreator ? loadMoreCreatorMedia : undefined}
+              onLoadMore={selectedCreator ? creatorArchive.loadMore : undefined}
               hasMore={selectedCreator ? creatorHasMore : undefined}
               loadingMore={creatorLoadingMore}
               loading={selectedCreator ? creatorLoading : undefined}
