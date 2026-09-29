@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 
 from ..config import ROOT, get_settings
 from ..db import (
@@ -60,31 +60,75 @@ class ToggleFavoritePayload(BaseModel):
     is_favorite: bool | None = None
 
 
+def _media_filters(
+    *,
+    platform: str | None = None,
+    creator: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
+) -> list:
+    """Build SQLAlchemy filter clauses shared by the list and count endpoints."""
+    clauses: list = []
+    if platform and platform != "all":
+        clauses.append(func.lower(MediaItem.platform) == platform.lower())
+    if creator:
+        if creator.lower() == "unknown":
+            clauses.append(MediaItem.username.is_(None))
+        else:
+            clauses.append(func.lower(MediaItem.username) == creator.lower())
+    if is_favorite is not None:
+        clauses.append(MediaItem.is_favorite == is_favorite)
+    if media_type and media_type != "all":
+        # Match on related files without duplicating rows.
+        clauses.append(
+            MediaItem.id.in_(
+                select(MediaFile.media_item_id).where(func.lower(MediaFile.kind) == media_type.lower())
+            )
+        )
+    if q and q.strip():
+        like = f"%{q.strip().lower()}%"
+        clauses.append(
+            or_(
+                func.lower(MediaItem.caption).like(like),
+                func.lower(MediaItem.username).like(like),
+                func.lower(MediaItem.source_url).like(like),
+                func.lower(MediaItem.platform).like(like),
+            )
+        )
+    return clauses
+
+
 @router.get("")
 def list_media(
     platform: str | None = None,
     creator: str | None = None,
     is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
     limit: int = Query(default=100, ge=1, le=10_000),
     offset: int = Query(default=0, ge=0),
 ):
     limit = min(limit, get_settings().list_limit)
     factory = get_session_factory()
     with factory() as session:
-        stmt = select(MediaItem).order_by(MediaItem.created_at.desc()).offset(offset).limit(limit)
-        if platform and platform != "all":
-            stmt = stmt.where(MediaItem.platform == platform)
-        if creator:
-            stmt = stmt.where(MediaItem.username == creator)
-        if is_favorite is not None:
-            stmt = stmt.where(MediaItem.is_favorite == is_favorite)
+        stmt = select(MediaItem)
+        for clause in _media_filters(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q):
+            stmt = stmt.where(clause)
+        # Deterministic ordering so offset pagination never drops or repeats rows
+        # when several items share the same created_at.
+        stmt = stmt.order_by(MediaItem.created_at.desc(), MediaItem.id.desc()).offset(offset).limit(limit)
 
         items = session.scalars(stmt).all()
         results = []
+        # Single batched lookup instead of one query per item (avoids N+1).
+        files_by_item: dict[int, list[MediaFile]] = {}
+        if items:
+            for f in session.scalars(select(MediaFile).where(MediaFile.media_item_id.in_([i.id for i in items]))).all():
+                files_by_item.setdefault(f.media_item_id, []).append(f)
         for i in items:
-            files = session.scalars(select(MediaFile).where(MediaFile.media_item_id == i.id)).all()
             file_list = []
-            for f in files:
+            for f in files_by_item.get(i.id, []):
                 if f.kind == "audio" or Path(f.path).suffix.lower() in {".m4a", ".mp3", ".wav", ".aac", ".flac", ".ogg"}:
                     continue
                 file_list.append({
@@ -101,7 +145,7 @@ def list_media(
                 "id": i.id,
                 "platform": i.platform,
                 "source_url": i.source_url,
-                "username": i.username,
+                "username": i.username or "unknown",
                 "caption": i.caption,
                 "is_favorite": bool(i.is_favorite),
                 "posted_at": i.posted_at.isoformat() if i.posted_at else None,
@@ -112,10 +156,19 @@ def list_media(
 
 
 @router.get("/count")
-def count_media():
+def count_media(
+    platform: str | None = None,
+    creator: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
+):
     factory = get_session_factory()
     with factory() as session:
-        return {"count": session.scalar(select(func.count()).select_from(MediaItem)) or 0}
+        stmt = select(func.count()).select_from(MediaItem)
+        for clause in _media_filters(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q):
+            stmt = stmt.where(clause)
+        return {"count": session.scalar(stmt) or 0}
 
 
 _storage_cache: tuple[float, dict[str, int | str]] | None = None

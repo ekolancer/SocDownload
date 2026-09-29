@@ -102,6 +102,13 @@ export default function VaultPage() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaTypeFilter>('all');
 
+  // Creator archive: server-side pagination state
+  const [creatorMedia, setCreatorMedia] = useState<MediaItem[]>([]);
+  const [creatorTotal, setCreatorTotal] = useState(0);
+  const [creatorLoading, setCreatorLoading] = useState(false);
+  const [creatorLoadingMore, setCreatorLoadingMore] = useState(false);
+  const [creatorHasMore, setCreatorHasMore] = useState(false);
+
   // Multi-Selection States
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
@@ -120,6 +127,9 @@ export default function VaultPage() {
   const lastMediaHashRef = useRef<string>('');
   const lastAlbumsHashRef = useRef<string>('');
   const lastCreatorsHashRef = useRef<string>('');
+  const creatorOffsetRef = useRef(0);
+  const creatorRequestRef = useRef(0);
+  const CREATOR_PAGE_SIZE = 90;
 
   // Fetch & Synchronize Library Data
   const refreshData = useCallback(async (showIndicator = false) => {
@@ -244,6 +254,101 @@ export default function VaultPage() {
     }
   }, [selectedAlbum, fetchAlbumDetail]);
 
+  // Build the shared query string for creator archive requests so list and
+  // count stay in sync with the active server-side filters.
+  const buildCreatorFilters = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('creator', selectedCreator ?? '');
+    if (selectedPlatforms.length === 1) params.set('platform', selectedPlatforms[0]);
+    if (mediaTypeFilter !== 'all') params.set('media_type', mediaTypeFilter);
+    if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    return params;
+  }, [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery]);
+
+  const buildCreatorQuery = useCallback((offset: number) => {
+    const params = buildCreatorFilters();
+    params.set('limit', String(CREATOR_PAGE_SIZE));
+    params.set('offset', String(offset));
+    return params.toString();
+  }, [buildCreatorFilters, CREATOR_PAGE_SIZE]);
+
+  // Load the first page of a creator's archive from the server.
+  const fetchCreatorFirstPage = useCallback(async () => {
+    if (!selectedCreator) return;
+    const requestId = ++creatorRequestRef.current;
+    setCreatorLoading(true);
+    try {
+      const [listRes, countRes] = await Promise.all([
+        apiFetch(`${API}/media?${buildCreatorQuery(0)}`).catch(() => null),
+        apiFetch(`${API}/media/count?${buildCreatorFilters().toString()}`).catch(() => null),
+      ]);
+      if (requestId !== creatorRequestRef.current) return;
+      if (listRes && listRes.ok) {
+        const data: MediaItem[] = await listRes.json();
+        setCreatorMedia(data);
+        creatorOffsetRef.current = data.length;
+        setCreatorHasMore(data.length >= CREATOR_PAGE_SIZE);
+      }
+      if (countRes && countRes.ok) {
+        const data = await countRes.json();
+        setCreatorTotal(Number(data.count) || 0);
+      }
+    } catch (err) {
+      console.error('Fetch creator media failed:', err);
+    } finally {
+      if (requestId === creatorRequestRef.current) setCreatorLoading(false);
+    }
+  }, [selectedCreator, buildCreatorQuery, buildCreatorFilters, API]);
+
+  // Append the next page when the user scrolls to the sentinel.
+  const loadMoreCreatorMedia = useCallback(async () => {
+    if (!selectedCreator || creatorLoading || creatorLoadingMore || !creatorHasMore) return;
+    const requestId = creatorRequestRef.current;
+    setCreatorLoadingMore(true);
+    try {
+      const res = await apiFetch(`${API}/media?${buildCreatorQuery(creatorOffsetRef.current)}`).catch(() => null);
+      if (requestId !== creatorRequestRef.current) return;
+      if (res && res.ok) {
+        const data: MediaItem[] = await res.json();
+        if (data.length === 0) {
+          setCreatorHasMore(false);
+        } else {
+          setCreatorMedia((prev) => {
+            const seen = new Set(prev.map((m) => m.id));
+            return [...prev, ...data.filter((m) => !seen.has(m.id))];
+          });
+          creatorOffsetRef.current += data.length;
+          setCreatorHasMore(data.length >= CREATOR_PAGE_SIZE);
+        }
+      }
+    } catch (err) {
+      console.error('Load more creator media failed:', err);
+    } finally {
+      if (requestId === creatorRequestRef.current) setCreatorLoadingMore(false);
+    }
+  }, [selectedCreator, creatorLoading, creatorLoadingMore, creatorHasMore, buildCreatorQuery, API]);
+
+  // Reset & reload whenever a creator is selected or its filters change.
+  useEffect(() => {
+    if (!selectedCreator) {
+      creatorRequestRef.current += 1;
+      creatorOffsetRef.current = 0;
+      setCreatorMedia([]);
+      setCreatorTotal(0);
+      setCreatorHasMore(false);
+      return;
+    }
+    creatorOffsetRef.current = 0;
+    fetchCreatorFirstPage();
+  }, [selectedCreator, selectedPlatforms, mediaTypeFilter, searchQuery, fetchCreatorFirstPage]);
+
+  // Keep the creator archive fresh on the existing 10s poll (first page only).
+  useEffect(() => {
+    if (!selectedCreator) return;
+    const interval = setInterval(() => fetchCreatorFirstPage(), 10000);
+    return () => clearInterval(interval);
+  }, [selectedCreator, fetchCreatorFirstPage]);
+
   // Initial load & background polling
   useEffect(() => {
     refreshData(false);
@@ -273,16 +378,20 @@ export default function VaultPage() {
   const currentBaseMedia = useMemo(() => {
     if (selectedAlbum) return albumDetailItems;
     if (selectedCreator) {
-      return media.filter((m) => m.username?.toLowerCase() === selectedCreator.toLowerCase());
+      // Creator archive is fetched and filtered server-side.
+      return creatorMedia;
     }
     if (currentTab === 'favorites') {
       return media.filter((m) => m.is_favorite);
     }
     return media;
-  }, [media, selectedAlbum, albumDetailItems, selectedCreator, currentTab]);
+  }, [media, selectedAlbum, albumDetailItems, selectedCreator, currentTab, creatorMedia]);
 
   // Filtered & Searched media items
   const displayMedia = useMemo(() => {
+    // Creator mode already has platform/type/search applied by the server.
+    if (selectedCreator) return currentBaseMedia;
+
     let result = [...currentBaseMedia];
 
     // Platform filter
@@ -332,6 +441,10 @@ export default function VaultPage() {
       if (res.ok) {
         setMedia((prev) => prev.filter((m) => m.id !== id));
         setSelectedIds((prev) => prev.filter((i) => i !== id));
+        if (selectedCreator) {
+          setCreatorMedia((prev) => prev.filter((m) => m.id !== id));
+          setCreatorTotal((prev) => Math.max(0, prev - 1));
+        }
         if (lightboxItem?.id === id) setLightboxItem(null);
         refreshData(false);
       }
@@ -348,6 +461,11 @@ export default function VaultPage() {
         setMedia((prev) =>
           prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
         );
+        if (selectedCreator) {
+          setCreatorMedia((prev) =>
+            prev.map((m) => (m.id === id ? { ...m, is_favorite: data.is_favorite } : m))
+          );
+        }
         if (lightboxItem && lightboxItem.id === id) {
           setLightboxItem((prev) => prev ? { ...prev, is_favorite: data.is_favorite } : null);
         }
@@ -1076,6 +1194,11 @@ storageStats?.disk_total_bytes
                     }
                   : undefined
               }
+              totalCount={selectedCreator ? creatorTotal : undefined}
+              onLoadMore={selectedCreator ? loadMoreCreatorMedia : undefined}
+              hasMore={selectedCreator ? creatorHasMore : undefined}
+              loadingMore={creatorLoadingMore}
+              loading={selectedCreator ? creatorLoading : undefined}
             />
           )}
         </section>

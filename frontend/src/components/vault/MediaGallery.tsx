@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   IconStar,
@@ -34,6 +34,14 @@ interface MediaGalleryProps {
   viewSubtitle?: string;
   onBackToTimeline?: () => void;
   error?: string;
+  // Server-side pagination (creator archive). When onLoadMore is provided the
+  // gallery renders every loaded item and lazily appends more on scroll,
+  // instead of slicing the array client-side.
+  totalCount?: number;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  loading?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [30, 60, 90, 120, 150];
@@ -100,10 +108,19 @@ export function MediaGallery({
   onToggleSelect,
   viewTitle,
   onBackToTimeline,
+  totalCount,
+  onLoadMore,
+  hasMore,
+  loadingMore,
+  loading,
 }: MediaGalleryProps) {
   // Default 6x5 = 30 items per page
   const [pageSize, setPageSize] = useState<number>(30);
   const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Server-side pagination mode (creator archive): render all loaded items.
+  const isServerPaged = typeof onLoadMore === 'function';
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset page when media changes
   useEffect(() => {
@@ -116,9 +133,24 @@ export function MediaGallery({
   const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedMedia = useMemo(() => {
+    if (isServerPaged) return media;
     const start = (safeCurrentPage - 1) * pageSize;
     return media.slice(start, start + pageSize);
-  }, [media, safeCurrentPage, pageSize]);
+  }, [media, safeCurrentPage, pageSize, isServerPaged]);
+
+  // Infinite scroll: append the next page when the sentinel enters the viewport.
+  useEffect(() => {
+    if (!isServerPaged || !hasMore || loadingMore) return;
+    const node = sentinelRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        onLoadMore?.();
+      }
+    }, { rootMargin: '600px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isServerPaged, hasMore, loadingMore, onLoadMore]);
 
   const visiblePages = getVisiblePages(safeCurrentPage, totalPages);
 
@@ -130,6 +162,18 @@ export function MediaGallery({
   };
 
   if (media.length === 0) {
+    // While a creator archive is loading, show a spinner instead of the
+    // "empty vault" message so users don't think their media is gone.
+    if (loading) {
+      return (
+        <div className="w-full p-1.5 sm:p-2 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-xl backdrop-blur-xl">
+          <div className="w-full flex flex-col items-center justify-center p-12 sm:p-16 rounded-xl bg-slate-950/50 border border-white/[0.06] text-center">
+            <div className="w-8 h-8 rounded-full border-2 border-emerald-400/40 border-t-emerald-400 animate-spin mb-4" />
+            <p className="text-xs text-slate-400">Memuat media kreator…</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="w-full p-1.5 sm:p-2 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-xl backdrop-blur-xl">
         <div className="w-full flex flex-col items-center justify-center p-12 sm:p-16 rounded-xl bg-slate-950/50 border border-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] text-center">
@@ -170,7 +214,7 @@ export function MediaGallery({
               </h2>
             </div>
             <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
-              {totalItems} media
+              {isServerPaged ? (totalCount ?? totalItems) : totalItems} media
             </span>
           </div>
         </div>
@@ -308,8 +352,31 @@ export function MediaGallery({
         })}
       </div>
 
+      {/* Server-side lazy-load: sentinel + accessible fallback button */}
+      {isServerPaged && (hasMore || loadingMore) && (
+        <div ref={sentinelRef} className="w-full flex flex-col items-center justify-center gap-3 py-6">
+          {loadingMore ? (
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <div className="w-4 h-4 rounded-full border-2 border-emerald-400/40 border-t-emerald-400 animate-spin" />
+              <span>Memuat lebih banyak…</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onLoadMore?.()}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer active:scale-95"
+            >
+              Muat lebih banyak
+            </button>
+          )}
+          <span className="text-[11px] font-mono text-slate-500">
+            {media.length} dari {totalCount ?? media.length} media
+          </span>
+        </div>
+      )}
+
       {/* Modern SaaS Pagination Controls (Multiples of 30) */}
-      {totalPages > 1 && (
+      {!isServerPaged && totalPages > 1 && (
         <div className="w-full p-2 rounded-2xl bg-slate-900/60 border border-white/[0.08] shadow-lg backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 px-3">
             <span className="text-xs font-mono text-slate-300">

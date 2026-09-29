@@ -4,7 +4,7 @@
 > Status: Draft  
 > Owner: [TBD — confirm with team]  
 > Last Updated: 2026-09-24  
-> Related Documents: [Portal](../README.md), [SRS](01-requirements/SRS.md), [HLD](02-architecture/HLD.md)
+> Related Documents: [Portal](../README.md), [SRS](01-requirements/SRS.md), [HLD](02-architecture/HLD.md), [Context](../CONTEXT.md), [ADRs](adr/README.md)
 
 - **API:** Application Programming Interface; HTTP contract exposed by backend.
 - **CRUD:** Create, Read, Update, Delete.
