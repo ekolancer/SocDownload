@@ -34,4 +34,6 @@ curl -H "Authorization: Bearer $API_TOKEN" \
   http://127.0.0.1:8000/api/jobs
 ```
 
+`GET /api/media?limit=5&available_visual=true` returns newest archived items with existing image/video files for five display-only Recent Downloads cards; items with only audio or missing files are skipped before the limit. Without `available_visual`, the media list keeps its normal behavior. `GET /api/media/files/{id}` serves known image/video/audio types inline with concrete MIME types and supports byte ranges for video playback; unrecognized file types remain attachments. Recent Downloads is a view of archived media, not job history; queued, duplicate, and failed downloads remain under `/api/jobs`.
+
 Exact request models, limits, and response fields are route source. Validation errors are mapped by FastAPI handlers; unauthorized requests return `401`.

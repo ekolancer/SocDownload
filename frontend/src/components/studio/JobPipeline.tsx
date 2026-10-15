@@ -67,6 +67,9 @@ interface JobPipelineProps {
   onCancelQueue?: () => Promise<void>;
   onClearJobs?: () => Promise<void>;
   onDeleteJob?: (id: number) => Promise<void>;
+  loading?: boolean;
+  loadError?: string;
+  onRetry?: () => void;
 }
 
 type StatusFilter = 'all' | 'active' | 'instagram' | 'tiktok' | 'threads' | 'x' | 'youtube';
@@ -126,7 +129,7 @@ function formatJobTime(dateString?: string | null) {
   }
 }
 
-export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJob }: JobPipelineProps) {
+export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJob, loading = false, loadError = '', onRetry }: JobPipelineProps) {
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -199,8 +202,6 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
     }
   };
 
-  if (jobs.length === 0 && (!stats || stats.total === 0)) return null;
-
   return (
     <section className="w-full max-w-4xl flex flex-col gap-6 mt-8">
       
@@ -215,7 +216,7 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
           </p>
         </div>
 
-        {onClearJobs && (
+        {onClearJobs && !loadError && (jobs.length > 0 || (stats?.total ?? 0) > 0) && (
           <button
             type="button"
             onClick={onClearJobs}
@@ -440,7 +441,16 @@ export function JobPipeline({ jobs, stats, onCancelQueue, onClearJobs, onDeleteJ
 
       {/* Task List */}
       <div className="flex flex-col gap-2.5">
-        {paginatedJobs.map((job) => {
+        {loadError ? (
+          <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-4 text-sm text-rose-200">
+            {loadError} {onRetry && <button type="button" onClick={onRetry} className="ml-2 underline" aria-label="Retry loading jobs">Retry</button>}
+          </div>
+        ) : loading && jobs.length === 0 ? (
+          <p className="text-sm text-slate-400">Loading jobs...</p>
+        ) : paginatedJobs.length === 0 ? (
+          <p className="text-sm text-slate-400">{jobs.length === 0 ? 'No jobs yet.' : 'No jobs match these filters.'}</p>
+        ) : null}
+        {!loadError && paginatedJobs.map((job) => {
           const isDone = job.status === 'done' || job.status === 'dup';
           const isRunning = job.status === 'running';
           const isQueued = job.status === 'queued';

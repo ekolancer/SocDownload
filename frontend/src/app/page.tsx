@@ -7,7 +7,7 @@ import { AutoSyncCard } from '@/components/studio/AutoSyncCard';
 import { JobPipeline, JobRow, JobStats } from '@/components/studio/JobPipeline';
 import { ArchiveImportModal } from '@/components/modals/ArchiveImportModal';
 import { JobNotificationToast, CompletedJobNotice } from '@/components/studio/JobNotificationToast';
-import { MediaLightboxModal, MediaItem } from '@/components/modals/MediaLightboxModal';
+import type { MediaItem } from '@/components/modals/MediaLightboxModal';
 import Link from 'next/link';
 import { apiError, apiFetch } from '@/lib/api';
 import {
@@ -22,14 +22,14 @@ const API = '/api';
 
 export default function StudioPage() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
-  const [mediaCount, setMediaCount] = useState<number>(0);
   const [recentMedia, setRecentMedia] = useState<MediaItem[]>([]);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modals state
-  const [lightboxItem, setLightboxItem] = useState<MediaItem | null>(null);
   const [importMode, setImportMode] = useState<'archive' | 'vidara' | null>(null);
   const [isAdaptersDrawerOpen, setIsAdaptersDrawerOpen] = useState(false);
   const [completedNotice, setCompletedNotice] = useState<CompletedJobNotice | null>(null);
@@ -53,7 +53,7 @@ export default function StudioPage() {
       // Parallel fetch with individual timeouts
       const [healthResult, mediaResult, statsResult, jobsResult] = await Promise.allSettled([
         apiFetch(`${API}/health`, { signal: AbortSignal.timeout(4000) }),
-        apiFetch(`${API}/media?limit=8`, { signal: AbortSignal.timeout(6000) }),
+        apiFetch(`${API}/media?limit=5&available_visual=true`, { signal: AbortSignal.timeout(6000) }),
         apiFetch(`${API}/jobs/stats`, { signal: AbortSignal.timeout(4000) }),
         apiFetch(`${API}/jobs?limit=100`, { signal: AbortSignal.timeout(6000) }),
       ]);
@@ -69,17 +69,10 @@ export default function StudioPage() {
       if (mediaResult.status === 'fulfilled' && mediaResult.value.ok) {
         const mediaData = await mediaResult.value.json().catch(() => null);
         if (Array.isArray(mediaData)) {
-          const mediaItems = mediaData
-            .map((item: MediaItem) => ({
-              ...item,
-              files: (item.files || []).filter((file) => !/\.(m4a|mp3|wav|aac|flac|ogg)$/i.test(file.name || file.path || '')),
-            }))
-            .filter((item: MediaItem) => item.files.length > 0);
-          const mediaHash = JSON.stringify(mediaItems.map((m: MediaItem) => `${m.id}:${m.is_favorite}`));
+          const mediaHash = JSON.stringify(mediaData);
           if (mediaHash !== lastMediaHashRef.current) {
             lastMediaHashRef.current = mediaHash;
-            setRecentMedia(mediaItems);
-            setMediaCount(mediaItems.length);
+            setRecentMedia(mediaData);
           }
         }
       }
@@ -100,6 +93,7 @@ export default function StudioPage() {
       if (jobsResult.status === 'fulfilled' && jobsResult.value.ok) {
         const jobsData: JobRow[] = await jobsResult.value.json().catch(() => null);
         if (Array.isArray(jobsData)) {
+          setJobsError('');
           if (prevJobsRef.current.length > 0) {
             jobsData.forEach((newJob) => {
               const oldJob = prevJobsRef.current.find((j) => j.id === newJob.id);
@@ -138,11 +132,19 @@ export default function StudioPage() {
             lastJobsHashRef.current = jobsHash;
             setJobs(jobsData);
           }
+        } else {
+          setJobsError('Could not read job history.');
         }
+      } else {
+        setJobsError(jobsResult.status === 'fulfilled'
+          ? `Could not load jobs (${jobsResult.value.status}).`
+          : 'Could not connect to job history.');
       }
     } catch (err) {
       console.error('Fetch error:', err);
+      setJobsError('Could not load jobs.');
     } finally {
+      setJobsLoading(false);
       isFetchingRef.current = false;
       if (showIndicator) {
         setTimeout(() => setIsRefreshing(false), 300);
@@ -305,7 +307,7 @@ export default function StudioPage() {
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold text-white tracking-tight">Recent Downloads</h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
-                  8 LATEST
+                  {recentMedia.length} LATEST
                 </span>
               </div>
               <Link
@@ -317,25 +319,24 @@ export default function StudioPage() {
               </Link>
             </div>
 
-            {/* 4 Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {recentMedia.slice(0, 4).map((item) => {
+            {/* 5 Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              {recentMedia.slice(0, 5).map((item) => {
                 const firstFile = item.files?.[0];
                 const isVideo = firstFile?.kind === 'video' || Boolean(firstFile?.path?.endsWith('.mp4'));
-                const previewUrl = firstFile ? (firstFile.thumbnail_url || `/media-file/${firstFile.id}`) : '';
+                const previewUrl = firstFile?.thumbnail_url || (!isVideo && firstFile ? `/media-file/${firstFile.id}` : '');
 
                 return (
                   <div
                     key={item.id}
-                    onClick={() => setLightboxItem(item)}
-                    className="rounded-2xl overflow-hidden glass-panel hover:bg-slate-800/80 transition-all duration-300 flex flex-col group p-1.5 shadow-md hover:shadow-xl hover:-translate-y-1 border border-white/[0.08] hover:border-white/20 cursor-pointer"
+                    className="rounded-2xl overflow-hidden glass-panel flex flex-col p-1.5 shadow-md border border-white/[0.08]"
                   >
                     <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-slate-950 w-full border border-white/[0.04]">
                       {previewUrl ? (
                         <img
                           src={previewUrl}
                           alt={item.caption || 'Recent Media'}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="w-full h-full object-cover"
                           loading="lazy"
                           decoding="async"
                           width={firstFile?.width || 480}
@@ -368,7 +369,7 @@ export default function StudioPage() {
                         <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-emerald-400 shrink-0">
                           {item.username ? item.username.charAt(0).toUpperCase() : 'M'}
                         </div>
-                        <span className="text-xs text-white font-bold truncate group-hover:text-emerald-400 transition-colors">
+                        <span className="text-xs text-white font-bold truncate">
                           {item.username ? `@${item.username}` : 'Archived'}
                         </span>
                       </div>
@@ -387,17 +388,14 @@ export default function StudioPage() {
         <JobPipeline
           jobs={jobs}
           stats={jobStats}
+          loading={jobsLoading}
+          loadError={jobsError}
+          onRetry={() => refreshData(true)}
           onCancelQueue={handleCancelQueue}
           onClearJobs={handleClearJobs}
           onDeleteJob={handleDeleteJob}
         />
       </div>
-
-      {/* Lightbox Modal on Home */}
-      <MediaLightboxModal
-        item={lightboxItem}
-        onClose={() => setLightboxItem(null)}
-      />
 
       {/* Archive Import Modal */}
       <ArchiveImportModal

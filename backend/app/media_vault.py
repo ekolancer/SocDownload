@@ -33,6 +33,7 @@ class MediaQuery:
     is_favorite: bool | None = None
     media_type: str | None = None
     q: str | None = None
+    available_visual: bool = False
     ids: list[int] | None = None
     album_id: int | None = None
     limit: int = 100
@@ -127,10 +128,40 @@ class MediaVault:
             stmt = select(MediaItem)
             for clause in query.clauses():
                 stmt = stmt.where(clause)
-            stmt = stmt.order_by(MediaItem.created_at.desc(), MediaItem.id.desc()).offset(query.offset).limit(query.limit)
-            items = session.scalars(stmt).all()
-            files_by_item = self._files_by_item(session, [i.id for i in items])
-            return [serialize_item(i, files_by_item.get(i.id, []), skip_audio=True) for i in items]
+            stmt = stmt.order_by(MediaItem.created_at.desc(), MediaItem.id.desc())
+            if not query.available_visual:
+                items = session.scalars(stmt.offset(query.offset).limit(query.limit)).all()
+                files_by_item = self._files_by_item(session, [i.id for i in items])
+                return [serialize_item(i, files_by_item.get(i.id, []), skip_audio=True) for i in items]
+
+            visual_file = select(MediaFile.id).where(
+                MediaFile.media_item_id == MediaItem.id,
+                MediaFile.kind.in_(("image", "video")),
+            ).exists()
+            stmt = stmt.where(visual_file)
+            result: list[dict] = []
+            position = 0
+            available = 0
+            while len(result) < query.limit:
+                items = session.scalars(stmt.offset(position).limit(50)).all()
+                if not items:
+                    break
+                position += len(items)
+                files_by_item = self._files_by_item(session, [item.id for item in items])
+                for item in items:
+                    files = [file for file in files_by_item.get(item.id, []) if file.kind in {"image", "video"} and Path(file.path).is_file()]
+                    if files:
+                        available += 1
+                        if available <= query.offset:
+                            continue
+                        serialized = serialize_item(item, files)
+                        for file, payload in zip(files, serialized["files"]):
+                            if file.thumbnail_path and not Path(file.thumbnail_path).is_file():
+                                payload["thumbnail_url"] = None
+                        result.append(serialized)
+                        if len(result) == query.limit:
+                            break
+            return result
 
     def count(self, query: MediaQuery) -> int:
         with self._session_factory() as session:

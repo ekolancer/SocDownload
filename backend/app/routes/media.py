@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import shutil
 import threading
 import time
@@ -53,6 +54,7 @@ def _query(
     is_favorite: bool | None = None,
     media_type: str | None = None,
     q: str | None = None,
+    available_visual: bool = False,
     ids: list[int] | None = None,
     album_id: int | None = None,
     limit: int = 100,
@@ -64,6 +66,7 @@ def _query(
         is_favorite=is_favorite,
         media_type=media_type,
         q=q,
+        available_visual=available_visual,
         ids=ids,
         album_id=album_id,
         limit=limit,
@@ -80,9 +83,10 @@ def list_media(
     q: str | None = None,
     limit: int = Query(default=100, ge=1, le=10_000),
     offset: int = Query(default=0, ge=0),
+    available_visual: bool = False,
 ):
     limit = min(limit, get_settings().list_limit)
-    return _vault.list_items(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, limit=limit, offset=offset))
+    return _vault.list_items(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, available_visual=available_visual, limit=limit, offset=offset))
 
 
 @router.get("/count")
@@ -173,8 +177,14 @@ def serve_media_file(file_id: int):
         _guard_within(file_path, _media_root())
         if not file_path.is_file():
             raise HTTPException(status_code=404, detail="file missing")
-        media_type = "video" if mf.kind == "video" else "image"
-        return FileResponse(file_path, media_type=f"{media_type}/*", filename=file_path.name)
+        media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+        allowed = {
+            "image": {"image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/bmp", "image/tiff"},
+            "video": {"video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska", "video/mpeg"},
+            "audio": {"audio/mp4", "audio/mpeg", "audio/wav", "audio/aac", "audio/flac", "audio/ogg", "audio/webm"},
+        }
+        inline = media_type in allowed.get(mf.kind, set())
+        return FileResponse(file_path, media_type=media_type if inline else "application/octet-stream", filename=file_path.name, content_disposition_type="inline" if inline else "attachment")
 
 
 def _media_root() -> Path:
