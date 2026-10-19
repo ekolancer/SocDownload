@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from .base import BaseAdapter, ResolvedMedia, extract_username
 from ..engines import gdl_download, gdl_first_item
@@ -27,7 +28,11 @@ class PlatformSpec:
     engine: str = "gallery-dl"
 
     def detect(self, url: str) -> bool:
-        return bool(re.search(self.host_pattern, url, re.IGNORECASE))
+        try:
+            hostname = urlsplit(url).hostname
+        except ValueError:
+            return False
+        return bool(hostname and re.fullmatch(self.host_pattern, hostname.rstrip("."), re.IGNORECASE))
 
 
 def _first(metadata: dict, keys: tuple[str, ...]) -> str | None:

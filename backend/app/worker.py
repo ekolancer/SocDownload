@@ -69,6 +69,8 @@ class Worker:
                 )
                 await self._set_failed(job_id, str(exc))
             finally:
+                from .service import release_pending
+                release_pending(job_id)
                 record_job("completed", time.perf_counter() - started)
                 self.queue.task_done()
 

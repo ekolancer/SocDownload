@@ -12,8 +12,9 @@
 |---|---|
 | `main.py` | App creation, middleware, lifespan, adapter registration. |
 | `routes/` | HTTP contracts for auth, jobs, media, albums, imports, autosync, settings, health, console. |
-| `service.py` | Enqueue, queue, claims, orchestration, deduplication. |
-| `worker.py` | Worker loop and job transitions. |
+| `service.py` | Enqueue, in-memory queue, startup recovery, dispatch of due retries. |
+| `jobs.py` | DownloadJob lifecycle, deduplication, and retry decisions. |
+| `worker.py` | Worker scheduling loop and last-resort failure guard. |
 | `db.py` | Models, SQLite engine, migrations. |
 | `url_validation.py` | URL and public-DNS validation. |
 | `adapters/` | Platform-specific extraction/download behavior. |
@@ -27,8 +28,11 @@ stateDiagram-v2
  queued --> running: lease claimed
  running --> done: files persisted
  running --> dup: duplicate detected
- running --> failed: error
- failed --> queued: recovery/retry when eligible
+ running --> failed: terminal error or attempt limit
+ running --> queued: retryable error, scheduled in DB
 ```
 
-Database state is authoritative. Staging/filesystem changes cannot share SQLite transaction; cleanup is compensating. Reconciliation policy: `[TBD — confirm with team]`.
+Retryable failures wait 30 seconds after attempt 1 and 60 seconds after attempt 2;
+three attempts total. Startup recovery and the existing scheduler dispatch queued jobs
+only when `next_attempt_at` is due. `DownloadJob` atomically rejects premature or
+duplicate claims. Database state is authoritative. Staging/filesystem changes cannot share SQLite transaction; cleanup is compensating. Reconciliation policy: `[TBD — confirm with team]`.

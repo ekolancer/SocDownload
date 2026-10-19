@@ -48,15 +48,15 @@ do not drift to "component", "service", "API", or "boundary".
 
 ## Named modules (target architecture)
 
-These names are introduced by the architecture review in
-`architecture-review-20260929` (temp dir) and the ADRs. Implementation may lag.
+These names originated in the architecture review and ADRs. Status describes implementation,
+not whether an interface needs more layers.
 
 | Module | Responsibility | Status |
 |---|---|---|
-| **DownloadJob** | Owns one job's lifecycle: claim → download → dedup → organize → persist, with the single retry classifier. | proposed |
-| **GalleryDlAdapter** | One deep adapter driving gallery-dl, parameterised by a per-platform `PlatformSpec`. | proposed |
-| **PlatformSpec** | Data describing a platform for `GalleryDlAdapter`: hosts, username keys, regex fallback, field mappings. | proposed |
-| **MediaVault** | Query, serialization, and deletion of media items behind one interface. | proposed |
-| **MediaExporter** | Consumes MediaVault to produce CSV/JSON/ZIP artefacts. | proposed |
-| **MediaQuery** | One filter dataclass shared by list, count, creators, and export. | proposed |
+| **DownloadJob** | Owns one job's lifecycle: claim → download → dedup → organize → persist; retryable errors wait 30/60 seconds across restarts (three attempts total). | implemented |
+| **GalleryDlAdapter** | Shared gallery-dl adapter parameterised by per-platform `PlatformSpec`. | implemented |
+| **PlatformSpec** | Platform hosts, username keys, URL fallback, and metadata mappings. | implemented |
+| **MediaVault** | Query, serialization, and deletion of media items behind one interface. | implemented |
+| **MediaExporter** | Consumes MediaVault's selected items to produce CSV/JSON/ZIP artefacts. | implemented |
+| **MediaQuery** | Shared filters for list, count, creators, and export; pagination applies to list and export. | implemented |
 | **SettingsStore** | Resolves config precedence (env vs DB) once; exposes named getters. | deferred |

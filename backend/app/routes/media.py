@@ -81,12 +81,13 @@ def list_media(
     is_favorite: bool | None = None,
     media_type: str | None = None,
     q: str | None = None,
+    album_id: int | None = None,
     limit: int = Query(default=100, ge=1, le=10_000),
     offset: int = Query(default=0, ge=0),
     available_visual: bool = False,
 ):
     limit = min(limit, get_settings().list_limit)
-    return _vault.list_items(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, available_visual=available_visual, limit=limit, offset=offset))
+    return _vault.list_items(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, album_id=album_id, available_visual=available_visual, limit=limit, offset=offset))
 
 
 @router.get("/count")
@@ -96,14 +97,20 @@ def count_media(
     is_favorite: bool | None = None,
     media_type: str | None = None,
     q: str | None = None,
+    album_id: int | None = None,
 ):
-    return {"count": _vault.count(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q))}
-
+    return {"count": _vault.count(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, album_id=album_id))}
 
 @router.get("/creators")
-def list_creators():
-    return _vault.creators()
-
+def list_creators(
+    platform: str | None = None,
+    creator: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
+    album_id: int | None = None,
+):
+    return _vault.creators(_query(platform=platform, creator=creator, is_favorite=is_favorite, media_type=media_type, q=q, album_id=album_id))
 
 @router.get("/storage")
 def get_storage_stats():
@@ -222,14 +229,32 @@ def batch_delete_media(payload: BatchMediaPayload):
     return {"deleted_count": _vault.delete(media_ids)}
 
 
-def _export_query(ids: str | None, album_id: int | None, username: str | None, platform: str | None, limit: int) -> MediaQuery:
+def _export_query(
+    ids: str | None,
+    album_id: int | None,
+    username: str | None,
+    platform: str | None,
+    limit: int,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
+) -> MediaQuery:
     id_list = None
-    if ids:
+    if ids is not None:
         try:
             id_list = _validate_batch_ids([int(i.strip()) for i in ids.split(",") if i.strip()])
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid media IDs") from None
-    return _query(ids=id_list, album_id=album_id, creator=username, platform=platform, limit=limit)
+    return _query(
+        ids=id_list,
+        album_id=album_id,
+        creator=username,
+        platform=platform,
+        is_favorite=is_favorite,
+        media_type=media_type,
+        q=q,
+        limit=limit,
+    )
 
 
 @router.get("/export/csv")
@@ -238,10 +263,13 @@ def export_metadata_csv(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
     limit = min(limit, get_settings().export_items_limit)
-    data = _exporter.csv_bytes(_export_query(ids, album_id, username, platform, limit))
+    data = _exporter.csv_bytes(_export_query(ids, album_id, username, platform, limit, is_favorite, media_type, q))
     filename = f"mediavault_metadata_{now_wib().strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(io.BytesIO(data), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
@@ -252,10 +280,13 @@ def export_metadata_json(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
     limit = min(limit, get_settings().export_items_limit)
-    data = _exporter.json_bytes(_export_query(ids, album_id, username, platform, limit))
+    data = _exporter.json_bytes(_export_query(ids, album_id, username, platform, limit, is_favorite, media_type, q))
     filename = f"mediavault_export_{now_wib().strftime('%Y%m%d_%H%M%S')}.json"
     return StreamingResponse(io.BytesIO(data), media_type="application/json", headers={"Content-Disposition": f"attachment; filename={filename}"})
 
@@ -266,12 +297,15 @@ def export_media_zip(
     album_id: int | None = None,
     username: str | None = None,
     platform: str | None = None,
+    is_favorite: bool | None = None,
+    media_type: str | None = None,
+    q: str | None = None,
     limit: int = Query(default=500, ge=1, le=10_000),
 ):
     settings = get_settings()
     limit = min(limit, settings.export_items_limit)
     try:
-        data = _exporter.zip_bytes(_export_query(ids, album_id, username, platform, limit), bytes_limit=settings.export_bytes_limit)
+        data = _exporter.zip_bytes(_export_query(ids, album_id, username, platform, limit, is_favorite, media_type, q), bytes_limit=settings.export_bytes_limit)
     except ValueError as exc:
         if str(exc) == "export_too_large":
             raise HTTPException(status_code=413, detail="Export is too large") from None

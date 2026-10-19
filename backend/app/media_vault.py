@@ -41,7 +41,7 @@ class MediaQuery:
 
     def clauses(self) -> list:
         clauses: list = []
-        if self.ids:
+        if self.ids is not None:
             clauses.append(MediaItem.id.in_(self.ids))
         if self.platform and self.platform != "all":
             clauses.append(func.lower(MediaItem.platform) == self.platform.lower())
@@ -50,6 +50,12 @@ class MediaQuery:
                 clauses.append(MediaItem.username.is_(None))
             else:
                 clauses.append(func.lower(MediaItem.username) == self.creator.lower())
+        if self.album_id is not None:
+            clauses.append(
+                MediaItem.id.in_(
+                    select(AlbumMediaItem.media_item_id).where(AlbumMediaItem.album_id == self.album_id)
+                )
+            )
         if self.is_favorite is not None:
             clauses.append(MediaItem.is_favorite == self.is_favorite)
         if self.media_type and self.media_type != "all":
@@ -170,9 +176,13 @@ class MediaVault:
                 stmt = stmt.where(clause)
             return session.scalar(stmt) or 0
 
-    def creators(self) -> list[dict]:
+    def creators(self, query: MediaQuery | None = None) -> list[dict]:
+        query = query or MediaQuery()
         with self._session_factory() as session:
-            items = session.scalars(select(MediaItem).order_by(MediaItem.created_at.desc())).all()
+            stmt = select(MediaItem)
+            for clause in query.clauses():
+                stmt = stmt.where(clause)
+            items = session.scalars(stmt.order_by(MediaItem.created_at.desc())).all()
             files_by_item = self._files_by_item(session, [i.id for i in items])
 
             creators_map: dict[tuple[str, str], dict] = {}

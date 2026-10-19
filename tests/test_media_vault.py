@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.app.db import Base, MediaFile, MediaItem
+from backend.app.db import Album, AlbumMediaItem, Base, MediaFile, MediaItem
 from backend.app.media_exporter import MediaExporter
 from backend.app.media_vault import MediaQuery, MediaVault, serialize_item
 
@@ -114,6 +114,34 @@ def test_export_zip_rejects_oversize(session_factory, vault, tmp_path):
     _seed(session_factory, tmp_path)
     with pytest.raises(ValueError, match="export_too_large"):
         MediaExporter(vault=vault, session_factory=session_factory).zip_bytes(MediaQuery(limit=10), bytes_limit=1)
+
+
+def test_album_filter_is_shared_by_list_count_creators_and_exports(session_factory, vault, tmp_path):
+    _seed(session_factory, tmp_path)
+    with session_factory() as session:
+        session.add(Album(id=7, name="album"))
+        session.add_all([
+            AlbumMediaItem(album_id=7, media_item_id=1),
+            AlbumMediaItem(album_id=7, media_item_id=2),
+        ])
+        session.commit()
+
+    query = MediaQuery(album_id=7, platform="instagram", creator="CREATOR", limit=10)
+    assert [item["id"] for item in vault.list_items(query)] == [1]
+    assert vault.count(query) == 1
+    assert [(creator["username"], creator["platform"]) for creator in vault.creators(query)] == [("creator", "instagram")]
+
+    exporter = MediaExporter(vault=vault, session_factory=session_factory)
+    assert [item["id"] for item in json.loads(exporter.json_bytes(query))] == [1]
+    csv_text = exporter.csv_bytes(query).decode("utf-8-sig")
+    assert "https://ig/a" in csv_text
+    assert "https://vd/b" not in csv_text
+
+    page_query = MediaQuery(album_id=7, limit=1, offset=1)
+    assert [item["id"] for item in vault.list_items(page_query)] == [1]
+    assert [item["id"] for item in json.loads(exporter.json_bytes(page_query))] == [1]
+    with zipfile.ZipFile(io.BytesIO(exporter.zip_bytes(page_query, bytes_limit=10 * 1024 * 1024))) as archive:
+        assert [item["id"] for item in json.loads(archive.read("metadata.json"))] == [1]
 
 
 def test_serialize_item_full_includes_codecs():

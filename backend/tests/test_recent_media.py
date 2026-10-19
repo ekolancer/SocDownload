@@ -9,8 +9,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.config import Settings
-from backend.app.db import Base, MediaFile, MediaItem
+from backend.app.db import Album, AlbumMediaItem, Base, MediaFile, MediaItem
+from backend.app.media_exporter import MediaExporter
 from backend.app.media_vault import MediaQuery, MediaVault
+
+Settings.model_config["env_file"] = None
 from backend.app.routes.media import router
 
 
@@ -61,6 +64,31 @@ def test_recent_media_skips_audio_and_missing_files_before_limit(tmp_path):
     assert len(MediaVault(session_factory=factory).list_items(MediaQuery(limit=4))) == 4
     engine.dispose()
 
+
+def test_media_http_filters_share_album_query_across_list_count_creators_and_export(tmp_path):
+    engine = create_engine(f"sqlite:///{(tmp_path / 'http-album-vault.db').as_posix()}")
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with factory() as session:
+        session.add_all([
+            MediaItem(id=1, platform="x", source_url="https://example.test/1", username="creator"),
+            MediaItem(id=2, platform="x", source_url="https://example.test/2", username="other"),
+            Album(id=9, name="album"),
+        ])
+        session.add(AlbumMediaItem(album_id=9, media_item_id=1))
+        session.commit()
+    vault = MediaVault(session_factory=factory)
+    app = FastAPI()
+    app.include_router(router)
+    with patch("backend.app.routes.media._vault", vault), patch(
+        "backend.app.routes.media._exporter", MediaExporter(vault=vault, session_factory=factory)
+    ), patch("backend.app.routes.media.get_settings", return_value=Settings(_env_file=None)):
+        client = TestClient(app)
+        assert [item["id"] for item in client.get("/api/media?album_id=9").json()] == [1]
+        assert client.get("/api/media/count?album_id=9").json() == {"count": 1}
+        assert [item["username"] for item in client.get("/api/media/creators?album_id=9").json()] == ["creator"]
+        assert [item["id"] for item in client.get("/api/media/export/json?album_id=9").json()] == [1]
+    engine.dispose()
 
 def test_recent_media_http_route_returns_only_available_visual_files(tmp_path):
     engine = create_engine(f"sqlite:///{(tmp_path / 'http-vault.db').as_posix()}")

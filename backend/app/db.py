@@ -66,6 +66,7 @@ class Job(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     lease_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     progress_percent: Mapped[int | None] = mapped_column(Integer, nullable=True)
     bytes_downloaded: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -233,6 +234,9 @@ MIGRATIONS = {
         "ALTER TABLE jobs ADD COLUMN progress_stage VARCHAR(32)",
         "ALTER TABLE jobs ADD COLUMN transfer_speed FLOAT",
         "ALTER TABLE jobs ADD COLUMN eta_seconds INTEGER",
+    ),
+    10: (
+        "ALTER TABLE jobs ADD COLUMN next_attempt_at DATETIME",
     ),
 
 }

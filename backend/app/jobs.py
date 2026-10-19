@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 import shutil
@@ -103,12 +104,18 @@ class DownloadJob:
         with self._session_factory() as session:
             result = session.execute(
                 update(Job)
-                .where(Job.id == job_id, Job.status == JobStatus.QUEUED.value)
+                .where(
+                    Job.id == job_id,
+                    Job.status == JobStatus.QUEUED.value,
+                    Job.attempts < self._max_attempts,
+                    (Job.next_attempt_at.is_(None)) | (Job.next_attempt_at <= now),
+                )
                 .values(
                     status=JobStatus.RUNNING.value,
                     started_at=now,
                     lease_until=now + timedelta(seconds=self._lease_seconds),
                     lease_token=token,
+                    next_attempt_at=None,
                     attempts=Job.attempts + 1,
                 )
             )
@@ -211,10 +218,10 @@ class DownloadJob:
 
     def _download(self, adapter, job: Job, temp_dir: str) -> list[str]:
         on_progress = self._progress_writer(job.id)
-        try:
+        parameters = inspect.signature(adapter.download).parameters
+        if "on_progress" in parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
             downloaded = adapter.download(job.url, temp_dir, on_progress=on_progress)
-        except TypeError:
-            # Adapter does not accept on_progress.
+        else:
             downloaded = adapter.download(job.url, temp_dir)
         return [
             normalize(path) if Path(path).suffix.lower() in {".mp4", ".ts", ".m2ts"} else path
@@ -256,24 +263,26 @@ class DownloadJob:
         self._set_failed(session, job, exc)
         category = classify_download_error(exc)
         retryable = is_retryable(category) and job.attempts < self._max_attempts
+        if retryable:
+            job.status = JobStatus.QUEUED.value
+            job.finished_at = None
+            job.next_attempt_at = now_wib() + timedelta(seconds=30 * (2 ** (job.attempts - 1)))
+            job.lease_until = None
+            job.lease_token = None
+        else:
+            job.status = JobStatus.FAILED.value
+            job.next_attempt_at = None
+            job.finished_at = now_wib()
+        session.commit()
         log_download(
             "download_failed",
             f"Download gagal: {category.value}",
             job_id=job.id,
-            status="failed",
+            status=job.status,
             platform=job.platform,
             error_code=category.value,
             retryable=retryable,
         )
-        if retryable:
-            job.status = JobStatus.QUEUED.value
-            job.finished_at = None
-            job.lease_until = None
-            job.lease_token = None
-            session.commit()
-            return job.status
-        job.status = JobStatus.FAILED.value
-        session.commit()
         return job.status
 
     def _set_failed(self, session, job: Job, exc: BaseException) -> None:

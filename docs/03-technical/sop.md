@@ -13,6 +13,7 @@
 3. Inspect application logs without exposing credentials.
 4. Verify database/media backup according to policy `[TBD — confirm with team]`.
 5. Check adapter health after dependency/platform changes.
+6. For retryable download failures, inspect `jobs.next_attempt_at` and `attempts`: the scheduler dispatches due retries after 30/60 seconds, up to three attempts total. A restart preserves this schedule.
 
 ## Incident steps
 

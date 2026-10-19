@@ -12,10 +12,21 @@ from backend.app.adapters.x import XAdapter
 SPECS = [XAdapter(), RedditAdapter(), PinterestAdapter()]
 
 
-@pytest.mark.parametrize("adapter", SPECS, ids=lambda a: a.platform)
-def test_detect_matches_own_host_only(adapter):
-    assert adapter.detect("https://x.com/user/status/1") == (adapter.platform == "x")
-    assert adapter.detect("https://www.pinterest.com/pin/1") == (adapter.platform == "pinterest")
+@pytest.mark.parametrize(
+    ("adapter", "valid_hosts", "lookalikes"),
+    [
+        (XAdapter(), ("x.com", "twitter.com", "sub.x.com"), ("notx.com", "nottwitter.com", "x.com.example.org")),
+        (RedditAdapter(), ("reddit.com", "redd.it", "sub.reddit.com"), ("notreddit.com", "notredd.it", "reddit.com.example.org")),
+        (PinterestAdapter(), ("pinterest.com", "pin.it", "sub.pinterest.com"), ("notpinterest.com", "notpin.it", "pinterest.com.example.org")),
+    ],
+    ids=lambda value: value.platform if isinstance(value, GalleryDlAdapter) else None,
+)
+def test_detect_matches_registered_hosts_and_subdomains(adapter, valid_hosts, lookalikes):
+    for host in valid_hosts:
+        assert adapter.detect(f"https://{host}/post")
+    for host in lookalikes:
+        assert not adapter.detect(f"https://{host}/post")
+    assert not adapter.detect(f"https://example.org/?next=https://{valid_hosts[0]}/post")
 
 
 @pytest.mark.parametrize("adapter", SPECS, ids=lambda a: a.platform)

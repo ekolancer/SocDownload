@@ -4,7 +4,7 @@ from .gallerydl import GalleryDlAdapter, PlatformSpec
 
 SPEC = PlatformSpec(
     platform="reddit",
-    host_pattern=r"(?i)(reddit\.com|redd\.it)",
+    host_pattern=r"(?:[a-z0-9-]+\.)*(reddit\.com|redd\.it)",
     username_keys=("author", "user", "username", "uploader"),
 )
 

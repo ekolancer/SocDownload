@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.app import db as db_module
-from backend.app.db import Base, Job, JobStatus
+from backend.app.db import Base, Job, JobStatus, now_wib
 from backend.app.download_errors import DownloadErrorCategory, is_retryable
 from backend.app.jobs import DownloadJob
 
@@ -134,6 +135,87 @@ def test_network_failure_is_retryable_and_requeues(factory, tmp_path):
     assert row.status == JobStatus.QUEUED.value
     assert row.attempts == 1
     assert is_retryable(DownloadErrorCategory.NETWORK_ERROR)
+
+
+def test_retry_waits_for_due_time_and_stops_after_three_attempts(factory, tmp_path):
+    adapter = FakeAdapter(download_error=RuntimeError("connection reset"))
+    job_id = _seed_job(factory)
+    job = _make_job(factory, tmp_path, adapter)
+
+    assert job.process(job_id) == JobStatus.QUEUED.value
+    row = _get_job(factory, job_id)
+    assert timedelta(seconds=29) <= row.next_attempt_at - now_wib().replace(tzinfo=None) <= timedelta(seconds=30)
+    assert job.process(job_id) is None
+    assert adapter.download_calls == 1
+
+    with factory() as session:
+        session.get(Job, job_id).next_attempt_at = now_wib() - timedelta(seconds=1)
+        session.commit()
+    assert job.process(job_id) == JobStatus.QUEUED.value
+    row = _get_job(factory, job_id)
+    assert timedelta(seconds=59) <= row.next_attempt_at - now_wib().replace(tzinfo=None) <= timedelta(seconds=60)
+
+    with factory() as session:
+        session.get(Job, job_id).next_attempt_at = now_wib() - timedelta(seconds=1)
+        session.commit()
+    assert job.process(job_id) == JobStatus.FAILED.value
+    row = _get_job(factory, job_id)
+    assert row.attempts == 3
+    assert row.next_attempt_at is None
+    assert adapter.download_calls == 3
+
+
+def test_recovery_keeps_retry_due_time(factory, tmp_path, monkeypatch):
+    from backend.app import service
+
+    queue = __import__("asyncio").Queue()
+    monkeypatch.setattr(service, "_queue", queue)
+    monkeypatch.setattr(service, "_pending_ids", set())
+    monkeypatch.setattr(service, "get_session_factory", lambda: factory)
+    job_id = _seed_job(factory)
+    with factory() as session:
+        session.get(Job, job_id).next_attempt_at = now_wib() + timedelta(minutes=1)
+        session.commit()
+
+    service.recover_jobs()
+    assert queue.empty()
+    service.enqueue_due_jobs()
+    assert queue.empty()
+    with factory() as session:
+        session.get(Job, job_id).next_attempt_at = now_wib() - timedelta(seconds=1)
+        session.commit()
+    service.enqueue_due_jobs()
+    service.enqueue_due_jobs()
+    assert queue.qsize() == 1
+    assert queue.get_nowait() == job_id
+
+
+def test_recovery_fails_exhausted_running_job(factory, tmp_path, monkeypatch):
+    from backend.app import service
+
+    queue = __import__("asyncio").Queue()
+    monkeypatch.setattr(service, "_queue", queue)
+    monkeypatch.setattr(service, "_pending_ids", set())
+    monkeypatch.setattr(service, "get_session_factory", lambda: factory)
+    job_id = _seed_job(factory)
+    with factory() as session:
+        row = session.get(Job, job_id)
+        row.status = JobStatus.RUNNING.value
+        row.attempts = 3
+        session.commit()
+
+    service.recover_jobs()
+    assert queue.empty()
+    row = _get_job(factory, job_id)
+    assert row.status == JobStatus.FAILED.value
+    assert row.finished_at is not None
+
+
+def test_internal_type_error_does_not_repeat_download(factory, tmp_path):
+    adapter = FakeAdapter(download_error=TypeError("internal failure"))
+    job_id = _seed_job(factory)
+    assert _make_job(factory, tmp_path, adapter).process(job_id) == JobStatus.FAILED.value
+    assert adapter.download_calls == 1
 
 
 def test_non_retryable_failure_stays_failed(factory, tmp_path):

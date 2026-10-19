@@ -16,25 +16,31 @@ from .media_vault import MediaQuery, MediaVault, neutralize_csv_formula, sanitiz
 class MediaExporter:
     """Produce CSV/JSON/ZIP artefacts from a media query.
 
-    Reads through MediaVault for the item shape and the session factory for
-    raw file access needed by the ZIP writer.
+    Uses a vault for selected items and the session factory for raw file access
+    needed by the ZIP writer.
     """
 
     def __init__(self, vault: MediaVault | None = None, session_factory=None) -> None:
         self._session_factory = session_factory or get_session_factory()
-        self._vault = vault or MediaVault(session_factory=self._session_factory)
+        if vault is None:
+            self._vault = MediaVault(session_factory=self._session_factory)
+        else:
+            self._vault = vault
 
     def _items(self, query: MediaQuery):
+        selected = self._vault.list_items(query)
+        item_ids = [item["id"] for item in selected]
+        if not item_ids:
+            return [], {}
         with self._session_factory() as session:
-            stmt = select(MediaItem)
-            for clause in query.clauses():
-                stmt = stmt.where(clause)
-            stmt = stmt.order_by(MediaItem.created_at.desc()).limit(query.limit)
-            items = session.scalars(stmt).all()
+            items_by_id = {
+                item.id: item
+                for item in session.scalars(select(MediaItem).where(MediaItem.id.in_(item_ids))).all()
+            }
+            items = [items_by_id[item_id] for item_id in item_ids if item_id in items_by_id]
             files_by_item: dict[int, list[MediaFile]] = {}
-            if items:
-                for f in session.scalars(select(MediaFile).where(MediaFile.media_item_id.in_([i.id for i in items]))).all():
-                    files_by_item.setdefault(f.media_item_id, []).append(f)
+            for f in session.scalars(select(MediaFile).where(MediaFile.media_item_id.in_(item_ids))).all():
+                files_by_item.setdefault(f.media_item_id, []).append(f)
             return items, files_by_item
 
     def csv_bytes(self, query: MediaQuery) -> bytes:

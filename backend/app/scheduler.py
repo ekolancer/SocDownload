@@ -43,9 +43,14 @@ def run_periodic_autosync() -> None:
         logger.error("Periodic autosync error: %s", e)
 
 
+async def dispatch_due_jobs() -> None:
+    from .service import enqueue_due_jobs
+    enqueue_due_jobs()
+
 def start_scheduler() -> None:
     if not scheduler.running:
         scheduler.add_job(check_adapters_health, "interval", minutes=30, id="adapter_health")
         scheduler.add_job(run_periodic_autosync, "interval", minutes=1, id="autosync_tick")
+        scheduler.add_job(dispatch_due_jobs, "interval", seconds=5, id="job_retry_dispatch")
         scheduler.start()
 

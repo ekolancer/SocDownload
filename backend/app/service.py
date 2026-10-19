@@ -8,9 +8,11 @@ from sqlalchemy import select, update
 
 from .adapters.registry import detect_platform
 from .db import Job, JobStatus, get_session_factory, now_wib
+from .jobs import DEFAULT_MAX_ATTEMPTS
 from .url_validation import validate_url
 
 _queue: asyncio.Queue[int] | None = None
+_pending_ids: set[int] = set()
 
 DEFAULT_LEASE_SECONDS = 300
 
@@ -18,16 +20,38 @@ DEFAULT_LEASE_SECONDS = 300
 def recover_jobs() -> None:
     factory = get_session_factory()
     with factory() as session:
-        session.query(Job).filter(Job.status == JobStatus.RUNNING.value).update(
+        session.query(Job).filter(
+            Job.status == JobStatus.RUNNING.value,
+            Job.attempts < DEFAULT_MAX_ATTEMPTS,
+        ).update(
             {Job.status: JobStatus.QUEUED.value, Job.started_at: None, Job.lease_until: None, Job.lease_token: None, Job.error: "Recovered after restart"},
             synchronize_session=False,
         )
-        job_ids = session.scalars(select(Job.id).where(Job.status == JobStatus.QUEUED.value)).all()
+        session.query(Job).filter(
+            Job.status.in_((JobStatus.RUNNING.value, JobStatus.QUEUED.value)),
+            Job.attempts >= DEFAULT_MAX_ATTEMPTS,
+        ).update(
+            {Job.status: JobStatus.FAILED.value, Job.finished_at: now_wib(), Job.next_attempt_at: None,
+             Job.lease_until: None, Job.lease_token: None, Job.error: "Retry limit reached after restart"},
+            synchronize_session=False,
+        )
+        job_ids = session.scalars(select(Job.id).where(
+            Job.status == JobStatus.QUEUED.value,
+            Job.attempts < DEFAULT_MAX_ATTEMPTS,
+            (Job.next_attempt_at.is_(None)) | (Job.next_attempt_at <= now_wib()),
+        )).all()
         session.commit()
-    queue = get_queue()
-    for job_id in job_ids:
-        queue.put_nowait(job_id)
+    _push(job_ids)
 
+def enqueue_due_jobs() -> None:
+    with get_session_factory()() as session:
+        job_ids = session.scalars(select(Job.id).where(
+            Job.status == JobStatus.QUEUED.value,
+            Job.attempts < DEFAULT_MAX_ATTEMPTS,
+            Job.next_attempt_at.is_not(None),
+            Job.next_attempt_at <= now_wib(),
+        )).all()
+    _push(job_ids)
 
 def claim_job(job_id: int, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> str | None:
     """Claim a queued job by setting it RUNNING with a lease.
@@ -41,12 +65,18 @@ def claim_job(job_id: int, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> str | 
     with factory() as session:
         result = session.execute(
             update(Job)
-            .where(Job.id == job_id, Job.status == JobStatus.QUEUED.value)
+            .where(
+                Job.id == job_id,
+                Job.status == JobStatus.QUEUED.value,
+                Job.attempts < DEFAULT_MAX_ATTEMPTS,
+                (Job.next_attempt_at.is_(None)) | (Job.next_attempt_at <= now),
+            )
             .values(
                 status=JobStatus.RUNNING.value,
                 started_at=now,
                 lease_until=now + timedelta(seconds=lease_seconds),
                 lease_token=token,
+                next_attempt_at=None,
                 attempts=Job.attempts + 1,
             )
         )
@@ -73,10 +103,16 @@ def platform_of(url: str) -> str:
 def _push(job_ids: list[int]) -> None:
     queue = get_queue()
     for job_id in job_ids:
+        if job_id in _pending_ids:
+            continue
         try:
             queue.put_nowait(job_id)
+            _pending_ids.add(job_id)
         except Exception:
             pass
+
+def release_pending(job_id: int) -> None:
+    _pending_ids.discard(job_id)
 
 
 def purge_queue() -> int:
@@ -85,7 +121,7 @@ def purge_queue() -> int:
     count = 0
     while not q.empty():
         try:
-            q.get_nowait()
+            release_pending(q.get_nowait())
             q.task_done()
             count += 1
         except Exception:
