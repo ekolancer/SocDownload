@@ -1,17 +1,13 @@
-# Architecture Decision Records
+# Architecture Decision Records (ADR)
 
-Short, dated records of decisions that a future architecture review should not re-litigate.
+> **Document Type:** Architecture Decision Index<br>
+> **Status:** Existing records retained; records must be verified against current implementation<br>
+> **Owner:** [TBD — confirm with team]<br>
+> **Last Updated:** 2026-10-19<br>
+> **Related Documents:** [HLD](../02-architecture/HLD.md), [LLD](../02-architecture/LLD.md), [Architecture](../02-architecture/README.md)
 
-| ADR | Title | Status |
-|---|---|---|
-| [0001](0001-download-error-taxonomy.md) | One download error taxonomy | Accepted |
-| [0002](0002-vidara-stream-cache-behind-interface.md) | Vidara stream cache lives inside the adapter | Accepted |
-| [0003](0003-config-precedence.md) | Config precedence — DB over env for UI settings, env files for secrets | Proposed |
+Existing decision records are retained as historical project artifacts. Their contents were not re-reviewed as part of this code-grounded documentation pass; treat them as hypotheses, not verified current behavior.
 
-## Format
-
-Each record states Context, Decision, Consequences, and Alternatives considered. Keep them
-short. Add a record when a decision is load-bearing enough that a future explorer would otherwise
-re-suggest the thing it rejects.
-
-Related: [CONTEXT.md](../../CONTEXT.md), [LLD](../02-architecture/LLD.md).
+- [ADR-0001 — Download error taxonomy](./0001-download-error-taxonomy.md)
+- [ADR-0002 — Vidara stream cache behind interface](./0002-vidara-stream-cache-behind-interface.md)
+- [ADR-0003 — Configuration precedence](./0003-config-precedence.md)

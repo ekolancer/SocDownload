@@ -1,14 +1,18 @@
-# Requirements Index
+# Kebutuhan dan Analisis
 
-> Document Type: Requirements Index  
-> Status: Draft  
-> Owner: [TBD — confirm with team]  
-> Last Updated: 2026-09-24  
-> Related Documents: [Portal](../../README.md), [Architecture](../02-architecture/README.md)
+> **Document Type:** Section Index<br>
+> **Status:** Draft<br>
+> **Owner:** [TBD — confirm with team]<br>
+> **Last Updated:** 2026-10-19<br>
+> **Related Documents:** [HLD](../02-architecture/HLD.md), [Glosarium](../glossary.md)
 
-- [BRD](BRD.md): code-evidenced scope and unresolved business facts.
-- [SRS](SRS.md): functional and non-functional requirements.
-- [Use Cases](use-cases.md): operator, scheduler, and platform interactions.
-- [Flowcharts](flowcharts.md): download and recovery flows.
-- [ERD](ERD.md): database relationships and physical fields.
-- [Data Dictionary](data-dictionary.md): table-level definitions.
+Dokumen ini menjelaskan perilaku dan kebutuhan yang disimpulkan dari implementasi. BRD dan prioritas belum disetujui pemilik bisnis.
+
+| Dokumen | Tujuan |
+|---|---|
+| [BRD](./BRD.md) | Kebutuhan bisnis yang tampak dari fitur aplikasi; hal yang belum diketahui ditandai TBD. |
+| [SRS](./SRS.md) | Perilaku sistem, batas implementasi, dan keterlacakan dari BR ke fitur. |
+| [Use Cases](./use-cases.md) | Alur pengguna dan operator yang teramati. |
+| [Flowcharts](./flowcharts.md) | Alur unduhan, impor, dan sync Instagram. |
+| [ERD](./ERD.md) | Model konseptual dan kolom fisik dari SQLAlchemy dan migrasi aktual. |
+| [Kamus Data](./data-dictionary.md) | Definisi setiap tabel dan kolom database yang didokumentasikan. |
